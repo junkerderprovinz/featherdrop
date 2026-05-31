@@ -1,0 +1,33 @@
+# =============================================================================
+# .dockerignore — featherdrop
+# Keep the build context small; the image is built from source via multi-stage.
+# =============================================================================
+
+.git/
+.gitignore
+
+# Build artifacts / deps that the image rebuilds itself
+node_modules/
+.next/
+out/
+
+# GitHub metadata — except the init-log banner art, which the Dockerfile COPYs
+.github/
+!.github/assets/banner-raw.txt
+
+# Docs not needed inside the image
+README.md
+CHANGELOG.md
+LICENSE
+
+# Runtime data + local env
+data/
+.env
+.env.local
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.log

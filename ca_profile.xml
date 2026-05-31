@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>
+    featherdrop — a clean, login-free, self-hosted file sharer for Unraid.
+    Open the page, drop a file, set an expiry (and an optional password), get a
+    shareable link. Resumable uploads, files stored on a local volume, metadata
+    in a single SQLite file — no separate database, no accounts. A lightweight
+    alternative to heavier sharing platforms. Maintained by junkerderprovinz.
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/icon.png</Icon>
+  <WebPage>https://github.com/junkerderprovinz/featherdrop</WebPage>
+</CommunityApplications>

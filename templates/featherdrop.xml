@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>featherdrop</Name>
+  <Repository>ghcr.io/junkerderprovinz/featherdrop:latest</Repository>
+  <Registry>https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/junkerderprovinz/featherdrop/issues</Support>
+  <Project>https://github.com/junkerderprovinz/featherdrop</Project>
+  <Overview>A clean, login-free, self-hosted file sharer. Open the page, drop a file, set an expiry and optional password, and share the link. Resumable uploads (tus), files on a local volume, metadata in a single SQLite file — no separate database, no accounts. Put it behind a reverse proxy and set BASE_URL so share links use your public domain.</Overview>
+  <Category>Tools:Utilities Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/templates/featherdrop.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/icon.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <DateInstalled/>
+  <DonateText>If this template helps you, consider buying me a coffee.</DonateText>
+  <DonateLink>https://buymeacoffee.com/junkerderprovinz</DonateLink>
+  <Config
+    Name="WebUI Port"
+    Target="3000"
+    Default="3000"
+    Mode="tcp"
+    Description="Port the featherdrop web interface listens on."
+    Type="Port"
+    Display="always"
+    Required="true"
+    Mask="false">3000</Config>
+  <Config
+    Name="Data Directory"
+    Target="/data"
+    Default="/mnt/user/appdata/featherdrop"
+    Mode="rw"
+    Description="Persistent storage for uploaded files and the SQLite metadata database."
+    Type="Path"
+    Display="always"
+    Required="true"
+    Mask="false">/mnt/user/appdata/featherdrop</Config>
+  <Config
+    Name="Public Base URL"
+    Target="BASE_URL"
+    Default=""
+    Mode=""
+    Description="Public URL featherdrop is reached at, e.g. https://share.yourdomain.tld. Used so generated share links point at your domain when behind a reverse proxy. Leave empty to use the address the browser is on."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false"></Config>
+  <Config
+    Name="Default Expiry"
+    Target="DEFAULT_EXPIRY"
+    Default="7d"
+    Mode=""
+    Description="Expiry pre-selected in the UI. One of: 1h, 6h, 1d, 7d, 30d, never."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false">7d</Config>
+  <Config
+    Name="Max File Size (bytes)"
+    Target="MAX_FILE_SIZE"
+    Default="0"
+    Mode=""
+    Description="Maximum upload size in bytes. 0 = unlimited (only limited by disk space). Example: 5368709120 = 5 GB."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false">0</Config>
+</Container>

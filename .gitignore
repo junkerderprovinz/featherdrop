@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+
+# TypeScript / tooling output
+*.tsbuildinfo
+lint-out.txt
+tsc-out.txt
+check.txt
+
+# Runtime data (uploads + sqlite) — never commit
+data/
+data-smoke/
+
+# Logs / OS / editor junk
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local env + agent config
+.env
+.env.local
+.claude/

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":dependencyDashboard"
+  ],
+  "timezone": "Europe/Vienna",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Group Mantine packages — they must move together",
+      "matchPackageNames": ["@mantine/core", "@mantine/hooks", "@mantine/dropzone", "@mantine/notifications"],
+      "groupName": "Mantine"
+    },
+    {
+      "description": "Group tus packages",
+      "matchPackageNames": ["@tus/server", "@tus/file-store", "tus-js-client"],
+      "groupName": "tus"
+    },
+    {
+      "description": "Auto-merge minor/patch for GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true,
+      "automergeType": "branch"
+    }
+  ]
+}

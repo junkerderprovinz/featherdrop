@@ -1,0 +1,43 @@
+{
+  "name": "featherdrop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A clean, login-free, self-hosted file sharer — drop a file, set an expiry, share a link.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "tsx watch custom-server.ts",
+    "build": "next build",
+    "start": "tsx custom-server.ts",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@mantine/core": "^7.13.0",
+    "@mantine/dropzone": "^7.13.0",
+    "@mantine/hooks": "^7.13.0",
+    "@mantine/notifications": "^7.13.0",
+    "@tabler/icons-react": "^3.19.0",
+    "@tus/file-store": "^1.5.0",
+    "@tus/server": "^1.8.0",
+    "better-sqlite3": "^11.3.0",
+    "nanoid": "^5.0.7",
+    "next": "^14.2.15",
+    "qrcode.react": "^4.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tus-js-client": "^4.1.0",
+    "tsx": "^4.19.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.16.10",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.15",
+    "postcss": "^8.4.47",
+    "postcss-preset-mantine": "^1.17.0",
+    "postcss-simple-vars": "^7.0.1",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,56 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eslint-typecheck:
+    name: ESLint + Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # --ignore-scripts skips the better-sqlite3 native build — not needed to
+      # lint or type-check, and keeps the job fast.
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+  xml-template:
+    name: XML Template Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install libxml2-utils
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      - name: Validate XML well-formedness
+        run: |
+          set -e
+          shopt -s nullglob
+          files=(templates/*.xml ca_profile.xml)
+          for f in "${files[@]}"; do
+            echo "::group::Linting $f"
+            xmllint --noout "$f"
+            echo "::endgroup::"
+          done
