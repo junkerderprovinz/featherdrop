@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-06-01
+
+### Added
+
+- Gold **featherdrop logo** (a feather with a light→metallic→deep gold gradient)
+  as an inline SVG component, replacing the placeholder feather icon in the
+  header, download page, and not-found page. Source art at
+  `.github/assets/featherdrop-logo.svg`.
+- `.github/assets/icon.png` (512×512) rendered from the logo, used as the Unraid
+  Community Applications template icon.
+
 ## [1.0.0] — 2026-05-31
 
 ### Added
