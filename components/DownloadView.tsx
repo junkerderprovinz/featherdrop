@@ -11,8 +11,9 @@ import {
   Text,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconDownload, IconFeather, IconLock } from "@tabler/icons-react";
+import { IconDownload, IconLock } from "@tabler/icons-react";
 import { formatBytes, formatExpiry } from "@/lib/format";
+import { Logo } from "@/components/Logo";
 
 interface DownloadViewProps {
   slug: string;
@@ -63,7 +64,7 @@ export function DownloadView({
       <Paper withBorder radius="xl" p="xl" maw={460} w="100%">
         <Stack align="center" gap="lg">
           <Group gap={6}>
-            <IconFeather size={22} />
+            <Logo size={22} />
             <Text fw={800} size="lg">
               featherdrop
             </Text>

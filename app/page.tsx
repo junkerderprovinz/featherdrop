@@ -15,8 +15,9 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconFeather, IconMoon, IconSun } from "@tabler/icons-react";
+import { IconMoon, IconSun } from "@tabler/icons-react";
 import * as tus from "tus-js-client";
+import { Logo } from "@/components/Logo";
 import { DropArea } from "@/components/DropArea";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -105,7 +106,7 @@ export default function HomePage() {
     <Container size="lg" py={60} style={{ minHeight: "100vh" }}>
       <Group justify="space-between" mb={48}>
         <Group gap="xs">
-          <IconFeather size={28} />
+          <Logo size={28} />
           <Title order={2} fw={800}>
             featherdrop
           </Title>
