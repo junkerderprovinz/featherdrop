@@ -26,6 +26,15 @@ export const BASE_URL = process.env.BASE_URL ?? "";
 export const ENCRYPT_UPLOADS =
   (process.env.ENCRYPT_UPLOADS ?? "true").toLowerCase() !== "false";
 
+// Server master key. When set, password-less uploads get short links (…/d/slug
+// with no #fragment): the per-file key is wrapped with this master key and
+// stored, instead of riding in the URL. The key lives only in the container
+// environment, not in the /data volume, so a stolen data backup stays unreadable.
+// Losing it makes password-less files unrecoverable. Unset = fall back to the
+// #fragment link mode.
+export const MASTER_KEY = process.env.MASTER_KEY ?? "";
+export const SERVER_KEY_MODE = MASTER_KEY.length > 0;
+
 let dirsReady = false;
 
 /** Create the data sub-directories once; safe to call repeatedly. */

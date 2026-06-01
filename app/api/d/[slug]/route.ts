@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { UPLOADS_DIR } from "@/lib/config";
+import { MASTER_KEY, UPLOADS_DIR } from "@/lib/config";
 import {
   getFileBySlug,
   incrementDownloadCount,
@@ -43,9 +43,11 @@ function fileStream(id: string): ReadableStream<Uint8Array> {
   ) as ReadableStream<Uint8Array>;
 }
 
-// Resolve the per-file age key for an encrypted record from a credential: either
-// the link key (link mode) or the password-unwrapped key (password mode).
-// Returns null when the credential is missing or wrong.
+// Resolve the per-file age key for an encrypted record:
+//   - link:     from the link key the client read out of the URL fragment.
+//   - password: unwrap with the verified password.
+//   - server:   unwrap with the server master key — no client credential needed.
+// Returns null when the credential is missing/wrong or the master key is absent.
 async function resolveKey(
   rec: FileRecord,
   cred: AuthBody,
@@ -60,6 +62,14 @@ async function resolveKey(
     }
     try {
       return await unwrapKey(rec.enc_key_wrapped ?? "", password);
+    } catch {
+      return null;
+    }
+  }
+  if (rec.enc_mode === "server") {
+    if (!MASTER_KEY) return null; // master key removed → cannot decrypt
+    try {
+      return await unwrapKey(rec.enc_key_wrapped ?? "", MASTER_KEY);
     } catch {
       return null;
     }

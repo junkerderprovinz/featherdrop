@@ -78,4 +78,14 @@
     Display="always"
     Required="false"
     Mask="false">true</Config>
+  <Config
+    Name="Master Key (short links)"
+    Target="MASTER_KEY"
+    Default=""
+    Mode=""
+    Description="Optional. Set a secret here to get SHORT links for password-less shares (e.g. /d/aB3xK instead of a long #key in the URL). The per-file key is then wrapped with this master key and stored, instead of riding in the link. Keep it secret and back it up: it lives only here, not in the data volume, so a stolen backup stays unreadable — but if you lose it, password-less files become unrecoverable. Generate one with: openssl rand -base64 32. Leave empty to keep the long #key links."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="true"></Config>
 </Container>

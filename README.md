@@ -90,12 +90,24 @@ encryption format. Each file gets its own key, and the **original filename and
 type are encrypted inside the file**, so a stolen disk or backup reveals neither
 the contents nor the names.
 
-How the per-file key is protected depends on whether you set a password:
+How the per-file key is protected depends on whether you set a password, and on
+whether you've configured a master key:
 
-| Share type | Where the key lives | What the server can decrypt |
-|---|---|---|
-| **Password** | Wrapped with your password (age scrypt), stored as a blob | Nothing without the password — not even the operator |
-| **Link** (no password) | In the share link's `#fragment` (`…/d/<slug>#k=…`) | Nothing from the database alone; the key never reaches the server |
+| Share type | Where the key lives | Link | What the server can decrypt |
+|---|---|---|---|
+| **Password** | Wrapped with your password (age scrypt) | `…/d/<slug>` | Nothing without the password — not even the operator |
+| **Server** (no password, `MASTER_KEY` set) | Wrapped with the server master key | `…/d/<slug>` — **short** | The file (it holds the master key); a stolen *data* backup alone cannot |
+| **Link** (no password, no master key) | In the share link's `#fragment` | `…/d/<slug>#k=…` — long | Nothing from the database alone; the key never reaches the server |
+
+**Short links.** By default a password-less share carries its key in the URL
+`#fragment`, which makes the link long but means the server can never decrypt it.
+If you'd rather have **short links** (`…/d/aB3xK`), set a **`MASTER_KEY`** (see
+[Configuration](#6-configuration)): password-less files are then wrapped with it
+and stored. The trade-off: the running server *can* decrypt those files — but a
+stolen `/data` backup still can't, because the master key lives only in the
+container environment, not in the volume. Keep it secret and **back it up** —
+losing it makes password-less files unrecoverable. Password shares are
+unaffected and stay end-to-end.
 
 Because the key in a link share lives in the URL **fragment**, it is never sent
 in an HTTP request and never appears in server logs or your reverse proxy. Treat
@@ -166,6 +178,7 @@ docker run -d \
 | `DEFAULT_EXPIRY` | `7d` | Expiry pre-selected in the UI. One of `1h`, `6h`, `1d`, `7d`, `30d`, `never`. |
 | `MAX_FILE_SIZE` | `0` | Max upload size in bytes. `0` = unlimited (disk-limited). E.g. `5368709120` = 5 GB. |
 | `ENCRYPT_UPLOADS` | `true` | Encrypt new uploads at rest with age (see [Encryption](#3-encryption)). Set `false` to store plaintext. Existing files keep their stored mode. |
+| `MASTER_KEY` | *(empty)* | Optional secret that gives **short links** for password-less shares (see [Encryption](#3-encryption)). Generate with `openssl rand -base64 32`. Keep it secret, back it up; losing it makes password-less files unrecoverable. Empty = long `#key` links. |
 | `PORT` | `3000` | Port the server listens on. |
 | `DATA_DIR` | `/data` | Where files + the SQLite database live. Map this to a volume. |
 
