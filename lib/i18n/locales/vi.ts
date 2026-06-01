@@ -31,6 +31,10 @@ export const vi: Translation = {
   "download.wrongPassword": "Sai mật khẩu",
   "download.failed": "Tải xuống thất bại",
 
+  "download.encryptedFile": "Tệp đã mã hóa",
+
+  "download.missingKey": "Liên kết này thiếu khóa giải mã — có thể đã được sao chép không đầy đủ.",
+
   "notfound.title": "Không có gì ở đây",
   "notfound.body": "Liên kết này không hợp lệ, hoặc tệp đã hết hạn và bị xóa.",
   "notfound.share": "Chia sẻ một tệp",

@@ -31,6 +31,10 @@ export const hu: Translation = {
   "download.wrongPassword": "Hibás jelszó",
   "download.failed": "A letöltés sikertelen",
 
+  "download.encryptedFile": "Titkosított fájl",
+
+  "download.missingKey": "Erről a linkről hiányzik a visszafejtő kulcs — lehet, hogy hiányosan másolták.",
+
   "notfound.title": "Itt nincs semmi",
   "notfound.body": "Ez a link érvénytelen, vagy a fájl lejárt és eltávolításra került.",
   "notfound.share": "Fájl megosztása",

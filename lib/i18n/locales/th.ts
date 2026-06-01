@@ -31,6 +31,10 @@ export const th: Translation = {
   "download.wrongPassword": "รหัสผ่านไม่ถูกต้อง",
   "download.failed": "ดาวน์โหลดล้มเหลว",
 
+  "download.encryptedFile": "ไฟล์ที่เข้ารหัส",
+
+  "download.missingKey": "ลิงก์นี้ไม่มีคีย์ถอดรหัส — อาจถูกคัดลอกมาไม่ครบ",
+
   "notfound.title": "ไม่มีอะไรที่นี่",
   "notfound.body": "ลิงก์นี้ไม่ถูกต้อง หรือไฟล์หมดอายุและถูกลบไปแล้ว",
   "notfound.share": "แชร์ไฟล์",

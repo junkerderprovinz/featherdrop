@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { DB_PATH, ensureDataDirs } from "../lib/config";
+import { applySchema } from "./schema";
 
 export interface FileRecord {
   id: string; // stored filename under UPLOADS_DIR
@@ -11,30 +12,20 @@ export interface FileRecord {
   expires_at: number | null; // unix ms, null = never
   created_at: number; // unix ms
   download_count: number;
+  encrypted: number; // 0 = plaintext blob, 1 = age-encrypted
+  enc_mode: string | null; // "link" | "password" | null
+  enc_key_wrapped: string | null; // password-wrapped per-file key (password mode)
 }
 
 let db: Database.Database | null = null;
 
-/** Open the SQLite file and create the schema if needed. Idempotent. */
+/** Open the SQLite file and create/migrate the schema if needed. Idempotent. */
 export function initDb(): Database.Database {
   if (db) return db;
   ensureDataDirs();
   db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS files (
-      id             TEXT PRIMARY KEY,
-      slug           TEXT UNIQUE NOT NULL,
-      original_name  TEXT NOT NULL,
-      size           INTEGER NOT NULL,
-      mime           TEXT,
-      password_hash  TEXT,
-      expires_at     INTEGER,
-      created_at     INTEGER NOT NULL,
-      download_count INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE INDEX IF NOT EXISTS idx_files_expires_at ON files (expires_at);
-  `);
+  applySchema(db);
   return db;
 }
 
@@ -46,9 +37,11 @@ export function createFileRecord(rec: Omit<FileRecord, "download_count">): void 
   conn()
     .prepare(
       `INSERT INTO files
-        (id, slug, original_name, size, mime, password_hash, expires_at, created_at)
+        (id, slug, original_name, size, mime, password_hash, expires_at,
+         created_at, encrypted, enc_mode, enc_key_wrapped)
        VALUES
-        (@id, @slug, @original_name, @size, @mime, @password_hash, @expires_at, @created_at)`,
+        (@id, @slug, @original_name, @size, @mime, @password_hash, @expires_at,
+         @created_at, @encrypted, @enc_mode, @enc_key_wrapped)`,
     )
     .run(rec);
 }

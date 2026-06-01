@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -23,10 +23,11 @@ import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
 interface DownloadViewProps {
   slug: string;
-  name: string;
+  name: string | null; // null when the server can't see it (encrypted)
   size: number;
   expiresAt: number | null;
   hasPassword: boolean;
+  linkMode: boolean; // encrypted, key carried in the URL #fragment
 }
 
 export function DownloadView({
@@ -35,11 +36,15 @@ export function DownloadView({
   size,
   expiresAt,
   hasPassword,
+  linkMode,
 }: DownloadViewProps) {
   const { t } = useTranslation();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // Filename: known from the server for plaintext shares, otherwise revealed
+  // after we decrypt the header (link mode on mount, password mode on unlock).
+  const [revealedName, setRevealedName] = useState<string | null>(name);
   const downloadUrl = `/api/d/${slug}`;
 
   const exp = describeExpiry(expiresAt);
@@ -48,30 +53,75 @@ export function DownloadView({
       ? t(`relexp.${exp.kind}`)
       : t(`relexp.${exp.kind}`, { count: exp.count });
 
-  const unlockAndDownload = async () => {
+  // The link key lives only in the URL fragment, never sent to the server in a
+  // request line. Read it once on the client.
+  const linkKey =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.hash.slice(1)).get("k") ?? ""
+      : "";
+
+  // Authorize the download (POST), then trigger the native streaming GET.
+  const authorizeThenDownload = async (cred: {
+    password?: string;
+    key?: string;
+  }) => {
     setBusy(true);
     try {
       const res = await fetch(downloadUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(cred),
       });
       if (res.status === 401) {
-        notifications.show({ color: "red", message: t("download.wrongPassword") });
-        return;
+        // 401 means a wrong credential: a bad password, or a corrupt link key.
+        const message = cred.password
+          ? t("download.wrongPassword")
+          : t("download.failed");
+        notifications.show({ color: "red", message });
+        return false;
       }
       if (!res.ok) throw new Error(`verify ${res.status}`);
+      const data = (await res.json()) as { name?: string };
+      if (data.name) setRevealedName(data.name);
       // Cookie is set; trigger the native streaming download.
       window.location.href = downloadUrl;
+      return true;
     } catch (e) {
       notifications.show({
         color: "red",
         message: e instanceof Error ? e.message : t("download.failed"),
       });
+      return false;
     } finally {
       setBusy(false);
     }
   };
+
+  // Link mode: as soon as we have the key from the fragment, reveal the real
+  // filename (a POST that decrypts just the header) without downloading yet.
+  useEffect(() => {
+    if (!linkMode || !linkKey) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(downloadUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: linkKey }),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { name?: string };
+        if (!cancelled && data.name) setRevealedName(data.name);
+      } catch {
+        // Leave the name hidden; the download button still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [linkMode, linkKey, downloadUrl]);
+
+  const missingKey = linkMode && !linkKey;
 
   return (
     <Center style={{ minHeight: "100vh" }} p="md">
@@ -107,14 +157,18 @@ export function DownloadView({
 
           <Stack align="center" gap={2}>
             <Text fw={700} size="xl" ta="center" lineClamp={2}>
-              {name}
+              {revealedName ?? t("download.encryptedFile")}
             </Text>
             <Text c="dimmed" size="sm">
               {formatBytes(size)} · {expiryText}
             </Text>
           </Stack>
 
-          {hasPassword ? (
+          {missingKey ? (
+            <Text c="red" ta="center" size="sm">
+              {t("download.missingKey")}
+            </Text>
+          ) : hasPassword ? (
             <Stack w="100%" gap="sm">
               <PasswordInput
                 label={t("download.protected")}
@@ -122,14 +176,16 @@ export function DownloadView({
                 leftSection={<IconLock size={16} />}
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
-                onKeyDown={(e) => e.key === "Enter" && unlockAndDownload()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && authorizeThenDownload({ password })
+                }
               />
               <Button
                 fullWidth
                 size="md"
                 leftSection={<IconDownload size={18} />}
                 loading={busy}
-                onClick={unlockAndDownload}
+                onClick={() => authorizeThenDownload({ password })}
               >
                 {t("download.unlock")}
               </Button>
@@ -138,9 +194,11 @@ export function DownloadView({
             <Button
               fullWidth
               size="md"
-              component="a"
-              href={downloadUrl}
               leftSection={<IconDownload size={18} />}
+              loading={busy}
+              onClick={() =>
+                authorizeThenDownload(linkMode ? { key: linkKey } : {})
+              }
             >
               {t("download.download")}
             </Button>

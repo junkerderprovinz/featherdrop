@@ -31,6 +31,10 @@ export const fi: Translation = {
   "download.wrongPassword": "Väärä salasana",
   "download.failed": "Lataus epäonnistui",
 
+  "download.encryptedFile": "Salattu tiedosto",
+
+  "download.missingKey": "Tästä linkistä puuttuu salauksenpurkuavain — se on voitu kopioida vaillinaisesti.",
+
   "notfound.title": "Täällä ei ole mitään",
   "notfound.body": "Tämä linkki on virheellinen tai tiedosto on vanhentunut ja poistettu.",
   "notfound.share": "Jaa tiedosto",

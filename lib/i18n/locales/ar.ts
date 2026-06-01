@@ -31,6 +31,10 @@ export const ar: Translation = {
   "download.wrongPassword": "كلمة مرور خاطئة",
   "download.failed": "فشل التنزيل",
 
+  "download.encryptedFile": "ملف مشفّر",
+
+  "download.missingKey": "هذا الرابط ينقصه مفتاح فك التشفير — ربما نُسخ بشكل غير كامل.",
+
   "notfound.title": "لا شيء هنا",
   "notfound.body": "هذا الرابط غير صالح، أو انتهت صلاحية الملف وتمت إزالته.",
   "notfound.share": "مشاركة ملف",

@@ -29,12 +29,13 @@ watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
 
 1. [What is this?](#1-what-is-this)
 2. [How it works](#2-how-it-works)
-3. [Languages](#3-languages)
-4. [Quick Start on Unraid](#4-quick-start-on-unraid)
-5. [Configuration](#5-configuration)
-6. [Reverse Proxy](#6-reverse-proxy)
-7. [Local Development](#7-local-development)
-8. [Contributing / License](#8-contributing--license)
+3. [Encryption](#3-encryption)
+4. [Languages](#4-languages)
+5. [Quick Start on Unraid](#5-quick-start-on-unraid)
+6. [Configuration](#6-configuration)
+7. [Reverse Proxy](#7-reverse-proxy)
+8. [Local Development](#8-local-development)
+9. [Contributing / License](#9-contributing--license)
 
 <br>
 
@@ -81,7 +82,33 @@ text, and large downloads **stream natively** (no in-browser buffering).
 
 <br>
 
-## 3. Languages
+## 3. Encryption
+
+Every uploaded file is **encrypted at rest** by default, using
+[age](https://age-encryption.org) — a modern, audited, streaming authenticated
+encryption format. Each file gets its own key, and the **original filename and
+type are encrypted inside the file**, so a stolen disk or backup reveals neither
+the contents nor the names.
+
+How the per-file key is protected depends on whether you set a password:
+
+| Share type | Where the key lives | What the server can decrypt |
+|---|---|---|
+| **Password** | Wrapped with your password (age scrypt), stored as a blob | Nothing without the password — not even the operator |
+| **Link** (no password) | In the share link's `#fragment` (`…/d/<slug>#k=…`) | Nothing from the database alone; the key never reaches the server |
+
+Because the key in a link share lives in the URL **fragment**, it is never sent
+in an HTTP request and never appears in server logs or your reverse proxy. Treat
+the full link as the secret: anyone who has it can download the file until it
+expires.
+
+Encryption streams (age's 64 KiB authenticated chunks), so multi-GB files are
+never buffered in memory. Set `ENCRYPT_UPLOADS=false` to store new uploads as
+plaintext if you ever need to; files keep the mode they were stored with.
+
+<br>
+
+## 4. Languages
 
 featherdrop's interface ships in **26 languages**. On a visitor's first load the
 language is taken from their **browser**; a flag picker beside the light/dark
@@ -101,7 +128,7 @@ welcome.
 
 <br>
 
-## 4. Quick Start on Unraid
+## 5. Quick Start on Unraid
 
 Pull the template into Unraid via the console / SSH:
 
@@ -131,24 +158,27 @@ docker run -d \
 
 <br>
 
-## 5. Configuration
+## 6. Configuration
 
 | Variable | Default | Description |
 |---|---|---|
 | `BASE_URL` | *(empty)* | Public URL featherdrop is reached at, so share links use your domain. Empty = use the address the browser is on. |
 | `DEFAULT_EXPIRY` | `7d` | Expiry pre-selected in the UI. One of `1h`, `6h`, `1d`, `7d`, `30d`, `never`. |
 | `MAX_FILE_SIZE` | `0` | Max upload size in bytes. `0` = unlimited (disk-limited). E.g. `5368709120` = 5 GB. |
+| `ENCRYPT_UPLOADS` | `true` | Encrypt new uploads at rest with age (see [Encryption](#3-encryption)). Set `false` to store plaintext. Existing files keep their stored mode. |
 | `PORT` | `3000` | Port the server listens on. |
 | `DATA_DIR` | `/data` | Where files + the SQLite database live. Map this to a volume. |
 
 <br>
 
-## 6. Reverse Proxy
+## 7. Reverse Proxy
 
 featherdrop speaks plain HTTP on `PORT`; put TLS in front of it (Nginx Proxy
 Manager, Caddy, Traefik). Two things matter:
 
-- Set **`BASE_URL`** to your public URL so generated links are correct.
+- Set **`BASE_URL`** to your public URL so generated links are correct. Use
+  **HTTPS** — for link shares the decryption key lives in the URL fragment, and
+  TLS keeps the whole link private in transit.
 - Allow **large request bodies** and generous timeouts for big uploads. For
   Nginx / NPM advanced config:
 
@@ -161,7 +191,7 @@ proxy_request_buffering off;   # stream uploads straight through
 
 <br>
 
-## 7. Local Development
+## 8. Local Development
 
 ```bash
 npm install
@@ -188,7 +218,7 @@ for metadata, and `react-i18next` for the UI languages. Files live under
 
 <br>
 
-## 8. Contributing / License
+## 9. Contributing / License
 
 Issues and pull requests welcome:
 <https://github.com/junkerderprovinz/featherdrop/issues>

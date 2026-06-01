@@ -31,6 +31,10 @@ export const he: Translation = {
   "download.wrongPassword": "סיסמה שגויה",
   "download.failed": "ההורדה נכשלה",
 
+  "download.encryptedFile": "קובץ מוצפן",
+
+  "download.missingKey": "לקישור הזה חסר מפתח הפענוח — ייתכן שהועתק באופן חלקי.",
+
   "notfound.title": "אין כאן כלום",
   "notfound.body": "הקישור הזה אינו תקין, או שהקובץ פג ונמחק.",
   "notfound.share": "שיתוף קובץ",

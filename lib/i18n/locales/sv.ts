@@ -31,6 +31,10 @@ export const sv: Translation = {
   "download.wrongPassword": "Fel lösenord",
   "download.failed": "Nedladdningen misslyckades",
 
+  "download.encryptedFile": "Krypterad fil",
+
+  "download.missingKey": "Den här länken saknar sin dekrypteringsnyckel — den kan ha kopierats ofullständigt.",
+
   "notfound.title": "Inget här",
   "notfound.body": "Den här länken är ogiltig, eller så har filen gått ut och tagits bort.",
   "notfound.share": "Dela en fil",

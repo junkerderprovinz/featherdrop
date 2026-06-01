@@ -31,6 +31,10 @@ export const zh: Translation = {
   "download.wrongPassword": "密码错误",
   "download.failed": "下载失败",
 
+  "download.encryptedFile": "已加密的文件",
+
+  "download.missingKey": "此链接缺少解密密钥 — 可能复制不完整。",
+
   "notfound.title": "这里什么都没有",
   "notfound.body": "此链接无效，或文件已过期并被删除。",
   "notfound.share": "分享文件",

@@ -31,6 +31,10 @@ export const ro: Translation = {
   "download.wrongPassword": "Parolă greșită",
   "download.failed": "Descărcarea a eșuat",
 
+  "download.encryptedFile": "Fișier criptat",
+
+  "download.missingKey": "Acestui link îi lipsește cheia de decriptare — poate a fost copiat incomplet.",
+
   "notfound.title": "Nimic aici",
   "notfound.body": "Acest link este invalid sau fișierul a expirat și a fost eliminat.",
   "notfound.share": "Partajează un fișier",

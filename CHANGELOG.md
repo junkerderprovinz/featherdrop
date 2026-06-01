@@ -7,24 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-06-01
+
+A major release: every uploaded file is now **encrypted at rest**, and the
+interface speaks **26 languages**.
+
 ### Added
 
-- **Multi-language UI (26 languages)** — featherdrop now speaks English, German,
-  French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian,
-  Czech, Swedish, Danish, Finnish, Norwegian, Turkish, Greek, Hungarian,
-  Romanian, Japanese, Korean, Chinese, Arabic, Hebrew, Thai and Vietnamese.
-  The language is **detected from the browser** on first visit (cookie →
-  `Accept-Language` → English fallback) and resolved **on the server**, so the
-  page renders translated even without JavaScript.
+- **At-rest encryption (default on).** Every upload is encrypted on the server
+  with [age](https://age-encryption.org) (Filippo Valsorda's audited,
+  streaming, authenticated format) to a fresh per-file key. The original
+  filename and type are encrypted **inside** the file, so a stolen disk or
+  backup reveals neither contents nor names. Two modes, chosen automatically:
+  - **Password shares** — the per-file key is wrapped with your password (age
+    scrypt) and only the wrapped blob is stored. Without the password the file
+    is unreadable, even to the server operator.
+  - **Link shares (no password)** — the key rides in the share-link
+    `#fragment` (`…/d/<slug>#k=…`) and **never reaches the server**. Anyone with
+    the full link can download; the database alone cannot decrypt the file.
+- **Multi-language UI (26 languages)** — English, German, French, Spanish,
+  Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Czech, Swedish,
+  Danish, Finnish, Norwegian, Turkish, Greek, Hungarian, Romanian, Japanese,
+  Korean, Chinese, Arabic, Hebrew, Thai and Vietnamese. The language is
+  **detected from the browser** on first visit (cookie → `Accept-Language` →
+  English fallback) and resolved **on the server**, so the page renders
+  translated even without JavaScript.
 - **Flag language switcher** beside the light/dark toggle, in the header and on
   the download page, so both uploader and recipient can change language. The
   choice persists in a cookie.
 - **Right-to-left support** for Arabic and Hebrew via Mantine's
   `DirectionProvider` (the whole UI mirrors, not just text).
+- **`ENCRYPT_UPLOADS`** environment variable (default `true`) to opt out of
+  encryption for new uploads if ever needed.
+- A unit-test suite (`npm test`, 50+ assertions) and a CI test job covering the
+  encryption round-trip, tamper/wrong-key rejection, the download-token gate,
+  language detection, and the schema migration.
+
+### Changed
+
+- The download flow now authorizes (password or link key) and then streams the
+  **decrypted** file natively; the share page reveals the real filename only
+  after the key/password is supplied.
 - Translations live in typed per-language files (`lib/i18n/locales/<code>.ts`)
   with English as the source of truth; a compile-time type plus a runtime parity
   test guarantee no key is ever missing or empty. Native-speaker corrections are
   a one-file edit.
+
+### Security
+
+- Fixed a password-gate bypass on the legacy plaintext download path: the
+  download cookie is now verified (constant-time) against an unforgeable,
+  password-hash-derived token rather than merely required to be present.
+
+### Migration
+
+- **Backward compatible.** The schema migrates in place (additive columns) and
+  files uploaded before v2.0.0 keep working as unencrypted blobs. Only uploads
+  made **after** the update are encrypted — existing shares are not rewritten.
 
 ## [1.0.3] — 2026-06-01
 

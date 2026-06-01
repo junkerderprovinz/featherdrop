@@ -31,6 +31,10 @@ export const es: Translation = {
   "download.wrongPassword": "Contraseña incorrecta",
   "download.failed": "Error en la descarga",
 
+  "download.encryptedFile": "Archivo cifrado",
+
+  "download.missingKey": "A este enlace le falta su clave de descifrado; puede que se haya copiado de forma incompleta.",
+
   "notfound.title": "Aquí no hay nada",
   "notfound.body": "Este enlace no es válido, o el archivo ha caducado y se ha eliminado.",
   "notfound.share": "Compartir un archivo",

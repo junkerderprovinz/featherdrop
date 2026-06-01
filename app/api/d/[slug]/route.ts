@@ -10,11 +10,21 @@ import {
   type FileRecord,
 } from "@/server/db";
 import { verifyPassword } from "@/lib/password";
-import { downloadToken } from "@/lib/token";
+import { downloadToken, tokenMatches } from "@/lib/token";
+import { decryptStream, unwrapKey } from "@/server/crypto";
 
 export const runtime = "nodejs";
 
-const COOKIE = "fd_dl";
+// Short-lived cookie that authorizes the streaming GET. For encrypted shares it
+// carries the per-file age key (a leak exposes only this one file — by design,
+// the same exposure as the link fragment); for legacy plaintext+password shares
+// it carries a non-empty marker. httpOnly + sameSite=strict + path-scoped.
+const COOKIE = "fd_key";
+
+interface AuthBody {
+  password?: string;
+  key?: string; // link-key from the share URL fragment (link mode)
+}
 
 function isExpired(rec: FileRecord, now = Date.now()): boolean {
   return rec.expires_at !== null && rec.expires_at <= now;
@@ -27,10 +37,40 @@ function contentDisposition(name: string): string {
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
-// GET streams the file. Password-protected shares require the short-lived cookie
-// set by a successful POST below.
+function fileStream(id: string): ReadableStream<Uint8Array> {
+  return Readable.toWeb(
+    createReadStream(join(UPLOADS_DIR, id)),
+  ) as ReadableStream<Uint8Array>;
+}
+
+// Resolve the per-file age key for an encrypted record from a credential: either
+// the link key (link mode) or the password-unwrapped key (password mode).
+// Returns null when the credential is missing or wrong.
+async function resolveKey(
+  rec: FileRecord,
+  cred: AuthBody,
+): Promise<string | null> {
+  if (rec.enc_mode === "link") {
+    return cred.key ? cred.key : null;
+  }
+  if (rec.enc_mode === "password") {
+    const password = cred.password ?? "";
+    if (!rec.password_hash || !verifyPassword(password, rec.password_hash)) {
+      return null;
+    }
+    try {
+      return await unwrapKey(rec.enc_key_wrapped ?? "", password);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// GET streams the file, decrypting on the fly for encrypted shares. The cookie
+// set by a successful POST below authorizes it (and carries the key).
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { slug: string } },
 ): Promise<Response> {
   const rec = getFileBySlug(params.slug);
@@ -38,40 +78,63 @@ export async function GET(
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  if (rec.password_hash) {
-    // The cookie must carry the token derived from the (server-only) password
-    // hash — not the public slug — or anyone with the link could forge it.
-    const cookie = _req.cookies.get(COOKIE)?.value;
-    if (cookie !== downloadToken(rec.password_hash)) {
-      return NextResponse.json({ error: "password required" }, { status: 403 });
-    }
-  }
-
-  const filePath = join(UPLOADS_DIR, rec.id);
   try {
-    await stat(filePath);
+    await stat(join(UPLOADS_DIR, rec.id));
   } catch {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
+  const cookie = req.cookies.get(COOKIE)?.value;
+
+  // Plaintext blob (legacy): the password gate requires the cookie to carry the
+  // unforgeable, hash-derived download token — not merely be present, or anyone
+  // with the public slug could send any value and bypass the password.
+  if (!rec.encrypted) {
+    if (rec.password_hash && !tokenMatches(cookie, rec.password_hash)) {
+      return NextResponse.json({ error: "password required" }, { status: 403 });
+    }
+    incrementDownloadCount(rec.slug);
+    return new Response(fileStream(rec.id), {
+      headers: {
+        "Content-Type": rec.mime ?? "application/octet-stream",
+        "Content-Length": String(rec.size),
+        "Content-Disposition": contentDisposition(rec.original_name),
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
+
+  if (!cookie) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 403 });
+  }
+
+  let header: { name: string; mime: string | null };
+  let plaintext: ReadableStream<Uint8Array>;
+  try {
+    const out = await decryptStream(fileStream(rec.id), cookie);
+    header = out.header;
+    plaintext = out.plaintext;
+  } catch {
+    return NextResponse.json({ error: "could not decrypt" }, { status: 401 });
+  }
+
   incrementDownloadCount(rec.slug);
 
-  const webStream = Readable.toWeb(
-    createReadStream(filePath),
-  ) as ReadableStream<Uint8Array>;
-
-  return new Response(webStream, {
+  // No Content-Length: we stream the decrypted bytes without buffering and the
+  // plaintext length differs from the on-disk ciphertext size.
+  return new Response(plaintext, {
     headers: {
-      "Content-Type": rec.mime ?? "application/octet-stream",
-      "Content-Length": String(rec.size),
-      "Content-Disposition": contentDisposition(rec.original_name),
+      "Content-Type": header.mime ?? "application/octet-stream",
+      "Content-Disposition": contentDisposition(header.name),
       "Cache-Control": "private, no-store",
     },
   });
 }
 
-// POST verifies a password and, on success, sets a cookie scoped to this share's
-// download path. The client then triggers the GET to stream the file natively.
+// POST authorizes a download: it validates the credential (password or link
+// key), and on success sets the short-lived cookie and returns the real
+// filename (decrypted from the file header) so the page can show it. The client
+// then triggers the GET to stream the file natively.
 export async function POST(
   req: NextRequest,
   { params }: { params: { slug: string } },
@@ -80,27 +143,60 @@ export async function POST(
   if (!rec || isExpired(rec)) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  if (!rec.password_hash) {
-    return NextResponse.json({ ok: true }); // not protected, nothing to verify
-  }
 
-  let password = "";
+  let cred: AuthBody = {};
   try {
-    password = ((await req.json()) as { password?: string }).password ?? "";
+    const text = await req.text();
+    if (text) cred = JSON.parse(text) as AuthBody;
   } catch {
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
 
-  if (!verifyPassword(password, rec.password_hash)) {
-    return NextResponse.json({ error: "wrong password" }, { status: 401 });
+  const setCookie = (res: NextResponse, value: string) =>
+    res.cookies.set(COOKIE, value, {
+      path: `/api/d/${rec.slug}`,
+      httpOnly: true,
+      sameSite: "strict",
+      maxAge: 300,
+    });
+
+  // Plaintext blob (legacy): verify password if set, then authorize the GET with
+  // the hash-derived token (NOT a bare marker — see tokenMatches).
+  if (!rec.encrypted) {
+    if (rec.password_hash) {
+      if (!verifyPassword(cred.password ?? "", rec.password_hash)) {
+        return NextResponse.json({ error: "wrong password" }, { status: 401 });
+      }
+    }
+    const res = NextResponse.json({ ok: true, name: rec.original_name });
+    if (rec.password_hash) setCookie(res, downloadToken(rec.password_hash));
+    return res;
   }
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE, downloadToken(rec.password_hash), {
-    path: `/api/d/${rec.slug}`,
-    httpOnly: true,
-    sameSite: "strict",
-    maxAge: 300,
-  });
+  const key = await resolveKey(rec, cred);
+  if (!key) {
+    const status = rec.enc_mode === "password" ? 401 : 422;
+    return NextResponse.json(
+      {
+        error:
+          rec.enc_mode === "password" ? "wrong password" : "key required",
+      },
+      { status },
+    );
+  }
+
+  // Decrypt just the header to learn the filename (and confirm the key works)
+  // before authorizing the stream.
+  let name: string;
+  try {
+    const out = await decryptStream(fileStream(rec.id), key);
+    name = out.header.name;
+    await out.plaintext.cancel();
+  } catch {
+    return NextResponse.json({ error: "could not decrypt" }, { status: 401 });
+  }
+
+  const res = NextResponse.json({ ok: true, name });
+  setCookie(res, key);
   return res;
 }
