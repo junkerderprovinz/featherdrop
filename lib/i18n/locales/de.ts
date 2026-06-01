@@ -16,7 +16,7 @@ export const de: Translation = {
   "settings.passwordPlaceholder": "Leer lassen für keins",
   "settings.upload": "Hochladen & teilen",
 
-  "result.ready": "Dein Freigabe-Link ist bereit",
+  "result.ready": "Dein Link ist bereit",
   "result.copy": "Link kopieren",
   "result.copied": "Kopiert",
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.2] — 2026-06-01
+
+### Changed
+
+- **Reactive edge on the result & download windows** (`app/globals.css`): the
+  `.fd-glass` border lights up with a soft gold glow on hover, like the drop zone.
+- **Result heading wording**: now "Your link is ready" / "Dein Link ist bereit"
+  (`lib/i18n/locales/en.ts`, `lib/i18n/locales/de.ts`).
+
+### Fixed
+
+- **Init-log banner** (`print-banner.sh`): removed the stray separator rule above
+  the ASCII banner and added spacing before the title block.
+
 ## [2.5.1] — 2026-06-01
 
 ### Changed

@@ -10,12 +10,12 @@ BANNER_FILE="/usr/local/share/banner.txt"
 SEP="$(printf '─%.0s' $(seq 1 67))"
 
 echo ""
-echo "  ${SEP}"
 
 if [ -f "${BANNER_FILE}" ]; then
     cat "${BANNER_FILE}"
-    # The shared banner file has no trailing newline, so add one — otherwise the
-    # separator below fuses onto the banner's last line in the container log.
+    # The shared banner file has no trailing newline; add blank lines so the
+    # banner gets breathing room before the title block (no leading rule above).
+    echo ""
     echo ""
 else
     echo ""

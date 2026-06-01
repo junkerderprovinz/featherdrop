@@ -19,7 +19,7 @@ export const en = {
   "settings.passwordPlaceholder": "Leave empty for none",
   "settings.upload": "Upload & share",
 
-  "result.ready": "Your share link is ready",
+  "result.ready": "Your link is ready",
   "result.copy": "Copy link",
   "result.copied": "Copied",
   "result.copyFailed": "Could not copy — select the link and copy it manually.",
