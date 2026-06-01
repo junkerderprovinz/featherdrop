@@ -31,10 +31,12 @@ function isExpired(rec: FileRecord, now = Date.now()): boolean {
 }
 
 // RFC 5987 filename so non-ASCII names survive the Content-Disposition header.
-function contentDisposition(name: string): string {
+// `inline` renders the file in the browser (preview) instead of downloading it.
+function contentDisposition(name: string, inline = false): string {
   const ascii = name.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "'");
   const encoded = encodeURIComponent(name);
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+  const kind = inline ? "inline" : "attachment";
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
 function fileStream(id: string, deleteAfter = false): ReadableStream<Uint8Array> {
@@ -100,12 +102,28 @@ export async function GET(
 
   const cookie = req.cookies.get(COOKIE)?.value;
 
+  // Preview mode (?inline=1): render the file in the browser without counting a
+  // download. Allowed ONLY for unlimited shares — otherwise a preview would
+  // bypass the download limit (a limited share falls through to a real download).
+  const wantInline =
+    req.nextUrl.searchParams.get("inline") === "1" && rec.max_downloads === null;
+
   // Plaintext blob (legacy): the password gate requires the cookie to carry the
   // unforgeable, hash-derived download token — not merely be present, or anyone
   // with the public slug could send any value and bypass the password.
   if (!rec.encrypted) {
     if (rec.password_hash && !tokenMatches(cookie, rec.password_hash)) {
       return NextResponse.json({ error: "password required" }, { status: 403 });
+    }
+    if (wantInline) {
+      return new Response(fileStream(rec.id), {
+        headers: {
+          "Content-Type": rec.mime ?? "application/octet-stream",
+          "Content-Length": String(rec.size),
+          "Content-Disposition": contentDisposition(rec.original_name, true),
+          "Cache-Control": "private, no-store",
+        },
+      });
     }
     const dl = registerDownload(rec.slug);
     if (!dl.allowed) {
@@ -141,6 +159,17 @@ export async function GET(
   } catch {
     rs.destroy();
     return NextResponse.json({ error: "could not decrypt" }, { status: 401 });
+  }
+
+  if (wantInline) {
+    // Preview an unlimited encrypted share: stream decrypted, inline, no count.
+    return new Response(plaintext, {
+      headers: {
+        "Content-Type": header.mime ?? "application/octet-stream",
+        "Content-Disposition": contentDisposition(header.name, true),
+        "Cache-Control": "private, no-store",
+      },
+    });
   }
 
   const dl = registerDownload(rec.slug);
@@ -200,7 +229,11 @@ export async function POST(
         return NextResponse.json({ error: "wrong password" }, { status: 401 });
       }
     }
-    const res = NextResponse.json({ ok: true, name: rec.original_name });
+    const res = NextResponse.json({
+      ok: true,
+      name: rec.original_name,
+      mime: rec.mime,
+    });
     if (rec.password_hash) setCookie(res, downloadToken(rec.password_hash));
     return res;
   }
@@ -217,18 +250,20 @@ export async function POST(
     );
   }
 
-  // Decrypt just the header to learn the filename (and confirm the key works)
-  // before authorizing the stream.
+  // Decrypt just the header to learn the filename + type (and confirm the key
+  // works) before authorizing the stream.
   let name: string;
+  let mime: string | null;
   try {
     const out = await decryptStream(fileStream(rec.id), key);
     name = out.header.name;
+    mime = out.header.mime;
     await out.plaintext.cancel();
   } catch {
     return NextResponse.json({ error: "could not decrypt" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true, name });
+  const res = NextResponse.json({ ok: true, name, mime });
   setCookie(res, key);
   return res;
 }

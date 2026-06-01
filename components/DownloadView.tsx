@@ -27,6 +27,7 @@ interface DownloadViewProps {
   slug: string;
   name: string | null; // null when the server can't see it (encrypted)
   size: number;
+  mime: string | null; // content type, used to offer an inline image/PDF preview
   expiresAt: number | null;
   hasPassword: boolean;
   linkMode: boolean; // encrypted, key carried in the URL #fragment
@@ -38,6 +39,7 @@ export function DownloadView({
   slug,
   name,
   size,
+  mime,
   expiresAt,
   hasPassword,
   linkMode,
@@ -133,6 +135,18 @@ export function DownloadView({
 
   const missingKey = linkMode && !linkKey;
 
+  // Inline preview for images/PDFs — only for unlimited, password-less shares
+  // (a preview would otherwise consume or require a counted download). The
+  // preview GET (?inline=1) never counts and is refused for limited shares.
+  const previewable =
+    !!mime && (mime.startsWith("image/") || mime === "application/pdf");
+  const canPreview =
+    previewable &&
+    downloadsLeft === null &&
+    !hasPassword &&
+    !missingKey &&
+    revealedName !== null;
+
   return (
     <Center style={{ minHeight: "100vh" }} p="md">
       <Box pos="absolute" top={16} right={16}>
@@ -184,6 +198,41 @@ export function DownloadView({
               </Text>
             )}
           </Stack>
+
+          {canPreview && (
+            <Box
+              w="100%"
+              style={{
+                borderRadius: "var(--mantine-radius-md)",
+                overflow: "hidden",
+              }}
+            >
+              {mime?.startsWith("image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`${downloadUrl}?inline=1`}
+                  alt={revealedName ?? ""}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    maxHeight: 360,
+                    objectFit: "contain",
+                  }}
+                />
+              ) : (
+                <embed
+                  src={`${downloadUrl}?inline=1`}
+                  type="application/pdf"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: 360,
+                    border: "none",
+                  }}
+                />
+              )}
+            </Box>
+          )}
 
           {missingKey ? (
             <Text c="red" ta="center" size="sm">

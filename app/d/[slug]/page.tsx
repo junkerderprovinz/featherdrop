@@ -34,6 +34,7 @@ export default function DownloadPage({
       slug={rec.slug}
       name={serverName}
       size={rec.size}
+      mime={rec.mime}
       expiresAt={rec.expires_at}
       hasPassword={rec.password_hash !== null}
       linkMode={linkMode}
