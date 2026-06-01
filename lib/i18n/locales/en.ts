@@ -4,14 +4,14 @@
 //
 // Interpolation uses i18next syntax: {{label}}, {{count}}.
 export const en = {
-  "app.tagline": "Drop a file, share a link.",
-  "app.subtitle": "Encrypted, and gone when it expires.",
+  "app.tagline": "Share a file securely — no account needed.",
+  "app.subtitle": "Encrypted at rest and automatically deleted when the link expires.",
   "theme.toggle": "Toggle theme",
   "language.label": "Language",
 
-  "drop.drag": "Drag a file here",
-  "drop.browse": "or click to browse",
-  "drop.replace": "drop another to replace",
+  "drop.drag": "Drag a file here to upload",
+  "drop.browse": "or click to choose one",
+  "drop.replace": "drop another file to replace it",
 
   "settings.title": "Share options",
   "settings.expiresAfter": "Expires after",
@@ -19,7 +19,7 @@ export const en = {
   "settings.passwordPlaceholder": "Leave empty for none",
   "settings.upload": "Upload & share",
 
-  "result.ready": "Ready to share",
+  "result.ready": "Your share link is ready",
   "result.copy": "Copy link",
   "result.copied": "Copied",
   "result.copyFailed": "Could not copy — select the link and copy it manually.",
@@ -27,10 +27,10 @@ export const en = {
   "result.neverExpires": "Never expires",
   "result.expiresAfter": "Expires after {{label}}",
 
-  "download.protected": "This file is password protected",
+  "download.protected": "This file is password-protected",
   "download.passwordPlaceholder": "Enter password",
   "download.unlock": "Unlock & download",
-  "download.download": "Download",
+  "download.download": "Download file",
   "download.wrongPassword": "Wrong password",
   "download.failed": "Download failed",
   "download.encryptedFile": "Encrypted file",

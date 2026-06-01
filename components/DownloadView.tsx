@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ActionIcon,
@@ -151,14 +152,16 @@ export function DownloadView({
           </Tooltip>
         </Group>
       </Box>
-      <Paper withBorder radius="xl" p="xl" maw={460} w="100%">
+      <Paper radius="lg" p="xl" maw={460} w="100%" className="fd-glass">
         <Stack align="center" gap="lg">
-          <Group gap={6}>
-            <Logo size={22} />
-            <Text fw={800} size="lg">
-              featherdrop
-            </Text>
-          </Group>
+          <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <Group gap={6} style={{ cursor: "pointer" }}>
+              <Logo size={22} />
+              <Text fw={800} size="lg">
+                featherdrop
+              </Text>
+            </Group>
+          </Link>
 
           <Stack align="center" gap={2}>
             <Text fw={700} size="xl" ta="center" lineClamp={2}>

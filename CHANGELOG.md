@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-06-01
+
+### Added
+
+- **Confetti on a finished upload.** When an upload reaches 100% and the share
+  link appears, a short gold/violet confetti burst celebrates it
+  (`components/ResultPanel.tsx`, `canvas-confetti`, lazily loaded; disabled for
+  reduced-motion users).
+
+### Changed
+
+- **One consistent floating-glass design.** The result panel and the download
+  page now use the same frosted `.fd-glass` surface as the drop zone
+  (`components/ResultPanel.tsx`, `components/DownloadView.tsx`).
+- **Logo returns to the start.** Clicking the logo resets the upload on the home
+  page and links home from a download page (`app/page.tsx`,
+  `components/DownloadView.tsx`).
+- **Clearer, more professional copy.** Headline, subtitle, drop zone, result and
+  download wording rewritten to state plainly what featherdrop does (encrypted
+  at rest, auto-deleted on expiry, no account). English + German refreshed
+  (`lib/i18n/locales/en.ts`, `lib/i18n/locales/de.ts`).
+
 ## [2.2.0] — 2026-06-01
 
 ### Added

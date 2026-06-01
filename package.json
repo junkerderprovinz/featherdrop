@@ -1,6 +1,6 @@
 {
   "name": "featherdrop",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "description": "A clean, login-free, self-hosted file sharer — drop a file, set an expiry, share a link.",
@@ -22,6 +22,7 @@
     "@tus/server": "^1.8.0",
     "age-encryption": "^0.3.0",
     "better-sqlite3": "^11.3.0",
+    "canvas-confetti": "^1.9.4",
     "flag-icons": "^7.5.0",
     "i18next": "^26.3.0",
     "nanoid": "^5.0.7",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20.16.10",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
