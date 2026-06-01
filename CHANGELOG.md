@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-06-01
+
+### Changed
+
+- Banner now follows the house style guide exactly: a **white `#ffffff`
+  1600×500 card with the gold feather centered and no text**, replacing the
+  transparent emblem crop that shipped in 1.0.2.
+- README hero reordered to the canonical style-guide sequence: centered `<h1>`
+  → tagline (a featherdrop-specific exception) → banner → badge row →
+  description. The full description moved back **below** the badges.
+
 ## [1.0.2] — 2026-06-01
 
 ### Changed
@@ -14,11 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New **featherdrop logo** — a redrawn, more flowing gold feather. It replaces
   the previous mark everywhere it appears: the header, the download page, the
   not-found page, and the `.github/assets/featherdrop-logo.svg` source art.
-- README hero reworked to the style guide. The centered `featherdrop` heading
-  and the tagline now sit **above** the banner; the banner image itself is
-  **logo-only** (the wordmark moved out of the image and into the heading text).
-- Regenerated `.github/assets/featherdrop-banner.png` (logo-only, no wordmark)
-  and `.github/assets/icon.png` (512×512) from the new logo.
+- Regenerated `.github/assets/featherdrop-banner.png` and
+  `.github/assets/icon.png` (512×512) from the new logo.
 
 ### Added
 

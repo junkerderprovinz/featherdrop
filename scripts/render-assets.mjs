@@ -1,12 +1,12 @@
 // One-off asset renderer (run manually; @resvg/resvg-js is installed --no-save,
 // not a project dependency). Produces:
-//   .github/assets/featherdrop-banner.svg  — logo-only emblem (no text), the
-//                                            feather tightly cropped at its
-//                                            natural aspect with a little padding
-//   .github/assets/featherdrop-banner.png  — rendered emblem
+//   .github/assets/featherdrop-banner.svg  — canonical README banner: a white
+//                                            1600x500 card with the feather
+//                                            centered, no text (house style guide)
+//   .github/assets/featherdrop-banner.png  — rendered banner
 //   .github/assets/icon.png                — 512x512 square template icon
-// Both crops are derived from the path's real bounding box, so the feather is
-// framed correctly regardless of the glyph's internal offset.
+// Placement is derived from the path's real bounding box, so the feather is
+// centered correctly regardless of the glyph's internal offset.
 //
 // Usage:  npm install --no-save @resvg/resvg-js && node scripts/render-assets.mjs
 import { Resvg } from "@resvg/resvg-js";
@@ -40,12 +40,21 @@ const bb = probe.getBBox();
 if (!bb) throw new Error("could not compute bbox");
 const { x, y, width: w, height: h } = bb;
 
-// --- Banner emblem: the feather tightly cropped at its natural aspect, with
-//     ~8% padding all round so the strokes never touch the edge. ---
-const pad = Math.max(w, h) * 0.08;
-const emblemSvg = wrap(x - pad, y - pad, w + pad * 2, h + pad * 2);
-writeFileSync(new URL("featherdrop-banner.svg", ASSETS), emblemSvg);
-writeFileSync(new URL("featherdrop-banner.png", ASSETS), renderPng(emblemSvg, 600));
+// --- Banner: canonical 1600x500 white card, feather centered, no text
+//     (house style guide: white #ffffff background, logo only). ---
+const BW = 1600;
+const BH = 500;
+const s = (BH * 0.78) / h; // fit the feather to ~78% of the banner height
+const tx = (BW - w * s) / 2 - x * s; // center the bbox horizontally
+const ty = (BH - h * s) / 2 - y * s; // center the bbox vertically
+const bannerSvg =
+  `<?xml version="1.0" encoding="UTF-8"?>\n` +
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BW} ${BH}" width="${BW}" height="${BH}" role="img" aria-label="featherdrop">\n` +
+  `  <rect width="${BW}" height="${BH}" fill="#ffffff"/>\n` +
+  `  <g transform="translate(${round(tx)},${round(ty)}) scale(${round(s)})">${inner}</g>\n` +
+  `</svg>\n`;
+writeFileSync(new URL("featherdrop-banner.svg", ASSETS), bannerSvg);
+writeFileSync(new URL("featherdrop-banner.png", ASSETS), renderPng(bannerSvg, BW));
 
 // --- Icon: square, feather centered with 10% padding, 512x512 ---
 const side = Math.max(w, h) * 1.2;
@@ -53,5 +62,5 @@ const iconSvg = wrap(x - (side - w) / 2, y - (side - h) / 2, side, side);
 writeFileSync(new URL("icon.png", ASSETS), renderPng(iconSvg, 512));
 
 console.log(`bbox x=${round(x)} y=${round(y)} w=${round(w)} h=${round(h)}`);
-console.log(`emblem ${round(w + pad * 2)}x${round(h + pad * 2)} -> 600px png`);
+console.log(`banner ${BW}x${BH} white, feather scale=${round(s)} -> ${BW}px png`);
 console.log("wrote featherdrop-banner.svg, featherdrop-banner.png, icon.png");
