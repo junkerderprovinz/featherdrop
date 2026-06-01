@@ -68,4 +68,14 @@
     Display="always"
     Required="false"
     Mask="false">0</Config>
+  <Config
+    Name="Encrypt Uploads"
+    Target="ENCRYPT_UPLOADS"
+    Default="true"
+    Mode=""
+    Description="Encrypt new uploads at rest with age. true (recommended) = files are encrypted on disk; the filename is hidden too. false = store plaintext. Existing files keep their stored mode."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false">true</Config>
 </Container>
