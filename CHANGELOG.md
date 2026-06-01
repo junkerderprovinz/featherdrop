@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.2] — 2026-06-01
+
+### Changed
+
+- **i18n polish for the download-limit strings.** The "downloads left" string is
+  phrased count-neutral so it reads correctly for any count in every language
+  (avoiding i18next CLDR plural pitfalls where missing `_few`/`_many` forms fell
+  back to English), and `settings.limitDownloads` / `settings.maxDownloads` /
+  `download.downloadsLeft` are now properly translated across all 26 locales
+  (24 were English placeholders).
+
 ## [2.8.1] — 2026-06-01
 
 ### Security

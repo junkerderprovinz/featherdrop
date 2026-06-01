@@ -14,8 +14,8 @@ export const da: Translation = {
   "settings.expiresAfter": "Udløber efter",
   "settings.password": "Adgangskode (valgfri)",
   "settings.passwordPlaceholder": "Lad stå tom for ingen",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Begræns downloads",
+  "settings.maxDownloads": "Maks. downloads",
   "settings.upload": "Upload og del",
 
   "result.ready": "Klar til deling",
@@ -35,7 +35,7 @@ export const da: Translation = {
   "download.failed": "Download mislykkedes",
 
   "download.encryptedFile": "Krypteret fil",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Resterende downloads: {{count}}",
 
   "download.missingKey": "Dette link mangler sin dekrypteringsnøgle — det er måske kopieret ufuldstændigt.",
 

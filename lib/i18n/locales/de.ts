@@ -36,7 +36,7 @@ export const de: Translation = {
 
   "download.encryptedFile": "Verschlüsselte Datei",
 
-  "download.downloadsLeft": "Noch {{count}} Downloads",
+  "download.downloadsLeft": "Verbleibende Downloads: {{count}}",
 
   "download.missingKey": "Diesem Link fehlt der Entschlüsselungs-Schlüssel — er wurde vielleicht unvollständig kopiert.",
 

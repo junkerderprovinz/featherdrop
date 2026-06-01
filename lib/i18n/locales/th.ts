@@ -14,8 +14,8 @@ export const th: Translation = {
   "settings.expiresAfter": "หมดอายุหลังจาก",
   "settings.password": "รหัสผ่าน (ไม่บังคับ)",
   "settings.passwordPlaceholder": "เว้นว่างไว้หากไม่ต้องการ",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "จำกัดจำนวนดาวน์โหลด",
+  "settings.maxDownloads": "ดาวน์โหลดสูงสุด",
   "settings.upload": "อัปโหลดและแชร์",
 
   "result.ready": "พร้อมแชร์",
@@ -35,7 +35,7 @@ export const th: Translation = {
   "download.failed": "ดาวน์โหลดล้มเหลว",
 
   "download.encryptedFile": "ไฟล์ที่เข้ารหัส",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "ดาวน์โหลดที่เหลือ: {{count}}",
 
   "download.missingKey": "ลิงก์นี้ไม่มีคีย์ถอดรหัส — อาจถูกคัดลอกมาไม่ครบ",
 

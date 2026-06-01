@@ -14,8 +14,8 @@ export const ko: Translation = {
   "settings.expiresAfter": "만료 시점",
   "settings.password": "비밀번호 (선택)",
   "settings.passwordPlaceholder": "없으면 비워 두세요",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "다운로드 횟수 제한",
+  "settings.maxDownloads": "최대 다운로드 횟수",
   "settings.upload": "업로드 및 공유",
 
   "result.ready": "공유 준비 완료",
@@ -35,7 +35,7 @@ export const ko: Translation = {
   "download.failed": "다운로드 실패",
 
   "download.encryptedFile": "암호화된 파일",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "남은 다운로드 횟수: {{count}}",
 
   "download.missingKey": "이 링크에 복호화 키가 없습니다. 불완전하게 복사되었을 수 있습니다.",
 

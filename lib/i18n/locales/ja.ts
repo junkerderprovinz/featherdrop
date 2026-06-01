@@ -14,8 +14,8 @@ export const ja: Translation = {
   "settings.expiresAfter": "有効期限",
   "settings.password": "パスワード（任意）",
   "settings.passwordPlaceholder": "なしの場合は空欄",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "ダウンロード回数を制限",
+  "settings.maxDownloads": "最大ダウンロード回数",
   "settings.upload": "アップロードして共有",
 
   "result.ready": "共有の準備完了",
@@ -35,7 +35,7 @@ export const ja: Translation = {
   "download.failed": "ダウンロードに失敗しました",
 
   "download.encryptedFile": "暗号化されたファイル",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "残りダウンロード回数: {{count}}",
 
   "download.missingKey": "このリンクには復号鍵がありません。途中までしかコピーされていない可能性があります。",
 

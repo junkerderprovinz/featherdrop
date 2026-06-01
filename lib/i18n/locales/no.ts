@@ -14,8 +14,8 @@ export const no: Translation = {
   "settings.expiresAfter": "Utløper etter",
   "settings.password": "Passord (valgfritt)",
   "settings.passwordPlaceholder": "La stå tomt for ingen",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Begrens nedlastinger",
+  "settings.maxDownloads": "Maks. nedlastinger",
   "settings.upload": "Last opp og del",
 
   "result.ready": "Klar til deling",
@@ -35,7 +35,7 @@ export const no: Translation = {
   "download.failed": "Nedlasting mislyktes",
 
   "download.encryptedFile": "Kryptert fil",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Gjenværende nedlastinger: {{count}}",
 
   "download.missingKey": "Denne lenken mangler dekrypteringsnøkkelen — den kan ha blitt kopiert ufullstendig.",
 

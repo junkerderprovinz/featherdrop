@@ -14,8 +14,8 @@ export const pl: Translation = {
   "settings.expiresAfter": "Wygasa po",
   "settings.password": "Hasło (opcjonalne)",
   "settings.passwordPlaceholder": "Pozostaw puste, aby brak",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Ogranicz pobrania",
+  "settings.maxDownloads": "Maks. pobrań",
   "settings.upload": "Prześlij i udostępnij",
 
   "result.ready": "Gotowe do udostępnienia",
@@ -35,7 +35,7 @@ export const pl: Translation = {
   "download.failed": "Pobieranie nie powiodło się",
 
   "download.encryptedFile": "Zaszyfrowany plik",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Pozostałe pobrania: {{count}}",
 
   "download.missingKey": "Temu linkowi brakuje klucza deszyfrującego — mógł zostać skopiowany niekompletnie.",
 

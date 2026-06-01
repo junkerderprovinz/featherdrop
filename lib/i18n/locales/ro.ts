@@ -14,8 +14,8 @@ export const ro: Translation = {
   "settings.expiresAfter": "Expiră după",
   "settings.password": "Parolă (opțional)",
   "settings.passwordPlaceholder": "Lasă gol pentru niciuna",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Limitează descărcările",
+  "settings.maxDownloads": "Descărcări maxime",
   "settings.upload": "Încarcă și partajează",
 
   "result.ready": "Gata de partajare",
@@ -35,7 +35,7 @@ export const ro: Translation = {
   "download.failed": "Descărcarea a eșuat",
 
   "download.encryptedFile": "Fișier criptat",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Descărcări rămase: {{count}}",
 
   "download.missingKey": "Acestui link îi lipsește cheia de decriptare — poate a fost copiat incomplet.",
 
