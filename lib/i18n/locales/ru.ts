@@ -14,6 +14,8 @@ export const ru: Translation = {
   "settings.expiresAfter": "Истекает через",
   "settings.password": "Пароль (необязательно)",
   "settings.passwordPlaceholder": "Оставьте пустым, чтобы без пароля",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "Загрузить и поделиться",
 
   "result.ready": "Готово к отправке",
@@ -33,6 +35,7 @@ export const ru: Translation = {
   "download.failed": "Не удалось скачать",
 
   "download.encryptedFile": "Зашифрованный файл",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "В этой ссылке нет ключа расшифровки — возможно, она скопирована не полностью.",
 

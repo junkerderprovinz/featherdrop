@@ -3,10 +3,12 @@
 import {
   Button,
   Divider,
+  NumberInput,
   Paper,
   PasswordInput,
   Select,
   Stack,
+  Switch,
   Text,
 } from "@mantine/core";
 import { IconLock, IconSend } from "@tabler/icons-react";
@@ -18,6 +20,8 @@ interface SettingsPanelProps {
   onExpiryChange: (value: string) => void;
   password: string;
   onPasswordChange: (value: string) => void;
+  maxDownloads: number | null;
+  onMaxDownloadsChange: (value: number | null) => void;
   onUpload: () => void;
   uploading: boolean;
 }
@@ -29,6 +33,8 @@ export function SettingsPanel({
   onExpiryChange,
   password,
   onPasswordChange,
+  maxDownloads,
+  onMaxDownloadsChange,
   onUpload,
   uploading,
 }: SettingsPanelProps) {
@@ -64,6 +70,30 @@ export function SettingsPanel({
           onChange={(e) => onPasswordChange(e.currentTarget.value)}
           disabled={uploading}
         />
+
+        {/* Optional download limit / burn-after-download. The switch toggles
+            between unlimited (null) and a capped count (defaulting to 1). */}
+        <Switch
+          label={t("settings.limitDownloads")}
+          checked={maxDownloads !== null}
+          onChange={(e) =>
+            onMaxDownloadsChange(e.currentTarget.checked ? 1 : null)
+          }
+          disabled={uploading}
+        />
+        {maxDownloads !== null && (
+          <NumberInput
+            label={t("settings.maxDownloads")}
+            min={1}
+            max={10000}
+            clampBehavior="strict"
+            value={maxDownloads ?? 1}
+            onChange={(v) =>
+              onMaxDownloadsChange(typeof v === "number" && v >= 1 ? v : 1)
+            }
+            disabled={uploading}
+          />
+        )}
 
         <Divider />
 

@@ -15,6 +15,7 @@ import {
 } from "@/lib/config";
 import { isSafeId, newSlug } from "@/lib/ids";
 import { isUploadComplete } from "@/lib/upload";
+import { parseMaxDownloads } from "@/lib/downloads";
 import { chooseEncMode } from "@/lib/encmode";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
 import { hashPassword } from "@/lib/password";
@@ -27,6 +28,7 @@ interface FinalizeBody {
   uploadId?: string;
   expiry?: string;
   password?: string;
+  maxDownloads?: number; // optional download limit; null/absent = unlimited
 }
 
 // Read the tus upload's metadata sidecar (<id>.json, written by @tus/file-store's
@@ -171,6 +173,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     password_hash: password ? hashPassword(password) : null,
     expires_at: expiryToTimestamp(expiry || DEFAULT_EXPIRY),
     created_at: Date.now(),
+    max_downloads: parseMaxDownloads(body.maxDownloads),
     encrypted,
     enc_mode: encMode,
     enc_key_wrapped: encKeyWrapped,

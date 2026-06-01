@@ -14,6 +14,8 @@ export const el: Translation = {
   "settings.expiresAfter": "Λήγει μετά από",
   "settings.password": "Κωδικός (προαιρετικός)",
   "settings.passwordPlaceholder": "Άφησέ το κενό για κανέναν",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "Μεταφόρτωση & κοινή χρήση",
 
   "result.ready": "Έτοιμο για κοινή χρήση",
@@ -33,6 +35,7 @@ export const el: Translation = {
   "download.failed": "Η λήψη απέτυχε",
 
   "download.encryptedFile": "Κρυπτογραφημένο αρχείο",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "Από αυτόν τον σύνδεσμο λείπει το κλειδί αποκρυπτογράφησης — ίσως αντιγράφηκε ελλιπώς.",
 

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { stat, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { MASTER_KEY, UPLOADS_DIR } from "@/lib/config";
 import {
   getFileBySlug,
-  incrementDownloadCount,
+  registerDownload,
   type FileRecord,
 } from "@/server/db";
 import { verifyPassword } from "@/lib/password";
@@ -37,10 +37,14 @@ function contentDisposition(name: string): string {
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
-function fileStream(id: string): ReadableStream<Uint8Array> {
-  return Readable.toWeb(
-    createReadStream(join(UPLOADS_DIR, id)),
-  ) as ReadableStream<Uint8Array>;
+function fileStream(id: string, deleteAfter = false): ReadableStream<Uint8Array> {
+  const path = join(UPLOADS_DIR, id);
+  const rs = createReadStream(path);
+  if (deleteAfter) {
+    // Burn-after-download: remove the blob once it has been fully read/streamed.
+    rs.on("close", () => void rm(path, { force: true }));
+  }
+  return Readable.toWeb(rs) as ReadableStream<Uint8Array>;
 }
 
 // Resolve the per-file age key for an encrypted record:
@@ -103,8 +107,11 @@ export async function GET(
     if (rec.password_hash && !tokenMatches(cookie, rec.password_hash)) {
       return NextResponse.json({ error: "password required" }, { status: 403 });
     }
-    incrementDownloadCount(rec.slug);
-    return new Response(fileStream(rec.id), {
+    const dl = registerDownload(rec.slug);
+    if (!dl.allowed) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+    return new Response(fileStream(rec.id, dl.burned), {
       headers: {
         "Content-Type": rec.mime ?? "application/octet-stream",
         "Content-Length": String(rec.size),
@@ -118,17 +125,32 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 403 });
   }
 
+  // Decrypt the header first to prove the cookie's key is valid, THEN count the
+  // download — so a bogus cookie can't burn through a limited share's downloads.
+  const path = join(UPLOADS_DIR, rec.id);
+  const rs = createReadStream(path);
   let header: { name: string; mime: string | null };
   let plaintext: ReadableStream<Uint8Array>;
   try {
-    const out = await decryptStream(fileStream(rec.id), cookie);
+    const out = await decryptStream(
+      Readable.toWeb(rs) as ReadableStream<Uint8Array>,
+      cookie,
+    );
     header = out.header;
     plaintext = out.plaintext;
   } catch {
+    rs.destroy();
     return NextResponse.json({ error: "could not decrypt" }, { status: 401 });
   }
 
-  incrementDownloadCount(rec.slug);
+  const dl = registerDownload(rec.slug);
+  if (!dl.allowed) {
+    rs.destroy();
+    await plaintext.cancel();
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  // Burn-after-download: remove the blob once the stream has been fully read.
+  if (dl.burned) rs.on("close", () => void rm(path, { force: true }));
 
   // No Content-Length: we stream the decrypted bytes without buffering and the
   // plaintext length differs from the on-disk ciphertext size.

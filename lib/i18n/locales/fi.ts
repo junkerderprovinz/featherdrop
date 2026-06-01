@@ -14,6 +14,8 @@ export const fi: Translation = {
   "settings.expiresAfter": "Vanhenee",
   "settings.password": "Salasana (valinnainen)",
   "settings.passwordPlaceholder": "Jätä tyhjäksi, jos ei salasanaa",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "Lataa ja jaa",
 
   "result.ready": "Valmis jaettavaksi",
@@ -33,6 +35,7 @@ export const fi: Translation = {
   "download.failed": "Lataus epäonnistui",
 
   "download.encryptedFile": "Salattu tiedosto",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "Tästä linkistä puuttuu salauksenpurkuavain — se on voitu kopioida vaillinaisesti.",
 

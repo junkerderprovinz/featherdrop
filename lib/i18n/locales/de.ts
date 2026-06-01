@@ -14,6 +14,8 @@ export const de: Translation = {
   "settings.expiresAfter": "Läuft ab nach",
   "settings.password": "Passwort (optional)",
   "settings.passwordPlaceholder": "Leer lassen für keins",
+  "settings.limitDownloads": "Download-Limit",
+  "settings.maxDownloads": "Max. Downloads",
   "settings.upload": "Hochladen & teilen",
 
   "result.ready": "Dein Link ist bereit",
@@ -33,6 +35,8 @@ export const de: Translation = {
   "download.failed": "Download fehlgeschlagen",
 
   "download.encryptedFile": "Verschlüsselte Datei",
+
+  "download.downloadsLeft": "Noch {{count}} Downloads",
 
   "download.missingKey": "Diesem Link fehlt der Entschlüsselungs-Schlüssel — er wurde vielleicht unvollständig kopiert.",
 

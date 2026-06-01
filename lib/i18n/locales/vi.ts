@@ -14,6 +14,8 @@ export const vi: Translation = {
   "settings.expiresAfter": "Hết hạn sau",
   "settings.password": "Mật khẩu (tùy chọn)",
   "settings.passwordPlaceholder": "Để trống nếu không có",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "Tải lên và chia sẻ",
 
   "result.ready": "Sẵn sàng chia sẻ",
@@ -33,6 +35,7 @@ export const vi: Translation = {
   "download.failed": "Tải xuống thất bại",
 
   "download.encryptedFile": "Tệp đã mã hóa",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "Liên kết này thiếu khóa giải mã — có thể đã được sao chép không đầy đủ.",
 

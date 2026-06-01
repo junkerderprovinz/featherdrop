@@ -31,6 +31,7 @@ interface DownloadViewProps {
   hasPassword: boolean;
   linkMode: boolean; // encrypted, key carried in the URL #fragment
   serverMode: boolean; // encrypted, key wrapped with the server master key
+  downloadsLeft: number | null; // remaining downloads, or null when unlimited
 }
 
 export function DownloadView({
@@ -41,6 +42,7 @@ export function DownloadView({
   hasPassword,
   linkMode,
   serverMode,
+  downloadsLeft,
 }: DownloadViewProps) {
   const { t } = useTranslation();
   const { appName } = useBranding();
@@ -176,6 +178,11 @@ export function DownloadView({
             <Text c="dimmed" size="sm">
               {formatBytes(size)} · {expiryText}
             </Text>
+            {downloadsLeft !== null && (
+              <Text c="dimmed" size="xs">
+                {t("download.downloadsLeft", { count: downloadsLeft })}
+              </Text>
+            )}
           </Stack>
 
           {missingKey ? (
