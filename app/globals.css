@@ -28,6 +28,26 @@ body {
     radial-gradient(42rem 42rem at 96% 4%, rgba(124, 58, 237, 0.30), transparent 55%),
     radial-gradient(55rem 34rem at 50% 118%, rgba(212, 175, 55, 0.22), transparent 60%),
     radial-gradient(30rem 30rem at 78% 82%, rgba(168, 85, 247, 0.18), transparent 60%);
+  /* A very slow, subtle drift so the ambient light feels alive but never busy. */
+  animation: fd-aurora-drift 34s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes fd-aurora-drift {
+  from {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.06);
+  }
+  to {
+    transform: translate3d(1.5%, 1.5%, 0) scale(1.12);
+  }
+}
+
+/* Respect users who prefer reduced motion: hold the aurora still. */
+@media (prefers-reduced-motion: reduce) {
+  .fd-aurora {
+    animation: none;
+    transform: scale(1.06);
+  }
 }
 
 [data-mantine-color-scheme="light"] .fd-aurora {
