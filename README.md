@@ -15,8 +15,9 @@
 </p>
 
 <p align="center">
-A clean, login-free, self-hosted file sharer. Open the page, drop a file,
-set an expiry, share the link — no account, no heavyweight stack.
+<b>Drop it like it's hot.</b> 🔥<br>
+featherdrop is your own self-hosted drop zone — fling a file in, get a link out,
+watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
 </p>
 
 <br>
