@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] — 2026-06-01
+
+### Changed
+
+- **Brand wordmark in Bitter.** The "featherdrop" wordmark in the header and on
+  the download page is now set in Bitter (a humanist slab serif, SIL OFL), Medium
+  500 Italic, self-hosted via `next/font/google` (`app/fonts.ts`, applied in
+  `app/page.tsx` and `components/DownloadView.tsx`). No font file is shipped in
+  the repo; the rest of the UI keeps its sans-serif.
+
 ## [2.3.0] — 2026-06-01
 
 ### Added

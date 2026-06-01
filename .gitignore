@@ -27,3 +27,7 @@ Thumbs.db
 .env
 .env.local
 .claude/
+
+# Local font files are never committed — the wordmark uses next/font/google
+# (Bitter, OFL), self-hosted at build time. Any OTFs dropped here stay local.
+/app/fonts/

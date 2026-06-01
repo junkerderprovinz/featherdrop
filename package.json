@@ -1,6 +1,6 @@
 {
   "name": "featherdrop",
-  "version": "2.3.0",
+  "version": "2.4.1",
   "private": true,
   "type": "module",
   "description": "A clean, login-free, self-hosted file sharer — drop a file, set an expiry, share a link.",
