@@ -1,16 +1,22 @@
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
+import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
 
 import type { Metadata } from "next";
+import { cookies, headers } from "next/headers";
 import {
   ColorSchemeScript,
+  DirectionProvider,
   MantineProvider,
   mantineHtmlProps,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { theme } from "@/theme";
+import { I18nProvider } from "@/components/i18n/I18nProvider";
+import { SUPPORTED, DEFAULT_LANGUAGE, isRtl } from "@/lib/i18n/locales";
+import { COOKIE, pickLanguage } from "@/lib/i18n/detect";
 
 export const metadata: Metadata = {
   title: "featherdrop",
@@ -23,8 +29,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Resolve the UI language on the server so the page renders translated even
+  // without JS, and the first client render matches (no hydration mismatch).
+  const lang = pickLanguage(
+    cookies().get(COOKIE)?.value,
+    headers().get("accept-language"),
+    SUPPORTED,
+    DEFAULT_LANGUAGE,
+  );
+  const dir = isRtl(lang) ? "rtl" : "ltr";
+
   return (
-    <html lang="en" {...mantineHtmlProps}>
+    <html lang={lang} dir={dir} {...mantineHtmlProps}>
       <head>
         <ColorSchemeScript defaultColorScheme="auto" />
         <meta
@@ -33,10 +49,12 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <MantineProvider theme={theme} defaultColorScheme="auto">
-          <Notifications position="top-center" />
-          {children}
-        </MantineProvider>
+        <DirectionProvider initialDirection={dir} detectDirection={false}>
+          <MantineProvider theme={theme} defaultColorScheme="auto">
+            <Notifications position="top-center" />
+            <I18nProvider initialLanguage={lang}>{children}</I18nProvider>
+          </MantineProvider>
+        </DirectionProvider>
       </body>
     </html>
   );

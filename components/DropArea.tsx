@@ -7,6 +7,7 @@ import {
   IconFile,
   IconX,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { formatBytes } from "@/lib/format";
 
 interface DropAreaProps {
@@ -26,6 +27,7 @@ export function DropArea({
   fileName,
   fileSize,
 }: DropAreaProps) {
+  const { t } = useTranslation();
   return (
     <Box pos="relative" style={{ flex: 1, minWidth: rem(280) }}>
       <Dropzone
@@ -58,17 +60,17 @@ export function DropArea({
               </Text>
               {fileSize !== undefined && (
                 <Text c="dimmed" size="sm">
-                  {formatBytes(fileSize)} · drop another to replace
+                  {formatBytes(fileSize)} · {t("drop.replace")}
                 </Text>
               )}
             </Stack>
           ) : (
             <Stack align="center" gap={2}>
               <Text fw={600} size="lg">
-                Drag a file here
+                {t("drop.drag")}
               </Text>
               <Text c="dimmed" size="sm">
-                or click to browse
+                {t("drop.browse")}
               </Text>
             </Stack>
           )}

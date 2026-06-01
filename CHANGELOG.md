@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-language UI (26 languages)** — featherdrop now speaks English, German,
+  French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian,
+  Czech, Swedish, Danish, Finnish, Norwegian, Turkish, Greek, Hungarian,
+  Romanian, Japanese, Korean, Chinese, Arabic, Hebrew, Thai and Vietnamese.
+  The language is **detected from the browser** on first visit (cookie →
+  `Accept-Language` → English fallback) and resolved **on the server**, so the
+  page renders translated even without JavaScript.
+- **Flag language switcher** beside the light/dark toggle, in the header and on
+  the download page, so both uploader and recipient can change language. The
+  choice persists in a cookie.
+- **Right-to-left support** for Arabic and Hebrew via Mantine's
+  `DirectionProvider` (the whole UI mirrors, not just text).
+- Translations live in typed per-language files (`lib/i18n/locales/<code>.ts`)
+  with English as the source of truth; a compile-time type plus a runtime parity
+  test guarantee no key is ever missing or empty. Native-speaker corrections are
+  a one-file edit.
+
 ## [1.0.3] — 2026-06-01
 
 ### Changed
