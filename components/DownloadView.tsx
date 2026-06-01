@@ -157,7 +157,11 @@ export function DownloadView({
           <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
             <Group gap={6} style={{ cursor: "pointer" }}>
               <Logo size={22} />
-              <Text fw={800} size="lg">
+              <Text
+                fw={500}
+                size="lg"
+                style={{ fontFamily: "var(--font-wordmark), Georgia, serif", fontStyle: "italic" }}
+              >
                 featherdrop
               </Text>
             </Group>

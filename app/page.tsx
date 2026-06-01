@@ -123,7 +123,16 @@ export default function HomePage() {
         <UnstyledButton onClick={reset} aria-label={t("app.tagline")}>
           <Group gap="sm" style={{ cursor: "pointer" }}>
             <Logo size={40} />
-            <Title order={1} fw={800} style={{ fontSize: rem(32), letterSpacing: -1 }}>
+            <Title
+              order={1}
+              fw={500}
+              style={{
+                fontSize: rem(32),
+                letterSpacing: -1,
+                fontFamily: "var(--font-wordmark), Georgia, serif",
+                fontStyle: "italic",
+              }}
+            >
               featherdrop
             </Title>
           </Group>
