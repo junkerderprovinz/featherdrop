@@ -19,6 +19,9 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/junkerderprovinz/featherdrop
+  # Opt JS-based actions into Node 24 ahead of the 2026-06-16 forced switch,
+  # silencing the Node 20 deprecation warning on checkout/docker actions.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:

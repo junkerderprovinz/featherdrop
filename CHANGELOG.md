@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-06-01
+
+### Changed
+
+- New **featherdrop logo** — a redrawn, more flowing gold feather. It replaces
+  the previous mark everywhere it appears: the header, the download page, the
+  not-found page, and the `.github/assets/featherdrop-logo.svg` source art.
+- README hero reworked to the style guide. The centered `featherdrop` heading
+  and the tagline now sit **above** the banner; the banner image itself is
+  **logo-only** (the wordmark moved out of the image and into the heading text).
+- Regenerated `.github/assets/featherdrop-banner.png` (logo-only, no wordmark)
+  and `.github/assets/icon.png` (512×512) from the new logo.
+
+### Added
+
+- `scripts/render-assets.mjs` — a manual asset renderer that produces the banner
+  and icon from `featherdrop-logo.svg`, centering the feather via its real
+  bounding box. Uses `@resvg/resvg-js` (installed on demand, not a dependency).
+
+### Maintenance
+
+- CI workflows now opt JS-based actions into Node 24
+  (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`) ahead of GitHub's forced switch on
+  2026-06-16, clearing the Node 20 deprecation warning on the checkout and
+  Docker actions.
+
 ## [1.0.1] — 2026-06-01
 
 ### Added

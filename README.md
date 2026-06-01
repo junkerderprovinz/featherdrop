@@ -1,5 +1,13 @@
+<h1 align="center">featherdrop</h1>
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/featherdrop-banner.png" alt="featherdrop" width="100%">
+<b>Drop it like it's hot.</b> 🔥<br>
+featherdrop is your own self-hosted drop zone — fling a file in, get a link out,
+watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/featherdrop-banner.png" alt="featherdrop" width="170">
 </p>
 
 <p align="center">
@@ -12,12 +20,6 @@
   <a href="https://unraid.net"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>&nbsp;
   <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" height="36"></a>
-</p>
-
-<p align="center">
-<b>Drop it like it's hot.</b> 🔥<br>
-featherdrop is your own self-hosted drop zone — fling a file in, get a link out,
-watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
 </p>
 
 <br>

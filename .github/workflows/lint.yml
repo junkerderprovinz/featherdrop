@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # Opt JS-based actions into Node 24 ahead of the 2026-06-16 forced switch,
+  # silencing the Node 20 deprecation warning on checkout.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   eslint-typecheck:
     name: ESLint + Typecheck
