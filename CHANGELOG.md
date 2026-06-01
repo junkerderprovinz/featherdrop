@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] — 2026-06-01
+
+### Added
+
+- **Inline image/PDF preview** on the download page (`components/DownloadView.tsx`).
+  The download route serves `?inline=1` with `Content-Disposition: inline` and
+  **without** counting a download (`app/api/d/[slug]/route.ts`); the reveal POST
+  returns the MIME type. Preview is shown only for unlimited, password-less
+  shares, so it can never bypass a download limit.
+
 ## [2.7.0] — 2026-06-01
 
 ### Added
