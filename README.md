@@ -29,11 +29,12 @@ watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
 
 1. [What is this?](#1-what-is-this)
 2. [How it works](#2-how-it-works)
-3. [Quick Start on Unraid](#3-quick-start-on-unraid)
-4. [Configuration](#4-configuration)
-5. [Reverse Proxy](#5-reverse-proxy)
-6. [Local Development](#6-local-development)
-7. [Contributing / License](#7-contributing--license)
+3. [Languages](#3-languages)
+4. [Quick Start on Unraid](#4-quick-start-on-unraid)
+5. [Configuration](#5-configuration)
+6. [Reverse Proxy](#6-reverse-proxy)
+7. [Local Development](#7-local-development)
+8. [Contributing / License](#8-contributing--license)
 
 <br>
 
@@ -49,6 +50,8 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
   and a progress ring overlays the drop zone while it uploads.
 - You get a **shareable link** (and a QR code). The recipient downloads it any
   time until it expires.
+- A light/dark toggle and a **flag language picker** sit in the header — the UI
+  speaks [26 languages](#3-languages) and picks yours from the browser.
 
 What it deliberately does **not** have: user accounts, OIDC/LDAP, email, malware
 scanning, S3 backends. If you need those, use Pingvin Share — that is the point.
@@ -78,7 +81,27 @@ text, and large downloads **stream natively** (no in-browser buffering).
 
 <br>
 
-## 3. Quick Start on Unraid
+## 3. Languages
+
+featherdrop's interface ships in **26 languages**. On a visitor's first load the
+language is taken from their **browser**; a flag picker beside the light/dark
+toggle (in the header *and* on the download page) switches it, and the choice is
+remembered. Detection runs on the server, so the page is already translated
+before any JavaScript loads. Arabic and Hebrew render **right-to-left**.
+
+> 🇬🇧 English · 🇩🇪 Deutsch · 🇫🇷 Français · 🇪🇸 Español · 🇮🇹 Italiano ·
+> 🇵🇹 Português · 🇳🇱 Nederlands · 🇵🇱 Polski · 🇷🇺 Русский · 🇺🇦 Українська ·
+> 🇨🇿 Čeština · 🇸🇪 Svenska · 🇩🇰 Dansk · 🇫🇮 Suomi · 🇳🇴 Norsk · 🇹🇷 Türkçe ·
+> 🇬🇷 Ελληνικά · 🇭🇺 Magyar · 🇷🇴 Română · 🇯🇵 日本語 · 🇰🇷 한국어 · 🇨🇳 中文 ·
+> 🇸🇦 العربية · 🇮🇱 עברית · 🇹🇭 ไทย · 🇻🇳 Tiếng Việt
+
+Each language is a typed file under `lib/i18n/locales/`, with English as the
+source of truth. A native-speaker correction is a one-file edit — pull requests
+welcome.
+
+<br>
+
+## 4. Quick Start on Unraid
 
 Pull the template into Unraid via the console / SSH:
 
@@ -90,6 +113,9 @@ curl -fsSL -o /boot/config/plugins/dockerMan/templates-user/my-featherdrop.xml \
 
 Then **Docker → Add Container → featherdrop** under *User templates*. Map the
 **Data Directory** to your appdata, pick a port, hit **Apply**, open the WebUI.
+
+The template filename **must** keep the `my-` prefix (`my-featherdrop.xml`) so
+Unraid treats it as a user template.
 
 ### Plain Docker (no Unraid)
 
@@ -105,7 +131,7 @@ docker run -d \
 
 <br>
 
-## 4. Configuration
+## 5. Configuration
 
 | Variable | Default | Description |
 |---|---|---|
@@ -117,7 +143,7 @@ docker run -d \
 
 <br>
 
-## 5. Reverse Proxy
+## 6. Reverse Proxy
 
 featherdrop speaks plain HTTP on `PORT`; put TLS in front of it (Nginx Proxy
 Manager, Caddy, Traefik). Two things matter:
@@ -135,7 +161,7 @@ proxy_request_buffering off;   # stream uploads straight through
 
 <br>
 
-## 6. Local Development
+## 7. Local Development
 
 ```bash
 npm install
@@ -149,13 +175,20 @@ npm run build
 npm run start
 ```
 
+Run the test suite (pure-logic assertions, no framework needed):
+
+```bash
+npm test
+```
+
 Stack: Next.js (App Router) + Mantine v7, a small custom Node server
 (`custom-server.ts`) that mounts the tus handler beside Next, `better-sqlite3`
-for metadata. Files live under `DATA_DIR` (default `./data` in dev).
+for metadata, and `react-i18next` for the UI languages. Files live under
+`DATA_DIR` (default `./data` in dev).
 
 <br>
 
-## 7. Contributing / License
+## 8. Contributing / License
 
 Issues and pull requests welcome:
 <https://github.com/junkerderprovinz/featherdrop/issues>
