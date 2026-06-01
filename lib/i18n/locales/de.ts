@@ -19,6 +19,8 @@ export const de: Translation = {
   "result.ready": "Bereit zum Teilen",
   "result.copy": "Link kopieren",
   "result.copied": "Kopiert",
+
+  "result.copyFailed": "Kopieren fehlgeschlagen — Link markieren und manuell kopieren.",
   "result.shareAnother": "Weitere Datei teilen",
   "result.neverExpires": "Läuft nie ab",
   "result.expiresAfter": "Läuft ab nach {{label}}",

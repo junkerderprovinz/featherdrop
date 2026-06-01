@@ -19,6 +19,8 @@ export const cs: Translation = {
   "result.ready": "Připraveno ke sdílení",
   "result.copy": "Kopírovat odkaz",
   "result.copied": "Zkopírováno",
+
+  "result.copyFailed": "Kopírování se nezdařilo — označte odkaz a zkopírujte ručně.",
   "result.shareAnother": "Sdílet další soubor",
   "result.neverExpires": "Nikdy nevyprší",
   "result.expiresAfter": "Vyprší za {{label}}",

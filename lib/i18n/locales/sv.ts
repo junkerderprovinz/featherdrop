@@ -19,6 +19,8 @@ export const sv: Translation = {
   "result.ready": "Redo att dela",
   "result.copy": "Kopiera länk",
   "result.copied": "Kopierat",
+
+  "result.copyFailed": "Kunde inte kopiera — markera länken och kopiera manuellt.",
   "result.shareAnother": "Dela en annan fil",
   "result.neverExpires": "Går aldrig ut",
   "result.expiresAfter": "Går ut efter {{label}}",

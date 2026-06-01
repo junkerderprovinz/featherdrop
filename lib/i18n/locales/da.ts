@@ -19,6 +19,8 @@ export const da: Translation = {
   "result.ready": "Klar til deling",
   "result.copy": "Kopiér link",
   "result.copied": "Kopieret",
+
+  "result.copyFailed": "Kunne ikke kopiere — markér linket og kopiér manuelt.",
   "result.shareAnother": "Del en anden fil",
   "result.neverExpires": "Udløber aldrig",
   "result.expiresAfter": "Udløber efter {{label}}",

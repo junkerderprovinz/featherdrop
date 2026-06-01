@@ -19,6 +19,8 @@ export const hu: Translation = {
   "result.ready": "Megosztásra kész",
   "result.copy": "Link másolása",
   "result.copied": "Másolva",
+
+  "result.copyFailed": "Nem sikerült másolni — jelölje ki a linket és másolja kézzel.",
   "result.shareAnother": "Másik fájl megosztása",
   "result.neverExpires": "Soha nem jár le",
   "result.expiresAfter": "Lejár {{label}} után",

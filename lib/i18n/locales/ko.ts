@@ -19,6 +19,8 @@ export const ko: Translation = {
   "result.ready": "공유 준비 완료",
   "result.copy": "링크 복사",
   "result.copied": "복사됨",
+
+  "result.copyFailed": "복사하지 못했습니다 — 링크를 선택해 직접 복사하세요.",
   "result.shareAnother": "다른 파일 공유",
   "result.neverExpires": "만료되지 않음",
   "result.expiresAfter": "{{label}} 후 만료",

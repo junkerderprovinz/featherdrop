@@ -22,6 +22,7 @@ export const en = {
   "result.ready": "Ready to share",
   "result.copy": "Copy link",
   "result.copied": "Copied",
+  "result.copyFailed": "Could not copy — select the link and copy it manually.",
   "result.shareAnother": "Share another file",
   "result.neverExpires": "Never expires",
   "result.expiresAfter": "Expires after {{label}}",

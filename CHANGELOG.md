@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.2] — 2026-06-01
+
+### Fixed
+
+- **Copy-link button did nothing on plain-HTTP LAN access.** The browser's
+  Clipboard API is only available in a secure context (HTTPS / localhost), so on
+  `http://<lan-ip>:3000` it was unavailable and the copy silently failed. Copying
+  now falls back to a legacy method that works without HTTPS (`lib/clipboard.ts`),
+  and shows a hint if even that is blocked. The link input also selects on focus.
+
+### Changed
+
+- **Accent colour now matches the logo.** The primary colour is the feather's
+  gold (`#d4af37`) instead of violet — buttons, the upload progress ring and the
+  copy button all echo the brand.
+
 ## [2.1.1] — 2026-06-01
 
 ### Fixed

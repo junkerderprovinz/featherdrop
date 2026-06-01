@@ -19,6 +19,8 @@ export const th: Translation = {
   "result.ready": "พร้อมแชร์",
   "result.copy": "คัดลอกลิงก์",
   "result.copied": "คัดลอกแล้ว",
+
+  "result.copyFailed": "คัดลอกไม่สำเร็จ — เลือกลิงก์แล้วคัดลอกเอง",
   "result.shareAnother": "แชร์ไฟล์อื่น",
   "result.neverExpires": "ไม่หมดอายุ",
   "result.expiresAfter": "หมดอายุหลังจาก {{label}}",
