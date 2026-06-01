@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] — 2026-06-01
+
+### Fixed
+
+- **App failed to render — HTTP 500 on every page.** `theme.ts` was marked
+  `"use client"`, but `createAppTheme()` is called from the server component
+  `app/layout.tsx`; a client export invoked on the server is a non-callable
+  reference, so every render threw `TypeError: u is not a function` during RSC
+  serialization. The theme module is now isomorphic (no `"use client"`): the
+  server builds the Mantine theme and hands a serializable object to the client
+  `<MantineProvider>`. The bug shipped with custom branding (folded into v3.0.0)
+  and only surfaced at runtime — `next build` is green and the dev server can't
+  boot locally (native `better-sqlite3`), so it was caught by reproducing the
+  production server (`next start`) on the DB-free `/` route. Regression test
+  added (`test/theme.test.ts`).
+
 ## [3.0.0] — 2026-06-01
 
 A milestone feature release bundling the branding, sharing, preview and visual

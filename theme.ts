@@ -1,5 +1,9 @@
-"use client";
-
+// NOTE: do NOT add "use client" here. createAppTheme() is called from the server
+// component app/layout.tsx; a "use client" export imported into a Server Component
+// becomes a non-callable client reference ("u is not a function" at render). Theme
+// creation is pure data (createTheme returns a plain object), so this module is
+// isomorphic and runs on the server, producing a serializable theme for the
+// client <MantineProvider>.
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
 import { accentTuple, DEFAULT_BRANDING } from "@/lib/branding";
 
