@@ -15,7 +15,7 @@ import { theme } from "@/theme";
 export const metadata: Metadata = {
   title: "featherdrop",
   description:
-    "Drop a file, set an expiry, share a link. Self-hosted, no account needed.",
+    "Drop it like it's hot — your own self-hosted drop zone. Fling a file in, get a link out, watch it self-destruct on schedule. No accounts, no clouds.",
 };
 
 export default function RootLayout({
