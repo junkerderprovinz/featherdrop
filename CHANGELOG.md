@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-06-01
+
+### Fixed
+
+- **Uploads failed with "finalize 409" / "Freigabe konnte nicht abgeschlossen
+  werden" for every non-empty file.** The completeness check trusted the tus
+  sidecar's `offset`, which `@tus/file-store` leaves frozen at `0` (it tracks
+  progress via the live file size, not the sidecar). Finalize now judges
+  completeness from the actual on-disk byte count against the declared upload
+  length (`lib/upload.ts`, covered by tests). Sharing works again.
+
 ## [2.0.0] — 2026-06-01
 
 A major release: every uploaded file is now **encrypted at rest**, and the
