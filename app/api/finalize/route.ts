@@ -12,6 +12,7 @@ import {
   ensureDataDirs,
 } from "@/lib/config";
 import { isSafeId, newSlug } from "@/lib/ids";
+import { isUploadComplete } from "@/lib/upload";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
 import { hashPassword } from "@/lib/password";
 import { createFileRecord, getFileBySlug } from "@/server/db";
@@ -110,13 +111,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Refuse to publish an upload tus has not finished receiving — otherwise an
   // early finalize call (buggy/malicious client) would share a partial file.
+  // Judge completeness from the ACTUAL on-disk byte count (`size`) against the
+  // declared Upload-Length — NOT the sidecar's `offset`, which tus leaves frozen
+  // at 0 (see lib/upload.ts), which previously 409'd every non-empty upload.
   const sidecar = await readTusSidecar(uploadId);
-  if (
-    sidecar &&
-    typeof sidecar.size === "number" &&
-    typeof sidecar.offset === "number" &&
-    sidecar.offset < sidecar.size
-  ) {
+  if (sidecar && !isUploadComplete(size, sidecar.size)) {
     return NextResponse.json({ error: "upload not complete" }, { status: 409 });
   }
 
