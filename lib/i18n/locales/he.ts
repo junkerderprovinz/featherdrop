@@ -14,8 +14,8 @@ export const he: Translation = {
   "settings.expiresAfter": "פג אחרי",
   "settings.password": "סיסמה (אופציונלי)",
   "settings.passwordPlaceholder": "השאירו ריק עבור ללא",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "הגבלת הורדות",
+  "settings.maxDownloads": "מקסימום הורדות",
   "settings.upload": "העלאה ושיתוף",
 
   "result.ready": "מוכן לשיתוף",
@@ -35,7 +35,7 @@ export const he: Translation = {
   "download.failed": "ההורדה נכשלה",
 
   "download.encryptedFile": "קובץ מוצפן",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "הורדות שנותרו: {{count}}",
 
   "download.missingKey": "לקישור הזה חסר מפתח הפענוח — ייתכן שהועתק באופן חלקי.",
 

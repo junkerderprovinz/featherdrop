@@ -14,8 +14,8 @@ export const pt: Translation = {
   "settings.expiresAfter": "Expira após",
   "settings.password": "Palavra-passe (opcional)",
   "settings.passwordPlaceholder": "Deixe vazio para nenhuma",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Limitar transferências",
+  "settings.maxDownloads": "Transferências máx.",
   "settings.upload": "Carregar e partilhar",
 
   "result.ready": "Pronto para partilhar",
@@ -35,7 +35,7 @@ export const pt: Translation = {
   "download.failed": "Falha na transferência",
 
   "download.encryptedFile": "Ficheiro encriptado",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Transferências restantes: {{count}}",
 
   "download.missingKey": "Falta a chave de desencriptação a este link — pode ter sido copiado de forma incompleta.",
 

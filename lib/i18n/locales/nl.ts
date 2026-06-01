@@ -14,8 +14,8 @@ export const nl: Translation = {
   "settings.expiresAfter": "Verloopt na",
   "settings.password": "Wachtwoord (optioneel)",
   "settings.passwordPlaceholder": "Laat leeg voor geen",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Downloads beperken",
+  "settings.maxDownloads": "Max. downloads",
   "settings.upload": "Uploaden en delen",
 
   "result.ready": "Klaar om te delen",
@@ -35,7 +35,7 @@ export const nl: Translation = {
   "download.failed": "Downloaden mislukt",
 
   "download.encryptedFile": "Versleuteld bestand",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Resterende downloads: {{count}}",
 
   "download.missingKey": "Deze link mist zijn ontsleutelsleutel — mogelijk is hij onvolledig gekopieerd.",
 

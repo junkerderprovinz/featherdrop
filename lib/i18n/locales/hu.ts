@@ -14,8 +14,8 @@ export const hu: Translation = {
   "settings.expiresAfter": "Lejár ennyi után",
   "settings.password": "Jelszó (nem kötelező)",
   "settings.passwordPlaceholder": "Hagyd üresen, ha nincs",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Letöltések korlátozása",
+  "settings.maxDownloads": "Max. letöltések",
   "settings.upload": "Feltöltés és megosztás",
 
   "result.ready": "Megosztásra kész",
@@ -35,7 +35,7 @@ export const hu: Translation = {
   "download.failed": "A letöltés sikertelen",
 
   "download.encryptedFile": "Titkosított fájl",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Hátralévő letöltések: {{count}}",
 
   "download.missingKey": "Erről a linkről hiányzik a visszafejtő kulcs — lehet, hogy hiányosan másolták.",
 

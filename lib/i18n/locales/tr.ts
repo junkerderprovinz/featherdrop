@@ -14,8 +14,8 @@ export const tr: Translation = {
   "settings.expiresAfter": "Şu süre sonra sona erer",
   "settings.password": "Parola (isteğe bağlı)",
   "settings.passwordPlaceholder": "Hiçbiri için boş bırakın",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "İndirmeleri sınırla",
+  "settings.maxDownloads": "Maks. indirme",
   "settings.upload": "Yükle ve paylaş",
 
   "result.ready": "Paylaşıma hazır",
@@ -35,7 +35,7 @@ export const tr: Translation = {
   "download.failed": "İndirme başarısız oldu",
 
   "download.encryptedFile": "Şifreli dosya",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Kalan indirme: {{count}}",
 
   "download.missingKey": "Bu bağlantının şifre çözme anahtarı eksik — eksik kopyalanmış olabilir.",
 

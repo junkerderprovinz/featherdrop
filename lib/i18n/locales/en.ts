@@ -36,7 +36,7 @@ export const en = {
   "download.wrongPassword": "Wrong password",
   "download.failed": "Download failed",
   "download.encryptedFile": "Encrypted file",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Downloads left: {{count}}",
   "download.missingKey": "This link is missing its decryption key — it may have been copied incompletely.",
 
   "notfound.title": "Nothing here",

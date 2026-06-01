@@ -14,8 +14,8 @@ export const cs: Translation = {
   "settings.expiresAfter": "Vyprší za",
   "settings.password": "Heslo (volitelné)",
   "settings.passwordPlaceholder": "Ponechte prázdné pro žádné",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "Omezit stahování",
+  "settings.maxDownloads": "Max. stažení",
   "settings.upload": "Nahrát a sdílet",
 
   "result.ready": "Připraveno ke sdílení",
@@ -35,7 +35,7 @@ export const cs: Translation = {
   "download.failed": "Stažení selhalo",
 
   "download.encryptedFile": "Šifrovaný soubor",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "Zbývající stažení: {{count}}",
 
   "download.missingKey": "Tomuto odkazu chybí dešifrovací klíč — možná byl zkopírován neúplně.",
 

@@ -14,8 +14,8 @@ export const ar: Translation = {
   "settings.expiresAfter": "تنتهي الصلاحية بعد",
   "settings.password": "كلمة المرور (اختيارية)",
   "settings.passwordPlaceholder": "اتركها فارغة لعدم وجود كلمة مرور",
-  "settings.limitDownloads": "Limit downloads",
-  "settings.maxDownloads": "Max downloads",
+  "settings.limitDownloads": "حدّ عدد التنزيلات",
+  "settings.maxDownloads": "أقصى عدد للتنزيلات",
   "settings.upload": "ارفع وشارِك",
 
   "result.ready": "جاهز للمشاركة",
@@ -35,7 +35,7 @@ export const ar: Translation = {
   "download.failed": "فشل التنزيل",
 
   "download.encryptedFile": "ملف مشفّر",
-  "download.downloadsLeft": "{{count}} downloads left",
+  "download.downloadsLeft": "التنزيلات المتبقية: {{count}}",
 
   "download.missingKey": "هذا الرابط ينقصه مفتاح فك التشفير — ربما نُسخ بشكل غير كامل.",
 
