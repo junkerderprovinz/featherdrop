@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] — 2026-06-01
+
+### Added
+
+- **`CONFIG_DIR` — separate database volume.** The SQLite metadata database can
+  live on its own volume, apart from the bulk uploads (`lib/config.ts`). Map
+  `DATA_DIR` (`/data`) for files and `CONFIG_DIR` (`/config`) for the database;
+  the Unraid template now exposes both **Data Directory** and **Config
+  Directory** (`templates/featherdrop.xml`).
+
+### Compatibility
+
+- Backward-compatible: `CONFIG_DIR` defaults to `DATA_DIR`, so single-volume
+  installs keep working. To migrate to two volumes, move `db.sqlite` into the
+  config volume before starting (otherwise a fresh empty DB is created).
+
 ## [2.4.1] — 2026-06-01
 
 ### Changed

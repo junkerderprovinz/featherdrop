@@ -29,15 +29,35 @@
     Required="true"
     Mask="false">3000</Config>
   <Config
-    Name="Data Directory"
+    Name="Data Directory (uploads)"
     Target="/data"
-    Default="/mnt/user/appdata/featherdrop"
+    Default="/mnt/user/appdata/featherdrop/data"
     Mode="rw"
-    Description="Persistent storage for uploaded files and the SQLite metadata database."
+    Description="Bulk storage for the uploaded files. Can live on slower array storage. Kept separate from the small metadata database (see Config Directory)."
     Type="Path"
     Display="always"
     Required="true"
-    Mask="false">/mnt/user/appdata/featherdrop</Config>
+    Mask="false">/mnt/user/appdata/featherdrop/data</Config>
+  <Config
+    Name="Config Directory (database)"
+    Target="/config"
+    Default="/mnt/user/appdata/featherdrop/config"
+    Mode="rw"
+    Description="Stores the small SQLite metadata database (db.sqlite). Best kept on fast storage (e.g. the SSD cache/appdata). Separate from the bulk uploads (see Data Directory)."
+    Type="Path"
+    Display="always"
+    Required="true"
+    Mask="false">/mnt/user/appdata/featherdrop/config</Config>
+  <Config
+    Name="Config Dir (container path)"
+    Target="CONFIG_DIR"
+    Default="/config"
+    Mode=""
+    Description="Container path the SQLite database is written to. Must match the Config Directory mount above (/config). Advanced — leave as /config."
+    Type="Variable"
+    Display="advanced"
+    Required="true"
+    Mask="false">/config</Config>
   <Config
     Name="Public Base URL"
     Target="BASE_URL"

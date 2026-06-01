@@ -1,13 +1,17 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-// Single source of truth for runtime configuration. All paths live under
-// DATA_DIR so the whole state (files + metadata) is one mountable volume.
+// Single source of truth for runtime configuration.
+// DATA_DIR holds the bulk uploaded files; CONFIG_DIR holds the small SQLite
+// metadata database. CONFIG_DIR defaults to DATA_DIR, so existing single-volume
+// installs keep working unchanged — set it (the Unraid template does) to put the
+// database on a separate, e.g. faster, volume.
 export const DATA_DIR = process.env.DATA_DIR ?? "./data";
+export const CONFIG_DIR = process.env.CONFIG_DIR ?? DATA_DIR;
 
 export const UPLOADS_DIR = join(DATA_DIR, "uploads"); // finalized shared files
 export const TMP_DIR = join(DATA_DIR, "tmp"); // in-progress tus uploads
-export const DB_PATH = join(DATA_DIR, "db.sqlite"); // metadata
+export const DB_PATH = join(CONFIG_DIR, "db.sqlite"); // metadata
 
 // Max upload size in bytes. 0 / unset = unlimited (limited only by disk).
 export const MAX_FILE_SIZE = Number(process.env.MAX_FILE_SIZE ?? 0);
@@ -40,7 +44,7 @@ let dirsReady = false;
 /** Create the data sub-directories once; safe to call repeatedly. */
 export function ensureDataDirs(): void {
   if (dirsReady) return;
-  for (const dir of [DATA_DIR, UPLOADS_DIR, TMP_DIR]) {
+  for (const dir of [DATA_DIR, UPLOADS_DIR, TMP_DIR, CONFIG_DIR]) {
     mkdirSync(dir, { recursive: true });
   }
   dirsReady = true;
