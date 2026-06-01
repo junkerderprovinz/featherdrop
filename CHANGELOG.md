@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] — 2026-06-01
+
+### Fixed
+
+- **Init-log banner ran into the separator line.** The shared ASCII banner file
+  has no trailing newline, so `print-banner.sh` printed the `─────` rule fused
+  onto the banner's last line. It now adds a newline after the banner. Also
+  aligned the banner subtitle with the UI wording ("encrypted, auto-expiring").
+
 ## [2.1.0] — 2026-06-01
 
 ### Changed

@@ -14,6 +14,9 @@ echo "  ${SEP}"
 
 if [ -f "${BANNER_FILE}" ]; then
     cat "${BANNER_FILE}"
+    # The shared banner file has no trailing newline, so add one — otherwise the
+    # separator below fuses onto the banner's last line in the container log.
+    echo ""
 else
     echo ""
     echo "  Junker der Provinz"
