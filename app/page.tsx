@@ -12,6 +12,7 @@ import {
   Title,
   Tooltip,
   Transition,
+  UnstyledButton,
   rem,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -118,12 +119,15 @@ export default function HomePage() {
   return (
     <Container size="lg" py={60} style={{ minHeight: "100vh" }}>
       <Group justify="space-between" mb={56}>
-        <Group gap="sm">
-          <Logo size={40} />
-          <Title order={1} fw={800} style={{ fontSize: rem(32), letterSpacing: -1 }}>
-            featherdrop
-          </Title>
-        </Group>
+        {/* Clicking the brand returns to the start screen (resets any upload). */}
+        <UnstyledButton onClick={reset} aria-label={t("app.tagline")}>
+          <Group gap="sm" style={{ cursor: "pointer" }}>
+            <Logo size={40} />
+            <Title order={1} fw={800} style={{ fontSize: rem(32), letterSpacing: -1 }}>
+              featherdrop
+            </Title>
+          </Group>
+        </UnstyledButton>
         <Group gap="xs">
           <LanguageSwitcher />
           <Tooltip label={t("theme.toggle")} withArrow>

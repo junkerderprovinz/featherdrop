@@ -1,12 +1,12 @@
 import type { Translation } from "./en.ts";
 
 export const de: Translation = {
-  "app.tagline": "Datei rein, Link raus.",
-  "app.subtitle": "Verschlüsselt, und weg, sobald es abläuft.",
+  "app.tagline": "Teile eine Datei sicher — ganz ohne Konto.",
+  "app.subtitle": "Verschlüsselt gespeichert und automatisch gelöscht, sobald der Link abläuft.",
   "theme.toggle": "Design umschalten",
   "language.label": "Sprache",
 
-  "drop.drag": "Datei hierher ziehen",
+  "drop.drag": "Datei zum Hochladen hierher ziehen",
   "drop.browse": "oder klicken zum Auswählen",
   "drop.replace": "andere Datei ablegen zum Ersetzen",
 
@@ -16,7 +16,7 @@ export const de: Translation = {
   "settings.passwordPlaceholder": "Leer lassen für keins",
   "settings.upload": "Hochladen & teilen",
 
-  "result.ready": "Bereit zum Teilen",
+  "result.ready": "Dein Freigabe-Link ist bereit",
   "result.copy": "Link kopieren",
   "result.copied": "Kopiert",
 
@@ -28,7 +28,7 @@ export const de: Translation = {
   "download.protected": "Diese Datei ist passwortgeschützt",
   "download.passwordPlaceholder": "Passwort eingeben",
   "download.unlock": "Entsperren & herunterladen",
-  "download.download": "Herunterladen",
+  "download.download": "Datei herunterladen",
   "download.wrongPassword": "Falsches Passwort",
   "download.failed": "Download fehlgeschlagen",
 

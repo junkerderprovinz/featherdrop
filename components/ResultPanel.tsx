@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -30,6 +30,37 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
+  // This panel mounts only once the share link exists — i.e. the upload reached
+  // 100% — so a short gold/violet confetti burst here celebrates completion.
+  // Loaded lazily so it never weighs on the initial bundle; honours reduced motion.
+  useEffect(() => {
+    let cancelled = false;
+    void import("canvas-confetti").then(({ default: confetti }) => {
+      if (cancelled) return;
+      const colors = ["#F6D981", "#D4AF37", "#A97C0A", "#7C3AED"];
+      confetti({
+        particleCount: 90,
+        spread: 72,
+        startVelocity: 42,
+        origin: { y: 0.32 },
+        colors,
+        disableForReducedMotion: true,
+      });
+      confetti({
+        particleCount: 55,
+        spread: 110,
+        startVelocity: 30,
+        scalar: 0.9,
+        origin: { y: 0.28 },
+        colors,
+        disableForReducedMotion: true,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Robust copy: works on plain-HTTP LAN access too (see lib/clipboard.ts),
   // where navigator.clipboard is unavailable and the modern path silently fails.
   const onCopy = async () => {
@@ -43,13 +74,16 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
   };
 
   return (
-    <Paper withBorder radius="lg" p="xl" maw={520} mx="auto" w="100%">
+    <Paper radius="lg" p="xl" maw={520} mx="auto" w="100%" className="fd-glass">
       <Stack align="center" gap="lg">
         <Stack align="center" gap={4}>
           <Text fw={700} size="xl">
             {t("result.ready")}
           </Text>
-          <Text c="dimmed" size="sm">
+          <Text c="dimmed" size="sm" ta="center">
+            {t("app.subtitle")}
+          </Text>
+          <Text c="dimmed" size="sm" fw={600}>
             {expiryLabel}
           </Text>
         </Stack>
