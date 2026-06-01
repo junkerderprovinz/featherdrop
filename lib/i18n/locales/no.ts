@@ -31,6 +31,10 @@ export const no: Translation = {
   "download.wrongPassword": "Feil passord",
   "download.failed": "Nedlasting mislyktes",
 
+  "download.encryptedFile": "Kryptert fil",
+
+  "download.missingKey": "Denne lenken mangler dekrypteringsnøkkelen — den kan ha blitt kopiert ufullstendig.",
+
   "notfound.title": "Ingenting her",
   "notfound.body": "Denne lenken er ugyldig, eller filen har utløpt og blitt fjernet.",
   "notfound.share": "Del en fil",

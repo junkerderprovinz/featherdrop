@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createReadStream, createWriteStream } from "node:fs";
 import { readFile, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { DEFAULT_EXPIRY, TMP_DIR, UPLOADS_DIR, ensureDataDirs } from "@/lib/config";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import {
+  DEFAULT_EXPIRY,
+  ENCRYPT_UPLOADS,
+  TMP_DIR,
+  UPLOADS_DIR,
+  ensureDataDirs,
+} from "@/lib/config";
 import { isSafeId, newSlug } from "@/lib/ids";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
 import { hashPassword } from "@/lib/password";
 import { createFileRecord, getFileBySlug } from "@/server/db";
+import { encryptStream, wrapKey } from "@/server/crypto";
 
 export const runtime = "nodejs";
 
@@ -41,6 +51,33 @@ function uniqueSlug(): string {
     if (!getFileBySlug(slug)) return slug;
   }
   throw new Error("could not allocate a unique slug");
+}
+
+// Encrypt the completed plaintext upload into the store with age, removing the
+// plaintext temp afterwards. Returns the per-file key (an age identity).
+async function encryptIntoStore(
+  tmpPath: string,
+  storedPath: string,
+  header: { name: string; mime: string | null },
+): Promise<string> {
+  const source = Readable.toWeb(
+    createReadStream(tmpPath),
+  ) as ReadableStream<Uint8Array>;
+  const { ciphertext, key } = await encryptStream(source, header);
+  try {
+    await pipeline(
+      Readable.fromWeb(ciphertext as Parameters<typeof Readable.fromWeb>[0]),
+      createWriteStream(storedPath),
+    );
+  } catch (err) {
+    // A mid-stream failure (e.g. disk full) would otherwise leave a partial,
+    // orphaned ciphertext with no DB row. Remove it; the plaintext temp stays so
+    // the upload itself is not lost.
+    await rm(storedPath, { force: true });
+    throw err;
+  }
+  await rm(tmpPath, { force: true });
+  return key;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -87,13 +124,37 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const originalName = (meta.filename ?? "download").slice(0, 255);
   const mime = meta.filetype ?? null;
 
-  // Move the completed upload into the permanent store, keyed by its tus id.
   const storedId = uploadId;
-  await rename(tmpPath, join(UPLOADS_DIR, storedId));
-  await rm(join(TMP_DIR, `${uploadId}.json`), { force: true });
-
+  const storedPath = join(UPLOADS_DIR, storedId);
   const slug = uniqueSlug();
   const password = body.password?.trim();
+
+  // Encryption (default on). The file is encrypted to a fresh per-file key:
+  //   - password set  -> wrap the key with the password, store only the wrap.
+  //   - no password   -> hand the key back so it can ride in the share link.
+  let encrypted = 0;
+  let encMode: string | null = null;
+  let encKeyWrapped: string | null = null;
+  let linkKey: string | undefined;
+
+  if (ENCRYPT_UPLOADS) {
+    const key = await encryptIntoStore(tmpPath, storedPath, {
+      name: originalName,
+      mime,
+    });
+    encrypted = 1;
+    if (password) {
+      encMode = "password";
+      encKeyWrapped = await wrapKey(key, password);
+    } else {
+      encMode = "link";
+      linkKey = key;
+    }
+  } else {
+    // Plaintext fallback: just move the upload into the store.
+    await rename(tmpPath, storedPath);
+  }
+  await rm(join(TMP_DIR, `${uploadId}.json`), { force: true });
 
   createFileRecord({
     id: storedId,
@@ -104,7 +165,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     password_hash: password ? hashPassword(password) : null,
     expires_at: expiryToTimestamp(expiry || DEFAULT_EXPIRY),
     created_at: Date.now(),
+    encrypted,
+    enc_mode: encMode,
+    enc_key_wrapped: encKeyWrapped,
   });
 
-  return NextResponse.json({ slug });
+  // The link key (link mode) goes to the uploader only, in the JSON response —
+  // the client appends it to the share URL as a #fragment, which never reaches
+  // the server. It is intentionally absent for password-protected shares.
+  return NextResponse.json(linkKey ? { slug, key: linkKey } : { slug });
 }

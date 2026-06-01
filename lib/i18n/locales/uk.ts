@@ -31,6 +31,10 @@ export const uk: Translation = {
   "download.wrongPassword": "Неправильний пароль",
   "download.failed": "Не вдалося завантажити",
 
+  "download.encryptedFile": "Зашифрований файл",
+
+  "download.missingKey": "У цьому посиланні немає ключа розшифрування — можливо, його скопійовано не повністю.",
+
   "notfound.title": "Тут нічого немає",
   "notfound.body": "Це посилання недійсне, або файл сплив і його видалено.",
   "notfound.share": "Поділитися файлом",

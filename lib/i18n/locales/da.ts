@@ -31,6 +31,10 @@ export const da: Translation = {
   "download.wrongPassword": "Forkert adgangskode",
   "download.failed": "Download mislykkedes",
 
+  "download.encryptedFile": "Krypteret fil",
+
+  "download.missingKey": "Dette link mangler sin dekrypteringsnøgle — det er måske kopieret ufuldstændigt.",
+
   "notfound.title": "Intet her",
   "notfound.body": "Dette link er ugyldigt, eller filen er udløbet og fjernet.",
   "notfound.share": "Del en fil",

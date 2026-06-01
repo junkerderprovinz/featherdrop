@@ -31,6 +31,10 @@ export const el: Translation = {
   "download.wrongPassword": "Λάθος κωδικός",
   "download.failed": "Η λήψη απέτυχε",
 
+  "download.encryptedFile": "Κρυπτογραφημένο αρχείο",
+
+  "download.missingKey": "Από αυτόν τον σύνδεσμο λείπει το κλειδί αποκρυπτογράφησης — ίσως αντιγράφηκε ελλιπώς.",
+
   "notfound.title": "Δεν υπάρχει τίποτα εδώ",
   "notfound.body": "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή το αρχείο έληξε και αφαιρέθηκε.",
   "notfound.share": "Μοιράσου ένα αρχείο",

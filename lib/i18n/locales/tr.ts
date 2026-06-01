@@ -31,6 +31,10 @@ export const tr: Translation = {
   "download.wrongPassword": "Yanlış parola",
   "download.failed": "İndirme başarısız oldu",
 
+  "download.encryptedFile": "Şifreli dosya",
+
+  "download.missingKey": "Bu bağlantının şifre çözme anahtarı eksik — eksik kopyalanmış olabilir.",
+
   "notfound.title": "Burada bir şey yok",
   "notfound.body": "Bu bağlantı geçersiz veya dosya sona erip kaldırılmış.",
   "notfound.share": "Bir dosya paylaş",

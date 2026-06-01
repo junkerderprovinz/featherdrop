@@ -20,6 +20,12 @@ export const DEFAULT_EXPIRY = process.env.DEFAULT_EXPIRY ?? "7d";
 // When unset the client falls back to window.location.origin.
 export const BASE_URL = process.env.BASE_URL ?? "";
 
+// Encrypt uploaded files at rest (age). On by default; set ENCRYPT_UPLOADS=false
+// to store plaintext blobs (e.g. for debugging). Existing files are unaffected
+// either way — the per-row `encrypted` flag records how each blob was stored.
+export const ENCRYPT_UPLOADS =
+  (process.env.ENCRYPT_UPLOADS ?? "true").toLowerCase() !== "false";
+
 let dirsReady = false;
 
 /** Create the data sub-directories once; safe to call repeatedly. */

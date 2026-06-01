@@ -31,6 +31,10 @@ export const ru: Translation = {
   "download.wrongPassword": "Неверный пароль",
   "download.failed": "Не удалось скачать",
 
+  "download.encryptedFile": "Зашифрованный файл",
+
+  "download.missingKey": "В этой ссылке нет ключа расшифровки — возможно, она скопирована не полностью.",
+
   "notfound.title": "Здесь ничего нет",
   "notfound.body": "Эта ссылка недействительна, или файл истёк и был удалён.",
   "notfound.share": "Поделиться файлом",

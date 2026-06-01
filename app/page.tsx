@@ -36,6 +36,9 @@ export default function HomePage() {
   const [expiry, setExpiry] = useState("7d");
   const [password, setPassword] = useState("");
   const [slug, setSlug] = useState<string | null>(null);
+  // Link-mode per-file key returned by finalize (only when no password). It is
+  // appended to the share URL as a #fragment and never stored server-side.
+  const [linkKey, setLinkKey] = useState<string | null>(null);
   const uploadRef = useRef<tus.Upload | null>(null);
 
   const onDrop = (f: File) => {
@@ -46,6 +49,7 @@ export default function HomePage() {
   const reset = () => {
     setFile(null);
     setSlug(null);
+    setLinkKey(null);
     setProgress(0);
     setPassword("");
     setExpiry("7d");
@@ -79,8 +83,9 @@ export default function HomePage() {
             body: JSON.stringify({ uploadId, expiry, password }),
           });
           if (!res.ok) throw new Error(`finalize ${res.status}`);
-          const data = (await res.json()) as { slug: string };
+          const data = (await res.json()) as { slug: string; key?: string };
           setSlug(data.slug);
+          setLinkKey(data.key ?? null);
           setStatus("done");
         } catch (e) {
           setStatus("ready");
@@ -98,7 +103,7 @@ export default function HomePage() {
 
   const shareUrl =
     slug && typeof window !== "undefined"
-      ? `${window.location.origin}/d/${slug}`
+      ? `${window.location.origin}/d/${slug}${linkKey ? `#k=${linkKey}` : ""}`
       : "";
   const uploading = status === "uploading";
   const showPanel = status === "ready" || status === "uploading";

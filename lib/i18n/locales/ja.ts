@@ -31,6 +31,10 @@ export const ja: Translation = {
   "download.wrongPassword": "パスワードが違います",
   "download.failed": "ダウンロードに失敗しました",
 
+  "download.encryptedFile": "暗号化されたファイル",
+
+  "download.missingKey": "このリンクには復号鍵がありません。途中までしかコピーされていない可能性があります。",
+
   "notfound.title": "ここには何もありません",
   "notfound.body": "このリンクは無効か、ファイルが期限切れで削除されています。",
   "notfound.share": "ファイルを共有",

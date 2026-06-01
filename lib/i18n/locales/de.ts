@@ -31,6 +31,10 @@ export const de: Translation = {
   "download.wrongPassword": "Falsches Passwort",
   "download.failed": "Download fehlgeschlagen",
 
+  "download.encryptedFile": "Verschlüsselte Datei",
+
+  "download.missingKey": "Diesem Link fehlt der Entschlüsselungs-Schlüssel — er wurde vielleicht unvollständig kopiert.",
+
   "notfound.title": "Hier ist nichts",
   "notfound.body": "Dieser Link ist ungültig oder die Datei ist abgelaufen und wurde entfernt.",
   "notfound.share": "Datei teilen",

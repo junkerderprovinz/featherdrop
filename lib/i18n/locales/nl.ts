@@ -31,6 +31,10 @@ export const nl: Translation = {
   "download.wrongPassword": "Verkeerd wachtwoord",
   "download.failed": "Downloaden mislukt",
 
+  "download.encryptedFile": "Versleuteld bestand",
+
+  "download.missingKey": "Deze link mist zijn ontsleutelsleutel — mogelijk is hij onvolledig gekopieerd.",
+
   "notfound.title": "Hier is niets",
   "notfound.body": "Deze link is ongeldig, of het bestand is verlopen en verwijderd.",
   "notfound.share": "Een bestand delen",

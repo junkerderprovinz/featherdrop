@@ -39,6 +39,26 @@ jobs:
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Full install (native better-sqlite3 build) so the DB schema/migration
+      # tests run for real, not skipped.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run tests
+        run: npm test
+
   xml-template:
     name: XML Template Lint
     runs-on: ubuntu-latest

@@ -31,6 +31,10 @@ export const cs: Translation = {
   "download.wrongPassword": "Nesprávné heslo",
   "download.failed": "Stažení selhalo",
 
+  "download.encryptedFile": "Šifrovaný soubor",
+
+  "download.missingKey": "Tomuto odkazu chybí dešifrovací klíč — možná byl zkopírován neúplně.",
+
   "notfound.title": "Tady nic není",
   "notfound.body": "Tento odkaz je neplatný, nebo soubor vypršel a byl odstraněn.",
   "notfound.share": "Sdílet soubor",
