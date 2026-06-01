@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.1] — 2026-06-01
+
+### Changed
+
+- **Init-log banner subtitle realigned with the UI copy** (`docker-entrypoint.sh`):
+  now "Encrypted at rest, auto-deleted when the link expires".
+
 ## [2.5.0] — 2026-06-01
 
 ### Added

@@ -6,7 +6,7 @@ set -e
 
 /usr/local/bin/print-banner.sh \
     "featherdrop" \
-    "Self-hosted file sharing — encrypted, auto-expiring"
+    "Encrypted at rest, auto-deleted when the link expires"
 
 # exec so the Node process becomes PID 1 and receives container signals.
 exec node_modules/.bin/tsx custom-server.ts
