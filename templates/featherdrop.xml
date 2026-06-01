@@ -108,4 +108,34 @@
     Display="always"
     Required="false"
     Mask="true"></Config>
+  <Config
+    Name="Custom App Name"
+    Target="APP_NAME"
+    Default=""
+    Mode=""
+    Description="Optional. Rename the app — replaces the 'featherdrop' wordmark in the header and the browser tab title with your own name. Leave empty to keep 'featherdrop'."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false"></Config>
+  <Config
+    Name="Custom Logo URL"
+    Target="APP_LOGO"
+    Default=""
+    Mode=""
+    Description="Optional. URL of your own logo image (SVG/PNG) to replace the feather. Use a public URL, or mount your logo into the container and point at it (e.g. put logo.svg in the Config Directory and use /config/logo.svg via a reverse proxy). Leave empty to keep the feather."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false"></Config>
+  <Config
+    Name="Accent Color"
+    Target="ACCENT_COLOR"
+    Default=""
+    Mode=""
+    Description="Optional. A 6-digit hex colour (e.g. #3daee9) for buttons, the upload ring and other accents. Leave empty to keep the gold (#d4af37)."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false"></Config>
 </Container>

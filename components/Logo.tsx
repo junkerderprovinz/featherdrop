@@ -1,19 +1,36 @@
 "use client";
 
 import { useId } from "react";
+import { useBranding } from "@/components/BrandingProvider";
 
 // The featherdrop mark — a gold feather. Rendered inline so it scales crisply
 // and the gold gradient travels with it. useId keeps the gradient id unique when
-// several logos appear on one page.
+// several logos appear on one page. A self-hoster's custom logo (logoUrl), when
+// set, replaces the feather with their image.
 export function Logo({ size = 28 }: { size?: number }) {
+  const { logoUrl, appName } = useBranding();
   const gradientId = useId();
+  if (logoUrl) {
+    // A self-hoster's logo is an arbitrary external/mounted URL; next/image
+    // can't optimize it without per-domain config, so a plain <img> is intended.
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        width={size}
+        height={size}
+        alt={appName}
+        style={{ objectFit: "contain", display: "block" }}
+      />
+    );
+  }
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 1000 1000"
       role="img"
-      aria-label="featherdrop logo"
+      aria-label={`${appName} logo`}
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>

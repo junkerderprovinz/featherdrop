@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { resolveBranding } from "./branding";
 
 // Single source of truth for runtime configuration.
 // DATA_DIR holds the bulk uploaded files; CONFIG_DIR holds the small SQLite
@@ -38,6 +39,14 @@ export const ENCRYPT_UPLOADS =
 // #fragment link mode.
 export const MASTER_KEY = process.env.MASTER_KEY ?? "";
 export const SERVER_KEY_MODE = MASTER_KEY.length > 0;
+
+// Custom branding (app name, logo, accent colour) for self-hosters. Resolved
+// once on the server from the environment; passed to the client via props.
+export const BRANDING = resolveBranding({
+  APP_NAME: process.env.APP_NAME,
+  APP_LOGO: process.env.APP_LOGO,
+  ACCENT_COLOR: process.env.ACCENT_COLOR,
+});
 
 let dirsReady = false;
 

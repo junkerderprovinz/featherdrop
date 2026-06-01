@@ -23,6 +23,7 @@ import { IconMoon, IconSun } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import * as tus from "tus-js-client";
 import { Logo } from "@/components/Logo";
+import { useBranding } from "@/components/BrandingProvider";
 import { DropArea } from "@/components/DropArea";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
@@ -33,6 +34,7 @@ type Status = "idle" | "ready" | "uploading" | "done";
 
 export default function HomePage() {
   const { t } = useTranslation();
+  const { appName } = useBranding();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const [status, setStatus] = useState<Status>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -158,7 +160,7 @@ export default function HomePage() {
                 fontStyle: "italic",
               }}
             >
-              featherdrop
+              {appName}
             </Title>
           </Group>
         </UnstyledButton>

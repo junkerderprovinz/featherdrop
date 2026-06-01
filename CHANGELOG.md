@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] — 2026-06-01
+
+### Added
+
+- **Custom branding for self-hosters** — `APP_NAME` (wordmark + tab title),
+  `APP_LOGO` (logo image URL replacing the feather), and `ACCENT_COLOR` (hex
+  driving buttons/ring/accents). Logic in `lib/branding.ts` (TDD), shared via
+  `components/BrandingProvider.tsx`, wired through `app/layout.tsx`, `theme.ts`,
+  `components/Logo.tsx`, `app/page.tsx`, `components/DownloadView.tsx`; exposed in
+  the Unraid template and README. Each value falls back to the default
+  featherdrop branding when unset or invalid.
+
 ## [2.5.3] — 2026-06-01
 
 ### Changed
