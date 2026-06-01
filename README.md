@@ -71,10 +71,14 @@ featherdrop container (Next.js + small custom Node server)
    ├─ /d/<slug>         share page (info, password gate, download)
    └─ cleanup job       deletes expired files
    ▼
-/data volume
-   ├─ uploads/<id>      the files
-   └─ db.sqlite         metadata (better-sqlite3 — a file, not a server)
+/data volume (uploads, bulk)        /config volume (metadata, small)
+   ├─ uploads/<id>   the files          └─ db.sqlite   (better-sqlite3 — a file, not a server)
+   └─ tmp/<id>       in-progress uploads
 ```
+
+`/data` (bulk files) and `/config` (the small SQLite database) are **separate
+volumes**, so you can keep uploads on array storage and the database on a fast
+SSD. `CONFIG_DIR` defaults to `DATA_DIR`, so a single-volume setup still works.
 
 Uploads are **resumable**: a dropped connection on a multi-GB transfer resumes
 instead of starting over. Passwords are **scrypt-hashed**, never stored in plain
@@ -151,7 +155,8 @@ curl -fsSL -o /boot/config/plugins/dockerMan/templates-user/my-featherdrop.xml \
 ```
 
 Then **Docker → Add Container → featherdrop** under *User templates*. Map the
-**Data Directory** to your appdata, pick a port, hit **Apply**, open the WebUI.
+**Data Directory** (uploads) and **Config Directory** (the database) to your
+appdata, pick a port, hit **Apply**, open the WebUI.
 
 The template filename **must** keep the `my-` prefix (`my-featherdrop.xml`) so
 Unraid treats it as a user template.
@@ -164,9 +169,15 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   -e BASE_URL=https://share.yourdomain.tld \
-  -v /mnt/user/appdata/featherdrop:/data \
+  -e CONFIG_DIR=/config \
+  -v /mnt/user/appdata/featherdrop/data:/data \
+  -v /mnt/user/appdata/featherdrop/config:/config \
   ghcr.io/junkerderprovinz/featherdrop:latest
 ```
+
+To keep everything on a single volume instead, drop the `CONFIG_DIR` line and
+the `/config` mount and map just `-v …:/data` — the database then lives in
+`/data` alongside the uploads.
 
 <br>
 
@@ -180,7 +191,8 @@ docker run -d \
 | `ENCRYPT_UPLOADS` | `true` | Encrypt new uploads at rest with age (see [Encryption](#3-encryption)). Set `false` to store plaintext. Existing files keep their stored mode. |
 | `MASTER_KEY` | *(empty)* | Optional secret that gives **short links** for password-less shares (see [Encryption](#3-encryption)). Generate with `openssl rand -base64 32`. Keep it secret, back it up; losing it makes password-less files unrecoverable. Empty = long `#key` links. |
 | `PORT` | `3000` | Port the server listens on. |
-| `DATA_DIR` | `/data` | Where files + the SQLite database live. Map this to a volume. |
+| `DATA_DIR` | `/data` | Where the uploaded files live (bulk). Map this to a volume. |
+| `CONFIG_DIR` | *(= `DATA_DIR`)* | Where the SQLite database lives. Defaults to `DATA_DIR` (single volume). Set it (the Unraid template uses `/config`) to keep the small database on a separate, faster volume. |
 
 <br>
 
