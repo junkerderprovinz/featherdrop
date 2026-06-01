@@ -24,6 +24,7 @@ export const da: Translation = {
 
   "result.copyFailed": "Kunne ikke kopiere — markér linket og kopiér manuelt.",
   "result.shareAnother": "Del en anden fil",
+  "result.downloadQr": "Gem QR-kode",
   "result.neverExpires": "Udløber aldrig",
   "result.expiresAfter": "Udløber efter {{label}}",
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCheck, IconCopy, IconPlus } from "@tabler/icons-react";
+import { IconCheck, IconCopy, IconDownload, IconPlus } from "@tabler/icons-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "@/lib/clipboard";
@@ -24,11 +24,16 @@ interface ResultPanelProps {
   onReset: () => void;
 }
 
+// On-screen QR edge in px; the PNG download rasterizes at 4× this. One source so
+// the displayed code and the saved file can never drift apart.
+const QR_SIZE = 160;
+
 // Shown after a successful upload: the shareable link, a copy button, a QR code
 // for phones, and a way to start over.
 export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   // This panel mounts only once the share link exists — i.e. the upload reached
   // 100% — so a short gold/violet confetti burst here celebrates completion.
@@ -61,6 +66,40 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
     };
   }, []);
 
+  // Save the QR as a crisp PNG so it can be printed or pasted into a chat: take
+  // the rendered SVG, rasterize it onto a white canvas at 4× and trigger a
+  // download. Pure client work — no extra dependency, no server round-trip.
+  const onDownloadQr = () => {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const xml = new XMLSerializer().serializeToString(svg);
+    const svgUrl = URL.createObjectURL(
+      new Blob([xml], { type: "image/svg+xml" }),
+    );
+    const img = new Image();
+    img.onload = () => {
+      const size = QR_SIZE * 4;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      URL.revokeObjectURL(svgUrl);
+      if (!ctx) return;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "featherdrop-qr.png";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, "image/png");
+    };
+    img.src = svgUrl;
+  };
+
   // Robust copy: works on plain-HTTP LAN access too (see lib/clipboard.ts),
   // where navigator.clipboard is unavailable and the modern path silently fails.
   const onCopy = async () => {
@@ -88,13 +127,24 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
           </Text>
         </Stack>
 
-        <Box
-          p="md"
-          bg="white"
-          style={{ borderRadius: "var(--mantine-radius-md)" }}
-        >
-          <QRCodeSVG value={url} size={160} />
-        </Box>
+        <Stack align="center" gap="xs">
+          <Box
+            ref={qrRef}
+            p="md"
+            bg="white"
+            style={{ borderRadius: "var(--mantine-radius-md)" }}
+          >
+            <QRCodeSVG value={url} size={QR_SIZE} />
+          </Box>
+          <Button
+            variant="subtle"
+            size="xs"
+            leftSection={<IconDownload size={14} />}
+            onClick={onDownloadQr}
+          >
+            {t("result.downloadQr")}
+          </Button>
+        </Stack>
 
         <Group w="100%" gap="xs" wrap="nowrap">
           <TextInput

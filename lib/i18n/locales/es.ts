@@ -24,6 +24,7 @@ export const es: Translation = {
 
   "result.copyFailed": "No se pudo copiar: selecciona el enlace y cópialo manualmente.",
   "result.shareAnother": "Compartir otro archivo",
+  "result.downloadQr": "Guardar código QR",
   "result.neverExpires": "Nunca caduca",
   "result.expiresAfter": "Caduca tras {{label}}",
 

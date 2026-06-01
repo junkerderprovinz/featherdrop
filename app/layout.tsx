@@ -14,17 +14,38 @@ import {
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { createAppTheme } from "@/theme";
-import { BRANDING } from "@/lib/config";
+import { BASE_URL, BRANDING } from "@/lib/config";
 import { BrandingProvider } from "@/components/BrandingProvider";
 import { wordmark } from "./fonts";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { SUPPORTED, DEFAULT_LANGUAGE, isRtl } from "@/lib/i18n/locales";
 import { COOKIE, pickLanguage } from "@/lib/i18n/detect";
 
+// One description, reused for the tab, search results and social cards so they
+// never drift apart. Link previews stay deliberately generic — a shared /d/<slug>
+// link must never leak the file's name (the download page sets no own metadata,
+// so it inherits this), and the OG/Twitter image is served by the file
+// convention app/opengraph-image.png.
+const DESCRIPTION =
+  "Drop it like it's hot — your own self-hosted drop zone. Fling a file in, get a link out, watch it self-destruct on schedule. No accounts, no clouds.";
+
 export const metadata: Metadata = {
+  // Absolute base for resolving the social-card image; only meaningful behind a
+  // known public URL. Unset BASE_URL → Next falls back to a relative/dev origin.
+  metadataBase: BASE_URL ? new URL(BASE_URL) : undefined,
   title: BRANDING.appName,
-  description:
-    "Drop it like it's hot — your own self-hosted drop zone. Fling a file in, get a link out, watch it self-destruct on schedule. No accounts, no clouds.",
+  description: DESCRIPTION,
+  openGraph: {
+    title: BRANDING.appName,
+    description: DESCRIPTION,
+    siteName: BRANDING.appName,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: BRANDING.appName,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

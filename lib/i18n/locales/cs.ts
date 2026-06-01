@@ -24,6 +24,7 @@ export const cs: Translation = {
 
   "result.copyFailed": "Kopírování se nezdařilo — označte odkaz a zkopírujte ručně.",
   "result.shareAnother": "Sdílet další soubor",
+  "result.downloadQr": "Uložit QR kód",
   "result.neverExpires": "Nikdy nevyprší",
   "result.expiresAfter": "Vyprší za {{label}}",
 

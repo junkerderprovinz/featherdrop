@@ -24,6 +24,7 @@ export const fi: Translation = {
 
   "result.copyFailed": "Kopiointi epäonnistui — valitse linkki ja kopioi käsin.",
   "result.shareAnother": "Jaa toinen tiedosto",
+  "result.downloadQr": "Tallenna QR-koodi",
   "result.neverExpires": "Ei vanhene koskaan",
   "result.expiresAfter": "Vanhenee {{label}} kuluttua",
 

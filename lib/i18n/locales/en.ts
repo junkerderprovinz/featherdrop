@@ -26,6 +26,7 @@ export const en = {
   "result.copied": "Copied",
   "result.copyFailed": "Could not copy — select the link and copy it manually.",
   "result.shareAnother": "Share another file",
+  "result.downloadQr": "Save QR code",
   "result.neverExpires": "Never expires",
   "result.expiresAfter": "Expires after {{label}}",
 

@@ -24,6 +24,7 @@ export const el: Translation = {
 
   "result.copyFailed": "Αδυναμία αντιγραφής — επιλέξτε τον σύνδεσμο και αντιγράψτε χειροκίνητα.",
   "result.shareAnother": "Μοιράσου άλλο αρχείο",
+  "result.downloadQr": "Αποθήκευση κωδικού QR",
   "result.neverExpires": "Δεν λήγει ποτέ",
   "result.expiresAfter": "Λήγει μετά από {{label}}",
 

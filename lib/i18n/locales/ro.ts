@@ -24,6 +24,7 @@ export const ro: Translation = {
 
   "result.copyFailed": "Nu s-a putut copia — selectează linkul și copiază-l manual.",
   "result.shareAnother": "Partajează alt fișier",
+  "result.downloadQr": "Salvează codul QR",
   "result.neverExpires": "Nu expiră niciodată",
   "result.expiresAfter": "Expiră după {{label}}",
 

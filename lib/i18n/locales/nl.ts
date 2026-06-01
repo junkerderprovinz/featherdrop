@@ -24,6 +24,7 @@ export const nl: Translation = {
 
   "result.copyFailed": "Kopiëren mislukt — selecteer de link en kopieer handmatig.",
   "result.shareAnother": "Nog een bestand delen",
+  "result.downloadQr": "QR-code opslaan",
   "result.neverExpires": "Verloopt nooit",
   "result.expiresAfter": "Verloopt na {{label}}",
 

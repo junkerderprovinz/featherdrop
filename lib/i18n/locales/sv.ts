@@ -24,6 +24,7 @@ export const sv: Translation = {
 
   "result.copyFailed": "Kunde inte kopiera — markera länken och kopiera manuellt.",
   "result.shareAnother": "Dela en annan fil",
+  "result.downloadQr": "Spara QR-kod",
   "result.neverExpires": "Går aldrig ut",
   "result.expiresAfter": "Går ut efter {{label}}",
 

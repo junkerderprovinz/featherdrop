@@ -24,6 +24,7 @@ export const uk: Translation = {
 
   "result.copyFailed": "Не вдалося скопіювати — виділіть посилання та скопіюйте вручну.",
   "result.shareAnother": "Поділитися іншим файлом",
+  "result.downloadQr": "Зберегти QR-код",
   "result.neverExpires": "Ніколи не спливає",
   "result.expiresAfter": "Спливає через {{label}}",
 
