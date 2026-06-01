@@ -52,7 +52,7 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 - You get a **shareable link** (and a QR code). The recipient downloads it any
   time until it expires.
 - A light/dark toggle and a **flag language picker** sit in the header — the UI
-  speaks [26 languages](#3-languages) and picks yours from the browser.
+  speaks [26 languages](#4-languages) and picks yours from the browser.
 
 What it deliberately does **not** have: user accounts, OIDC/LDAP, email, malware
 scanning, S3 backends. If you need those, use Pingvin Share — that is the point.
