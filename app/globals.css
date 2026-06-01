@@ -58,6 +58,28 @@ body {
     0 0 0 1px rgba(212, 175, 55, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
     inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+
+/* Reactive edge: the gold hairline lights up and a soft glow blooms on hover,
+   matching the drop zone's interactive feel. */
+.fd-glass:hover {
+  border-color: rgba(212, 175, 55, 0.55);
+  box-shadow:
+    0 30px 80px -24px rgba(0, 0, 0, 0.70),
+    0 0 0 1px rgba(212, 175, 55, 0.18),
+    0 0 44px -8px rgba(212, 175, 55, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+}
+
+[data-mantine-color-scheme="light"] .fd-glass:hover {
+  border-color: rgba(212, 175, 55, 0.65);
+  box-shadow:
+    0 30px 80px -26px rgba(31, 22, 10, 0.34),
+    0 0 0 1px rgba(212, 175, 55, 0.22),
+    0 0 40px -10px rgba(212, 175, 55, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 [data-mantine-color-scheme="light"] .fd-glass {
