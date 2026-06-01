@@ -24,6 +24,7 @@ export const ja: Translation = {
 
   "result.copyFailed": "コピーできませんでした。リンクを選択して手動でコピーしてください。",
   "result.shareAnother": "別のファイルを共有",
+  "result.downloadQr": "QRコードを保存",
   "result.neverExpires": "無期限",
   "result.expiresAfter": "{{label}}後に期限切れ",
 

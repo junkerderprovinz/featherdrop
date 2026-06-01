@@ -49,8 +49,10 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 - Open the page → a central **drop zone** is right there.
 - Drop a file → a settings panel slides in (**expiry** + optional **password**),
   and a progress ring overlays the drop zone while it uploads.
-- You get a **shareable link** (and a QR code). The recipient downloads it any
-  time until it expires.
+- You get a **shareable link** plus a **QR code** you can save as a PNG. The
+  recipient downloads it any time until it expires.
+- Pasting the link into a chat shows a **clean preview card** — your branding,
+  never the file's name.
 - A light/dark toggle and a **flag language picker** sit in the header — the UI
   speaks [26 languages](#4-languages) and picks yours from the browser.
 

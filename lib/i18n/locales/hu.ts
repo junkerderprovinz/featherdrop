@@ -24,6 +24,7 @@ export const hu: Translation = {
 
   "result.copyFailed": "Nem sikerült másolni — jelölje ki a linket és másolja kézzel.",
   "result.shareAnother": "Másik fájl megosztása",
+  "result.downloadQr": "QR-kód mentése",
   "result.neverExpires": "Soha nem jár le",
   "result.expiresAfter": "Lejár {{label}} után",
 

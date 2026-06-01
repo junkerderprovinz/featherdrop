@@ -24,6 +24,7 @@ export const th: Translation = {
 
   "result.copyFailed": "คัดลอกไม่สำเร็จ — เลือกลิงก์แล้วคัดลอกเอง",
   "result.shareAnother": "แชร์ไฟล์อื่น",
+  "result.downloadQr": "บันทึกคิวอาร์โค้ด",
   "result.neverExpires": "ไม่หมดอายุ",
   "result.expiresAfter": "หมดอายุหลังจาก {{label}}",
 

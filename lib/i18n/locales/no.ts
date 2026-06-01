@@ -24,6 +24,7 @@ export const no: Translation = {
 
   "result.copyFailed": "Kunne ikke kopiere — merk lenken og kopier manuelt.",
   "result.shareAnother": "Del en annen fil",
+  "result.downloadQr": "Lagre QR-kode",
   "result.neverExpires": "Utløper aldri",
   "result.expiresAfter": "Utløper etter {{label}}",
 

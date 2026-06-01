@@ -24,6 +24,7 @@ export const vi: Translation = {
 
   "result.copyFailed": "Không thể sao chép — hãy chọn liên kết và sao chép thủ công.",
   "result.shareAnother": "Chia sẻ tệp khác",
+  "result.downloadQr": "Lưu mã QR",
   "result.neverExpires": "Không bao giờ hết hạn",
   "result.expiresAfter": "Hết hạn sau {{label}}",
 

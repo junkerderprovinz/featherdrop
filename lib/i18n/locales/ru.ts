@@ -24,6 +24,7 @@ export const ru: Translation = {
 
   "result.copyFailed": "Не удалось скопировать — выделите ссылку и скопируйте вручную.",
   "result.shareAnother": "Поделиться другим файлом",
+  "result.downloadQr": "Сохранить QR-код",
   "result.neverExpires": "Никогда не истекает",
   "result.expiresAfter": "Истекает через {{label}}",
 

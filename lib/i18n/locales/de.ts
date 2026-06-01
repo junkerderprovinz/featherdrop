@@ -24,6 +24,7 @@ export const de: Translation = {
 
   "result.copyFailed": "Kopieren fehlgeschlagen — Link markieren und manuell kopieren.",
   "result.shareAnother": "Weitere Datei teilen",
+  "result.downloadQr": "QR-Code speichern",
   "result.neverExpires": "Läuft nie ab",
   "result.expiresAfter": "Läuft ab nach {{label}}",
 

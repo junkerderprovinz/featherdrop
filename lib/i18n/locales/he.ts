@@ -24,6 +24,7 @@ export const he: Translation = {
 
   "result.copyFailed": "ההעתקה נכשלה — סמנו את הקישור והעתיקו ידנית.",
   "result.shareAnother": "שיתוף קובץ נוסף",
+  "result.downloadQr": "שמירת קוד QR",
   "result.neverExpires": "לעולם לא פג",
   "result.expiresAfter": "פג אחרי {{label}}",
 

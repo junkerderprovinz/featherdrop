@@ -24,6 +24,7 @@ export const zh: Translation = {
 
   "result.copyFailed": "无法复制 — 请选中链接手动复制。",
   "result.shareAnother": "分享另一个文件",
+  "result.downloadQr": "保存二维码",
   "result.neverExpires": "永不过期",
   "result.expiresAfter": "{{label}}后过期",
 
