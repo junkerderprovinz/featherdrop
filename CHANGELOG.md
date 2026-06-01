@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] — 2026-06-01
+
+### Changed
+
+- **New featherdrop logo.** The mark is now a gold medallion with the feather
+  carved out as negative space, rendered as a crisp inline SVG that scales with
+  a single gold gradient (`components/Logo.tsx`, `useId` keeps the gradient id
+  unique when several logos share a page). The favicon (`app/icon.svg`), the
+  README banner and the Unraid template icon (`.github/assets/featherdrop-logo.svg`,
+  `featherdrop-banner.svg/.png`, `icon.png`) were re-rendered to match. A
+  self-hoster's own logo (`BRAND_LOGO_URL`) still overrides it.
+- **The ambient aurora now drifts.** The gold/violet background glow breathes
+  with a slow 34s motion (`app/globals.css`) and holds still for visitors who
+  prefer reduced motion.
+
 ## [2.8.2] — 2026-06-01
 
 ### Changed
