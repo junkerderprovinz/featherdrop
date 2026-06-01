@@ -38,4 +38,9 @@ export function applySchema(db: Database.Database): void {
   addColumn("encrypted", "encrypted INTEGER NOT NULL DEFAULT 0");
   addColumn("enc_mode", "enc_mode TEXT");
   addColumn("enc_key_wrapped", "enc_key_wrapped TEXT");
+
+  // Optional download limit (v2.7). NULL = unlimited; a positive integer caps the
+  // number of downloads, after which the file + row are deleted. Existing rows
+  // default to NULL (unlimited), preserving prior behaviour.
+  addColumn("max_downloads", "max_downloads INTEGER");
 }

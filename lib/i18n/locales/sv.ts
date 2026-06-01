@@ -14,6 +14,8 @@ export const sv: Translation = {
   "settings.expiresAfter": "Går ut efter",
   "settings.password": "Lösenord (valfritt)",
   "settings.passwordPlaceholder": "Lämna tomt för inget",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "Ladda upp och dela",
 
   "result.ready": "Redo att dela",
@@ -33,6 +35,7 @@ export const sv: Translation = {
   "download.failed": "Nedladdningen misslyckades",
 
   "download.encryptedFile": "Krypterad fil",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "Den här länken saknar sin dekrypteringsnyckel — den kan ha kopierats ofullständigt.",
 

@@ -41,6 +41,7 @@ export default function HomePage() {
   const [progress, setProgress] = useState(0);
   const [expiry, setExpiry] = useState("7d");
   const [password, setPassword] = useState("");
+  const [maxDownloads, setMaxDownloads] = useState<number | null>(null);
   const [slug, setSlug] = useState<string | null>(null);
   // Link-mode per-file key returned by finalize (only when no password). It is
   // appended to the share URL as a #fragment and never stored server-side.
@@ -59,6 +60,7 @@ export default function HomePage() {
     setProgress(0);
     setPassword("");
     setExpiry("7d");
+    setMaxDownloads(null);
     setStatus("idle");
   };
 
@@ -86,7 +88,7 @@ export default function HomePage() {
           const res = await fetch("/api/finalize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uploadId, expiry, password }),
+            body: JSON.stringify({ uploadId, expiry, password, maxDownloads }),
           });
           if (!res.ok) throw new Error(`finalize ${res.status}`);
           const data = (await res.json()) as { slug: string; key?: string };
@@ -201,6 +203,8 @@ export default function HomePage() {
                       onExpiryChange={setExpiry}
                       password={password}
                       onPasswordChange={setPassword}
+                      maxDownloads={maxDownloads}
+                      onMaxDownloadsChange={setMaxDownloads}
                       onUpload={startUpload}
                       uploading={uploading}
                     />

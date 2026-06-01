@@ -14,6 +14,8 @@ export const zh: Translation = {
   "settings.expiresAfter": "过期时间",
   "settings.password": "密码（可选）",
   "settings.passwordPlaceholder": "留空表示无密码",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "上传并分享",
 
   "result.ready": "已准备好分享",
@@ -33,6 +35,7 @@ export const zh: Translation = {
   "download.failed": "下载失败",
 
   "download.encryptedFile": "已加密的文件",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "此链接缺少解密密钥 — 可能复制不完整。",
 

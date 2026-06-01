@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getFileBySlug } from "@/server/db";
+import { downloadsLeft } from "@/lib/downloads";
 import { DownloadView } from "@/components/DownloadView";
 
 // Read the share metadata at request time (never statically). The DB singleton
@@ -37,6 +38,7 @@ export default function DownloadPage({
       hasPassword={rec.password_hash !== null}
       linkMode={linkMode}
       serverMode={serverMode}
+      downloadsLeft={downloadsLeft(rec.download_count, rec.max_downloads)}
     />
   );
 }

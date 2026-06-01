@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] — 2026-06-01
+
+### Added
+
+- **Download limit / burn-after-download.** Cap how many times a share can be
+  downloaded; the file and its row are deleted atomically once the limit is
+  reached. Logic in `lib/downloads.ts` (TDD) + `server/db.ts` `registerDownload`
+  (atomic count/delete), schema column `max_downloads`, wired through
+  `app/api/finalize`, `app/api/d/[slug]`, `components/SettingsPanel.tsx`,
+  `app/page.tsx`, and `components/DownloadView.tsx` (shows remaining downloads).
+  Encrypted shares verify the key before counting, so a bogus request can't
+  exhaust the limit. Unlimited shares are unchanged.
+
 ## [2.6.0] — 2026-06-01
 
 ### Added

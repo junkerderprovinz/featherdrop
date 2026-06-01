@@ -14,6 +14,8 @@ export const uk: Translation = {
   "settings.expiresAfter": "Спливає через",
   "settings.password": "Пароль (необов’язково)",
   "settings.passwordPlaceholder": "Залиште порожнім, щоб без пароля",
+  "settings.limitDownloads": "Limit downloads",
+  "settings.maxDownloads": "Max downloads",
   "settings.upload": "Завантажити та поділитися",
 
   "result.ready": "Готово до надсилання",
@@ -33,6 +35,7 @@ export const uk: Translation = {
   "download.failed": "Не вдалося завантажити",
 
   "download.encryptedFile": "Зашифрований файл",
+  "download.downloadsLeft": "{{count}} downloads left",
 
   "download.missingKey": "У цьому посиланні немає ключа розшифрування — можливо, його скопійовано не повністю.",
 
