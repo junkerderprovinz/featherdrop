@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import {
   ActionIcon,
+  Box,
+  Center,
   Container,
   Flex,
   Group,
@@ -117,26 +119,9 @@ export default function HomePage() {
       : t("result.expiresAfter", { label: t(`expiry.${expiry}`) });
 
   return (
-    <Container size="lg" py={60} style={{ minHeight: "100vh" }}>
-      <Group justify="space-between" mb={56}>
-        {/* Clicking the brand returns to the start screen (resets any upload). */}
-        <UnstyledButton onClick={reset} aria-label={t("app.tagline")}>
-          <Group gap="sm" style={{ cursor: "pointer" }}>
-            <Logo size={40} />
-            <Title
-              order={1}
-              fw={500}
-              style={{
-                fontSize: rem(32),
-                letterSpacing: -1,
-                fontFamily: "var(--font-wordmark), Georgia, serif",
-                fontStyle: "italic",
-              }}
-            >
-              featherdrop
-            </Title>
-          </Group>
-        </UnstyledButton>
+    <Container size="lg" py={60} style={{ position: "relative", minHeight: "100vh" }}>
+      {/* Controls float top-right so the brand can sit centered like the rest. */}
+      <Box pos="absolute" top={24} right={24} style={{ zIndex: 2 }}>
         <Group gap="xs">
           <LanguageSwitcher />
           <Tooltip label={t("theme.toggle")} withArrow>
@@ -156,7 +141,28 @@ export default function HomePage() {
             </ActionIcon>
           </Tooltip>
         </Group>
-      </Group>
+      </Box>
+
+      {/* Clicking the brand returns to the start screen (resets any upload). */}
+      <Center mb={56}>
+        <UnstyledButton onClick={reset} aria-label={t("app.tagline")}>
+          <Group gap="sm" style={{ cursor: "pointer" }}>
+            <Logo size={40} />
+            <Title
+              order={1}
+              fw={500}
+              style={{
+                fontSize: rem(32),
+                letterSpacing: -1,
+                fontFamily: "var(--font-wordmark), Georgia, serif",
+                fontStyle: "italic",
+              }}
+            >
+              featherdrop
+            </Title>
+          </Group>
+        </UnstyledButton>
+      </Center>
 
       {status === "done" ? (
         <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
