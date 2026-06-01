@@ -10,6 +10,7 @@ import {
   Text,
 } from "@mantine/core";
 import { IconLock, IconSend } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { EXPIRY_OPTIONS } from "@/lib/expiry";
 
 interface SettingsPanelProps {
@@ -31,24 +32,28 @@ export function SettingsPanel({
   onUpload,
   uploading,
 }: SettingsPanelProps) {
+  const { t } = useTranslation();
   return (
     <Paper withBorder radius="lg" p="lg" w={{ base: "100%", sm: 300 }}>
       <Stack gap="md">
-        <Text fw={600}>Share options</Text>
+        <Text fw={600}>{t("settings.title")}</Text>
 
         <Select
-          label="Expires after"
+          label={t("settings.expiresAfter")}
           value={expiry}
           onChange={(v) => v && onExpiryChange(v)}
-          data={EXPIRY_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          data={EXPIRY_OPTIONS.map((o) => ({
+            value: o.value,
+            label: t(`expiry.${o.value}`),
+          }))}
           allowDeselect={false}
           disabled={uploading}
           comboboxProps={{ withinPortal: true }}
         />
 
         <PasswordInput
-          label="Password (optional)"
-          placeholder="Leave empty for none"
+          label={t("settings.password")}
+          placeholder={t("settings.passwordPlaceholder")}
           leftSection={<IconLock size={16} />}
           value={password}
           onChange={(e) => onPasswordChange(e.currentTarget.value)}
@@ -64,7 +69,7 @@ export function SettingsPanel({
           onClick={onUpload}
           loading={uploading}
         >
-          Upload &amp; share
+          {t("settings.upload")}
         </Button>
       </Stack>
     </Paper>

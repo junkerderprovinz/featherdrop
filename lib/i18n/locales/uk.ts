@@ -1,0 +1,53 @@
+import type { Translation } from "./en.ts";
+
+export const uk: Translation = {
+  "app.tagline": "Перетягніть файл, поділіться посиланням.",
+  "app.subtitle": "Без облікового запису. Посилання спливають самі.",
+  "app.footer": "власний хостинг · без облікового запису · автоспливання",
+  "theme.toggle": "Перемкнути тему",
+  "language.label": "Мова",
+
+  "drop.drag": "Перетягніть файл сюди",
+  "drop.browse": "або натисніть для вибору",
+  "drop.replace": "перетягніть інший для заміни",
+
+  "settings.title": "Параметри доступу",
+  "settings.expiresAfter": "Спливає через",
+  "settings.password": "Пароль (необов’язково)",
+  "settings.passwordPlaceholder": "Залиште порожнім, щоб без пароля",
+  "settings.upload": "Завантажити та поділитися",
+
+  "result.ready": "Готово до надсилання",
+  "result.copy": "Копіювати посилання",
+  "result.copied": "Скопійовано",
+  "result.shareAnother": "Поділитися іншим файлом",
+  "result.neverExpires": "Ніколи не спливає",
+  "result.expiresAfter": "Спливає через {{label}}",
+
+  "download.protected": "Цей файл захищено паролем",
+  "download.passwordPlaceholder": "Введіть пароль",
+  "download.unlock": "Розблокувати та завантажити",
+  "download.download": "Завантажити",
+  "download.wrongPassword": "Неправильний пароль",
+  "download.failed": "Не вдалося завантажити",
+
+  "notfound.title": "Тут нічого немає",
+  "notfound.body": "Це посилання недійсне, або файл сплив і його видалено.",
+  "notfound.share": "Поділитися файлом",
+
+  "upload.failed": "Не вдалося завантажити",
+  "upload.finalizeFailed": "Не вдалося завершити публікацію",
+
+  "expiry.1h": "1 година",
+  "expiry.6h": "6 годин",
+  "expiry.1d": "1 день",
+  "expiry.7d": "7 днів",
+  "expiry.30d": "30 днів",
+  "expiry.never": "Ніколи",
+
+  "relexp.never": "Ніколи не спливає",
+  "relexp.expired": "Сплив",
+  "relexp.minutes": "Спливає за {{count}} хв",
+  "relexp.hours": "Спливає за {{count}} год",
+  "relexp.days": "Спливає за {{count}} дн.",
+};

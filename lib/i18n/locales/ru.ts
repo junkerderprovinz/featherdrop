@@ -1,0 +1,53 @@
+import type { Translation } from "./en.ts";
+
+export const ru: Translation = {
+  "app.tagline": "Перетащите файл, поделитесь ссылкой.",
+  "app.subtitle": "Без аккаунта. Ссылки истекают сами.",
+  "app.footer": "самостоятельный хостинг · без аккаунта · автоистечение",
+  "theme.toggle": "Переключить тему",
+  "language.label": "Язык",
+
+  "drop.drag": "Перетащите файл сюда",
+  "drop.browse": "или нажмите для выбора",
+  "drop.replace": "перетащите другой для замены",
+
+  "settings.title": "Параметры доступа",
+  "settings.expiresAfter": "Истекает через",
+  "settings.password": "Пароль (необязательно)",
+  "settings.passwordPlaceholder": "Оставьте пустым, чтобы без пароля",
+  "settings.upload": "Загрузить и поделиться",
+
+  "result.ready": "Готово к отправке",
+  "result.copy": "Копировать ссылку",
+  "result.copied": "Скопировано",
+  "result.shareAnother": "Поделиться другим файлом",
+  "result.neverExpires": "Никогда не истекает",
+  "result.expiresAfter": "Истекает через {{label}}",
+
+  "download.protected": "Этот файл защищён паролем",
+  "download.passwordPlaceholder": "Введите пароль",
+  "download.unlock": "Разблокировать и скачать",
+  "download.download": "Скачать",
+  "download.wrongPassword": "Неверный пароль",
+  "download.failed": "Не удалось скачать",
+
+  "notfound.title": "Здесь ничего нет",
+  "notfound.body": "Эта ссылка недействительна, или файл истёк и был удалён.",
+  "notfound.share": "Поделиться файлом",
+
+  "upload.failed": "Не удалось загрузить",
+  "upload.finalizeFailed": "Не удалось завершить публикацию",
+
+  "expiry.1h": "1 час",
+  "expiry.6h": "6 часов",
+  "expiry.1d": "1 день",
+  "expiry.7d": "7 дней",
+  "expiry.30d": "30 дней",
+  "expiry.never": "Никогда",
+
+  "relexp.never": "Никогда не истекает",
+  "relexp.expired": "Истёк",
+  "relexp.minutes": "Истекает через {{count}} мин",
+  "relexp.hours": "Истекает через {{count}} ч",
+  "relexp.days": "Истекает через {{count}} дн.",
+};

@@ -14,6 +14,7 @@ import {
 } from "@mantine/core";
 import { IconCheck, IconCopy, IconPlus } from "@tabler/icons-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useTranslation } from "react-i18next";
 
 interface ResultPanelProps {
   url: string;
@@ -24,12 +25,13 @@ interface ResultPanelProps {
 // Shown after a successful upload: the shareable link, a copy button, a QR code
 // for phones, and a way to start over.
 export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
+  const { t } = useTranslation();
   return (
     <Paper withBorder radius="lg" p="xl" maw={520} mx="auto" w="100%">
       <Stack align="center" gap="lg">
         <Stack align="center" gap={4}>
           <Text fw={700} size="xl">
-            Ready to share
+            {t("result.ready")}
           </Text>
           <Text c="dimmed" size="sm">
             {expiryLabel}
@@ -48,7 +50,7 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
           <TextInput value={url} readOnly style={{ flex: 1 }} />
           <CopyButton value={url} timeout={2000}>
             {({ copied, copy }) => (
-              <Tooltip label={copied ? "Copied" : "Copy link"} withArrow>
+              <Tooltip label={copied ? t("result.copied") : t("result.copy")} withArrow>
                 <ActionIcon
                   size={36}
                   variant={copied ? "filled" : "light"}
@@ -67,7 +69,7 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
           leftSection={<IconPlus size={16} />}
           onClick={onReset}
         >
-          Share another file
+          {t("result.shareAnother")}
         </Button>
       </Stack>
     </Paper>

@@ -16,16 +16,19 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconMoon, IconSun } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import * as tus from "tus-js-client";
 import { Logo } from "@/components/Logo";
 import { DropArea } from "@/components/DropArea";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { EXPIRY_OPTIONS } from "@/lib/expiry";
 
 type Status = "idle" | "ready" | "uploading" | "done";
 
 export default function HomePage() {
+  const { t } = useTranslation();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const [status, setStatus] = useState<Status>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -62,7 +65,7 @@ export default function HomePage() {
         setStatus("ready");
         notifications.show({
           color: "red",
-          title: "Upload failed",
+          title: t("upload.failed"),
           message: err.message,
         });
       },
@@ -83,7 +86,7 @@ export default function HomePage() {
           setStatus("ready");
           notifications.show({
             color: "red",
-            title: "Could not finalize share",
+            title: t("upload.finalizeFailed"),
             message: e instanceof Error ? e.message : "unknown error",
           });
         }
@@ -97,10 +100,14 @@ export default function HomePage() {
     slug && typeof window !== "undefined"
       ? `${window.location.origin}/d/${slug}`
       : "";
-  const expiryLabel =
-    EXPIRY_OPTIONS.find((o) => o.value === expiry)?.label ?? "";
   const uploading = status === "uploading";
   const showPanel = status === "ready" || status === "uploading";
+
+  const expiryOpt = EXPIRY_OPTIONS.find((o) => o.value === expiry);
+  const expiryText =
+    expiryOpt?.value === "never"
+      ? t("result.neverExpires")
+      : t("result.expiresAfter", { label: t(`expiry.${expiry}`) });
 
   return (
     <Container size="lg" py={60} style={{ minHeight: "100vh" }}>
@@ -111,38 +118,36 @@ export default function HomePage() {
             featherdrop
           </Title>
         </Group>
-        <Tooltip label="Toggle theme" withArrow>
-          <ActionIcon
-            variant="default"
-            size="lg"
-            onClick={() =>
-              setColorScheme(colorScheme === "dark" ? "light" : "dark")
-            }
-          >
-            {colorScheme === "dark" ? (
-              <IconSun size={18} />
-            ) : (
-              <IconMoon size={18} />
-            )}
-          </ActionIcon>
-        </Tooltip>
+        <Group gap="xs">
+          <LanguageSwitcher />
+          <Tooltip label={t("theme.toggle")} withArrow>
+            <ActionIcon
+              variant="default"
+              size="lg"
+              aria-label={t("theme.toggle")}
+              onClick={() =>
+                setColorScheme(colorScheme === "dark" ? "light" : "dark")
+              }
+            >
+              {colorScheme === "dark" ? (
+                <IconSun size={18} />
+              ) : (
+                <IconMoon size={18} />
+              )}
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       </Group>
 
       {status === "done" ? (
-        <ResultPanel
-          url={shareUrl}
-          expiryLabel={
-            expiryLabel === "Never" ? "Never expires" : `Expires after ${expiryLabel.toLowerCase()}`
-          }
-          onReset={reset}
-        />
+        <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
       ) : (
         <Stack align="center" gap="sm">
           <Stack align="center" gap={2} mb="md">
             <Text fw={600} size="xl">
-              Drop a file, share a link.
+              {t("app.tagline")}
             </Text>
-            <Text c="dimmed">No account. Links expire on their own.</Text>
+            <Text c="dimmed">{t("app.subtitle")}</Text>
           </Stack>
 
           <Paper withBorder radius="xl" p="lg" w="100%" maw={820}>
@@ -176,7 +181,7 @@ export default function HomePage() {
           </Paper>
 
           <Text c="dimmed" size="xs" mt="xl">
-            self-hosted · no account · auto-expiring
+            {t("app.footer")}
           </Text>
         </Stack>
       )}
