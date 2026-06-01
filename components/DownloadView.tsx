@@ -20,6 +20,7 @@ import { IconDownload, IconLock, IconMoon, IconSun } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
 import { Logo } from "@/components/Logo";
+import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
 interface DownloadViewProps {
@@ -42,6 +43,7 @@ export function DownloadView({
   serverMode,
 }: DownloadViewProps) {
   const { t } = useTranslation();
+  const { appName } = useBranding();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -162,7 +164,7 @@ export function DownloadView({
                 size="lg"
                 style={{ fontFamily: "var(--font-wordmark), Georgia, serif", fontStyle: "italic" }}
               >
-                featherdrop
+                {appName}
               </Text>
             </Group>
           </Link>
