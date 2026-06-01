@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const it: Translation = {
   "app.tagline": "Rilascia un file, condividi un link.",
-  "app.subtitle": "Nessun account. I link scadono da soli.",
-  "app.footer": "self-hosted · senza account · scadenza automatica",
+  "app.subtitle": "Cifrato, e sparisce alla scadenza.",
   "theme.toggle": "Cambia tema",
   "language.label": "Lingua",
 

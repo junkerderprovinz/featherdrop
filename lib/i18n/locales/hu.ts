@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const hu: Translation = {
   "app.tagline": "Dobj be egy fájlt, ossz meg egy linket.",
-  "app.subtitle": "Nincs fiók. A linkek maguktól lejárnak.",
-  "app.footer": "saját tárhely · fiók nélkül · automatikus lejárat",
+  "app.subtitle": "Titkosítva, és eltűnik, amikor lejár.",
   "theme.toggle": "Téma váltása",
   "language.label": "Nyelv",
 

@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const cs: Translation = {
   "app.tagline": "Přetáhněte soubor, sdílejte odkaz.",
-  "app.subtitle": "Bez účtu. Odkazy vyprší samy.",
-  "app.footer": "vlastní hosting · bez účtu · automatické vypršení",
+  "app.subtitle": "Šifrované a po vypršení zmizí.",
   "theme.toggle": "Přepnout motiv",
   "language.label": "Jazyk",
 

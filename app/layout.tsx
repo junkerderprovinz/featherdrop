@@ -52,7 +52,10 @@ export default function RootLayout({
         <DirectionProvider initialDirection={dir} detectDirection={false}>
           <MantineProvider theme={theme} defaultColorScheme="auto">
             <Notifications position="top-center" />
-            <I18nProvider initialLanguage={lang}>{children}</I18nProvider>
+            <div className="fd-aurora" aria-hidden="true" />
+            <div className="fd-content">
+              <I18nProvider initialLanguage={lang}>{children}</I18nProvider>
+            </div>
           </MantineProvider>
         </DirectionProvider>
       </body>

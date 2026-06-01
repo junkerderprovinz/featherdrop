@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const he: Translation = {
   "app.tagline": "שחררו קובץ, שתפו קישור.",
-  "app.subtitle": "בלי חשבון. הקישורים פגים מעצמם.",
-  "app.footer": "אירוח עצמי · בלי חשבון · תפוגה אוטומטית",
+  "app.subtitle": "מוצפן, ונעלם כשהתוקף פג.",
   "theme.toggle": "החלפת ערכת נושא",
   "language.label": "שפה",
 

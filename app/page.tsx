@@ -12,6 +12,7 @@ import {
   Title,
   Tooltip,
   Transition,
+  rem,
   useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -116,10 +117,10 @@ export default function HomePage() {
 
   return (
     <Container size="lg" py={60} style={{ minHeight: "100vh" }}>
-      <Group justify="space-between" mb={48}>
-        <Group gap="xs">
-          <Logo size={28} />
-          <Title order={2} fw={800}>
+      <Group justify="space-between" mb={56}>
+        <Group gap="sm">
+          <Logo size={40} />
+          <Title order={1} fw={800} style={{ fontSize: rem(32), letterSpacing: -1 }}>
             featherdrop
           </Title>
         </Group>
@@ -147,15 +148,18 @@ export default function HomePage() {
       {status === "done" ? (
         <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
       ) : (
-        <Stack align="center" gap="sm">
-          <Stack align="center" gap={2} mb="md">
-            <Text fw={600} size="xl">
+        <Stack align="center" gap={0}>
+          <Stack align="center" gap={6} mb={36}>
+            <Text fw={700} size={rem(28)} ta="center" style={{ letterSpacing: -0.5 }}>
               {t("app.tagline")}
             </Text>
-            <Text c="dimmed">{t("app.subtitle")}</Text>
+            <Text c="dimmed" size="lg" ta="center">
+              {t("app.subtitle")}
+            </Text>
           </Stack>
 
-          <Paper withBorder radius="xl" p="lg" w="100%" maw={820}>
+          {/* Floating frosted-glass window holding the drop zone + settings. */}
+          <Paper radius="lg" p="xl" w="100%" maw={860} className="fd-glass">
             <Flex
               direction={{ base: "column", sm: "row" }}
               gap="lg"
@@ -184,10 +188,6 @@ export default function HomePage() {
               </Transition>
             </Flex>
           </Paper>
-
-          <Text c="dimmed" size="xs" mt="xl">
-            {t("app.footer")}
-          </Text>
         </Stack>
       )}
     </Container>

@@ -34,7 +34,12 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   const { t } = useTranslation();
   return (
-    <Paper withBorder radius="lg" p="lg" w={{ base: "100%", sm: 300 }}>
+    <Paper
+      radius="lg"
+      p="lg"
+      w={{ base: "100%", sm: 300 }}
+      style={{ background: "transparent" }}
+    >
       <Stack gap="md">
         <Text fw={600}>{t("settings.title")}</Text>
 

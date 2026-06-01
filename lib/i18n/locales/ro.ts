@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ro: Translation = {
   "app.tagline": "Lasă un fișier, partajează un link.",
-  "app.subtitle": "Fără cont. Linkurile expiră singure.",
-  "app.footer": "auto-găzduit · fără cont · expiră automat",
+  "app.subtitle": "Criptat și dispare la expirare.",
   "theme.toggle": "Comută tema",
   "language.label": "Limbă",
 

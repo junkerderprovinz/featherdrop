@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const zh: Translation = {
   "app.tagline": "拖入文件，分享链接。",
-  "app.subtitle": "无需账户。链接会自动过期。",
-  "app.footer": "自托管 · 无账户 · 自动过期",
+  "app.subtitle": "已加密，过期后即消失。",
   "theme.toggle": "切换主题",
   "language.label": "语言",
 

@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const fi: Translation = {
   "app.tagline": "Pudota tiedosto, jaa linkki.",
-  "app.subtitle": "Ei tiliä. Linkit vanhenevat itsestään.",
-  "app.footer": "itse isännöity · ei tiliä · vanhenee automaattisesti",
+  "app.subtitle": "Salattu, ja poissa kun se vanhenee.",
   "theme.toggle": "Vaihda teemaa",
   "language.label": "Kieli",
 

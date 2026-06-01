@@ -2,13 +2,10 @@
 
 import { Box, Center, Group, RingProgress, Stack, Text, rem } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
-import {
-  IconCloudUpload,
-  IconFile,
-  IconX,
-} from "@tabler/icons-react";
+import { IconCloudUpload, IconFile, IconX } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@/lib/format";
+import { Logo } from "@/components/Logo";
 
 interface DropAreaProps {
   onDrop: (file: File) => void;
@@ -18,8 +15,9 @@ interface DropAreaProps {
   fileSize?: number;
 }
 
-// The central, always-visible drop target. While an upload runs, a translucent
-// overlay with a ring shows progress directly on the zone.
+// The central, always-visible drop target — a frosted-glass panel with the
+// feather mark crowning the top. While an upload runs, a translucent overlay
+// with a progress ring shows directly on the zone.
 export function DropArea({
   onDrop,
   uploading,
@@ -35,29 +33,34 @@ export function DropArea({
         disabled={uploading}
         multiple={false}
         radius="lg"
-        h={rem(280)}
-        style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        h={rem(300)}
+        className="fd-glass-inner"
+        styles={{ root: { background: "transparent", border: "none" } }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <Stack align="center" gap="xs" style={{ pointerEvents: "none" }}>
+        <Stack align="center" gap="md" style={{ pointerEvents: "none" }}>
+          {/* Logo (no wordmark) crowning the drop zone. */}
+          <Logo size={48} />
+
           <Dropzone.Accept>
-            <IconCloudUpload size={56} stroke={1.4} />
+            <IconCloudUpload size={40} stroke={1.4} />
           </Dropzone.Accept>
           <Dropzone.Reject>
-            <IconX size={56} stroke={1.4} />
+            <IconX size={40} stroke={1.4} />
           </Dropzone.Reject>
-          <Dropzone.Idle>
-            {fileName ? (
-              <IconFile size={56} stroke={1.2} />
-            ) : (
-              <IconCloudUpload size={56} stroke={1.2} />
-            )}
-          </Dropzone.Idle>
 
           {fileName ? (
             <Stack align="center" gap={2}>
-              <Text fw={600} size="lg" lineClamp={1}>
-                {fileName}
-              </Text>
+              <Group gap={8} wrap="nowrap">
+                <IconFile size={20} stroke={1.4} />
+                <Text fw={600} size="lg" lineClamp={1}>
+                  {fileName}
+                </Text>
+              </Group>
               {fileSize !== undefined && (
                 <Text c="dimmed" size="sm">
                   {formatBytes(fileSize)} · {t("drop.replace")}
@@ -83,23 +86,21 @@ export function DropArea({
           inset={0}
           style={{
             borderRadius: "var(--mantine-radius-lg)",
-            backdropFilter: "blur(2px)",
-            background: "rgba(0,0,0,0.35)",
+            backdropFilter: "blur(3px)",
+            background: "rgba(10, 8, 4, 0.45)",
           }}
         >
-          <Group>
-            <RingProgress
-              size={120}
-              thickness={10}
-              roundCaps
-              sections={[{ value: progress, color: "violet" }]}
-              label={
-                <Text c="white" fw={700} ta="center" size="lg">
-                  {Math.round(progress)}%
-                </Text>
-              }
-            />
-          </Group>
+          <RingProgress
+            size={130}
+            thickness={9}
+            roundCaps
+            sections={[{ value: progress, color: "yellow" }]}
+            label={
+              <Text c="white" fw={700} ta="center" size="lg">
+                {Math.round(progress)}%
+              </Text>
+            }
+          />
         </Center>
       )}
     </Box>

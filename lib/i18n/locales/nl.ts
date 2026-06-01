@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const nl: Translation = {
   "app.tagline": "Zet een bestand neer, deel een link.",
-  "app.subtitle": "Geen account. Links verlopen vanzelf.",
-  "app.footer": "zelf gehost · geen account · verloopt automatisch",
+  "app.subtitle": "Versleuteld, en weg zodra het verloopt.",
   "theme.toggle": "Thema wisselen",
   "language.label": "Taal",
 
