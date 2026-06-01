@@ -51,9 +51,9 @@
   <Config
     Name="Default Expiry"
     Target="DEFAULT_EXPIRY"
-    Default="7d"
+    Default="7d|1h|6h|1d|30d|never"
     Mode=""
-    Description="Expiry pre-selected in the UI. One of: 1h, 6h, 1d, 7d, 30d, never."
+    Description="Expiry pre-selected in the UI when an uploader does not choose one. Pick from the dropdown: 1h, 6h, 1d, 7d, 30d, or never."
     Type="Variable"
     Display="always"
     Required="false"
@@ -71,9 +71,9 @@
   <Config
     Name="Encrypt Uploads"
     Target="ENCRYPT_UPLOADS"
-    Default="true"
+    Default="true|false"
     Mode=""
-    Description="Encrypt new uploads at rest with age. true (recommended) = files are encrypted on disk; the filename is hidden too. false = store plaintext. Existing files keep their stored mode."
+    Description="Encrypt new uploads at rest with age. true (recommended) = files are encrypted on disk and the filename is hidden too. false = store plaintext. Existing files keep their stored mode."
     Type="Variable"
     Display="always"
     Required="false"
