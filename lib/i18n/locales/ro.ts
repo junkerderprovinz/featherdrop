@@ -19,6 +19,8 @@ export const ro: Translation = {
   "result.ready": "Gata de partajare",
   "result.copy": "Copiază linkul",
   "result.copied": "Copiat",
+
+  "result.copyFailed": "Nu s-a putut copia — selectează linkul și copiază-l manual.",
   "result.shareAnother": "Partajează alt fișier",
   "result.neverExpires": "Nu expiră niciodată",
   "result.expiresAfter": "Expiră după {{label}}",

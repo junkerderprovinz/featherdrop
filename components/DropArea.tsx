@@ -94,7 +94,7 @@ export function DropArea({
             size={130}
             thickness={9}
             roundCaps
-            sections={[{ value: progress, color: "yellow" }]}
+            sections={[{ value: progress, color: "fdgold" }]}
             label={
               <Text c="white" fw={700} ta="center" size="lg">
                 {Math.round(progress)}%

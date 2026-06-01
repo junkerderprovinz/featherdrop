@@ -19,6 +19,8 @@ export const he: Translation = {
   "result.ready": "מוכן לשיתוף",
   "result.copy": "העתקת קישור",
   "result.copied": "הועתק",
+
+  "result.copyFailed": "ההעתקה נכשלה — סמנו את הקישור והעתיקו ידנית.",
   "result.shareAnother": "שיתוף קובץ נוסף",
   "result.neverExpires": "לעולם לא פג",
   "result.expiresAfter": "פג אחרי {{label}}",

@@ -19,6 +19,8 @@ export const fi: Translation = {
   "result.ready": "Valmis jaettavaksi",
   "result.copy": "Kopioi linkki",
   "result.copied": "Kopioitu",
+
+  "result.copyFailed": "Kopiointi epäonnistui — valitse linkki ja kopioi käsin.",
   "result.shareAnother": "Jaa toinen tiedosto",
   "result.neverExpires": "Ei vanhene koskaan",
   "result.expiresAfter": "Vanhenee {{label}} kuluttua",

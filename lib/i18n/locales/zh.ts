@@ -19,6 +19,8 @@ export const zh: Translation = {
   "result.ready": "已准备好分享",
   "result.copy": "复制链接",
   "result.copied": "已复制",
+
+  "result.copyFailed": "无法复制 — 请选中链接手动复制。",
   "result.shareAnother": "分享另一个文件",
   "result.neverExpires": "永不过期",
   "result.expiresAfter": "{{label}}后过期",

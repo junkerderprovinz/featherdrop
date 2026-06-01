@@ -19,6 +19,8 @@ export const vi: Translation = {
   "result.ready": "Sẵn sàng chia sẻ",
   "result.copy": "Sao chép liên kết",
   "result.copied": "Đã sao chép",
+
+  "result.copyFailed": "Không thể sao chép — hãy chọn liên kết và sao chép thủ công.",
   "result.shareAnother": "Chia sẻ tệp khác",
   "result.neverExpires": "Không bao giờ hết hạn",
   "result.expiresAfter": "Hết hạn sau {{label}}",

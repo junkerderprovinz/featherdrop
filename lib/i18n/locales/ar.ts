@@ -19,6 +19,8 @@ export const ar: Translation = {
   "result.ready": "جاهز للمشاركة",
   "result.copy": "نسخ الرابط",
   "result.copied": "تم النسخ",
+
+  "result.copyFailed": "تعذّر النسخ — حدّد الرابط وانسخه يدويًا.",
   "result.shareAnother": "مشاركة ملف آخر",
   "result.neverExpires": "لا تنتهي صلاحيته أبدًا",
   "result.expiresAfter": "تنتهي الصلاحية بعد {{label}}",

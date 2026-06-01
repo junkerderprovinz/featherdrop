@@ -19,6 +19,8 @@ export const nl: Translation = {
   "result.ready": "Klaar om te delen",
   "result.copy": "Link kopiëren",
   "result.copied": "Gekopieerd",
+
+  "result.copyFailed": "Kopiëren mislukt — selecteer de link en kopieer handmatig.",
   "result.shareAnother": "Nog een bestand delen",
   "result.neverExpires": "Verloopt nooit",
   "result.expiresAfter": "Verloopt na {{label}}",

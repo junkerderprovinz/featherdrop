@@ -19,6 +19,8 @@ export const pt: Translation = {
   "result.ready": "Pronto para partilhar",
   "result.copy": "Copiar link",
   "result.copied": "Copiado",
+
+  "result.copyFailed": "Não foi possível copiar — selecione o link e copie manualmente.",
   "result.shareAnother": "Partilhar outro ficheiro",
   "result.neverExpires": "Nunca expira",
   "result.expiresAfter": "Expira após {{label}}",

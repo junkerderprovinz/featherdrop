@@ -19,6 +19,8 @@ export const ru: Translation = {
   "result.ready": "Готово к отправке",
   "result.copy": "Копировать ссылку",
   "result.copied": "Скопировано",
+
+  "result.copyFailed": "Не удалось скопировать — выделите ссылку и скопируйте вручную.",
   "result.shareAnother": "Поделиться другим файлом",
   "result.neverExpires": "Никогда не истекает",
   "result.expiresAfter": "Истекает через {{label}}",

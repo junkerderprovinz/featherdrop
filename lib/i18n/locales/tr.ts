@@ -19,6 +19,8 @@ export const tr: Translation = {
   "result.ready": "Paylaşıma hazır",
   "result.copy": "Bağlantıyı kopyala",
   "result.copied": "Kopyalandı",
+
+  "result.copyFailed": "Kopyalanamadı — bağlantıyı seçip elle kopyalayın.",
   "result.shareAnother": "Başka bir dosya paylaş",
   "result.neverExpires": "Asla sona ermez",
   "result.expiresAfter": "{{label}} sonra sona erer",

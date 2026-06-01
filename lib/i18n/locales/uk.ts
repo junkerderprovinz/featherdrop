@@ -19,6 +19,8 @@ export const uk: Translation = {
   "result.ready": "Готово до надсилання",
   "result.copy": "Копіювати посилання",
   "result.copied": "Скопійовано",
+
+  "result.copyFailed": "Не вдалося скопіювати — виділіть посилання та скопіюйте вручну.",
   "result.shareAnother": "Поділитися іншим файлом",
   "result.neverExpires": "Ніколи не спливає",
   "result.expiresAfter": "Спливає через {{label}}",

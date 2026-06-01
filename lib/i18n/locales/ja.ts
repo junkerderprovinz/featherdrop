@@ -19,6 +19,8 @@ export const ja: Translation = {
   "result.ready": "共有の準備完了",
   "result.copy": "リンクをコピー",
   "result.copied": "コピーしました",
+
+  "result.copyFailed": "コピーできませんでした。リンクを選択して手動でコピーしてください。",
   "result.shareAnother": "別のファイルを共有",
   "result.neverExpires": "無期限",
   "result.expiresAfter": "{{label}}後に期限切れ",

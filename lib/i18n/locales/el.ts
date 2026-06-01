@@ -19,6 +19,8 @@ export const el: Translation = {
   "result.ready": "Έτοιμο για κοινή χρήση",
   "result.copy": "Αντιγραφή συνδέσμου",
   "result.copied": "Αντιγράφηκε",
+
+  "result.copyFailed": "Αδυναμία αντιγραφής — επιλέξτε τον σύνδεσμο και αντιγράψτε χειροκίνητα.",
   "result.shareAnother": "Μοιράσου άλλο αρχείο",
   "result.neverExpires": "Δεν λήγει ποτέ",
   "result.expiresAfter": "Λήγει μετά από {{label}}",
