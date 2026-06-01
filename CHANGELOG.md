@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-06-01
+
+### Added
+
+- **Server encryption mode → short links.** A third at-rest mode beside
+  *password* and *link*. When `MASTER_KEY` is set, a password-less upload wraps
+  its per-file age key with the master key and stores it, instead of returning
+  the key in the share URL — so the link is just `…/d/aB3xK`, no `#fragment`.
+  The recipient opens the short link and the server decrypts with its master
+  key; no credential needed (`lib/encmode.ts`, `app/api/finalize`, `app/api/d`).
+- **`MASTER_KEY` config.** New optional env var (masked Unraid template field).
+  Generate with `openssl rand -base64 32`. It lives only in the container
+  environment, never in `/data`, so a stolen data backup stays unreadable. Keep
+  it secret and back it up — losing it makes password-less files unrecoverable.
+  Empty = the existing long `#key` links.
+- **Template dropdowns.** `ENCRYPT_UPLOADS` (`true | false`) and
+  `DEFAULT_EXPIRY` (`7d | 1h | 6h | 1d | 30d | never`) are now pick-lists in the
+  Unraid template instead of free-text fields.
+
+### Compatibility
+
+- Fully backward-compatible. With `MASTER_KEY` unset, behaviour is identical to
+  v2.1.x (long `#fragment` links). The mode is recorded per file, so existing
+  files keep the mode they were created with.
+
 ## [2.1.3] — 2026-06-01
 
 ### Added

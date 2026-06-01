@@ -18,11 +18,14 @@ export default function DownloadPage({
     notFound();
   }
 
-  // For encrypted link-mode shares the server never sees the real name (it is
-  // inside the encrypted header); the client reveals it after decrypting with
-  // the #key fragment. For password mode it is revealed after the password POST.
+  // The real filename is inside the encrypted blob, so the server doesn't know
+  // it for any encrypted share — the client reveals it after authorizing:
+  //   - link:     decrypt with the #fragment key.
+  //   - server:   the server decrypts with its master key (no credential).
+  //   - password: revealed after the password POST.
   // original_name holds the plaintext name only for legacy unencrypted blobs.
   const linkMode = rec.encrypted === 1 && rec.enc_mode === "link";
+  const serverMode = rec.encrypted === 1 && rec.enc_mode === "server";
   const serverName = rec.encrypted === 1 ? null : rec.original_name;
 
   return (
@@ -33,6 +36,7 @@ export default function DownloadPage({
       expiresAt={rec.expires_at}
       hasPassword={rec.password_hash !== null}
       linkMode={linkMode}
+      serverMode={serverMode}
     />
   );
 }

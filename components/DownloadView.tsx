@@ -28,6 +28,7 @@ interface DownloadViewProps {
   expiresAt: number | null;
   hasPassword: boolean;
   linkMode: boolean; // encrypted, key carried in the URL #fragment
+  serverMode: boolean; // encrypted, key wrapped with the server master key
 }
 
 export function DownloadView({
@@ -37,6 +38,7 @@ export function DownloadView({
   expiresAt,
   hasPassword,
   linkMode,
+  serverMode,
 }: DownloadViewProps) {
   const { t } = useTranslation();
   const { colorScheme, setColorScheme } = useMantineColorScheme();
@@ -97,17 +99,20 @@ export function DownloadView({
     }
   };
 
-  // Link mode: as soon as we have the key from the fragment, reveal the real
-  // filename (a POST that decrypts just the header) without downloading yet.
+  // Reveal the real filename on mount for shares that need no password: link
+  // mode (decrypt with the #fragment key) and server mode (the server decrypts
+  // with its master key, so an empty credential is enough). A POST that decrypts
+  // just the header, without downloading yet.
   useEffect(() => {
-    if (!linkMode || !linkKey) return;
+    const cred = linkMode && linkKey ? { key: linkKey } : serverMode ? {} : null;
+    if (!cred) return;
     let cancelled = false;
     void (async () => {
       try {
         const res = await fetch(downloadUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: linkKey }),
+          body: JSON.stringify(cred),
         });
         if (!res.ok) return;
         const data = (await res.json()) as { name?: string };
@@ -119,7 +124,7 @@ export function DownloadView({
     return () => {
       cancelled = true;
     };
-  }, [linkMode, linkKey, downloadUrl]);
+  }, [linkMode, linkKey, serverMode, downloadUrl]);
 
   const missingKey = linkMode && !linkKey;
 

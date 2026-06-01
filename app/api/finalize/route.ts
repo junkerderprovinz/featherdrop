@@ -7,12 +7,15 @@ import { pipeline } from "node:stream/promises";
 import {
   DEFAULT_EXPIRY,
   ENCRYPT_UPLOADS,
+  MASTER_KEY,
+  SERVER_KEY_MODE,
   TMP_DIR,
   UPLOADS_DIR,
   ensureDataDirs,
 } from "@/lib/config";
 import { isSafeId, newSlug } from "@/lib/ids";
 import { isUploadComplete } from "@/lib/upload";
+import { chooseEncMode } from "@/lib/encmode";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
 import { hashPassword } from "@/lib/password";
 import { createFileRecord, getFileBySlug } from "@/server/db";
@@ -128,9 +131,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const slug = uniqueSlug();
   const password = body.password?.trim();
 
-  // Encryption (default on). The file is encrypted to a fresh per-file key:
-  //   - password set  -> wrap the key with the password, store only the wrap.
-  //   - no password   -> hand the key back so it can ride in the share link.
+  // Encryption (default on). The file is encrypted to a fresh per-file key;
+  // what happens to that key is the mode (see lib/encmode.ts):
+  //   - password -> wrap with the password, store only the wrap.
+  //   - server   -> wrap with the server master key, store the wrap (short link).
+  //   - link     -> hand the key back so it rides in the share #fragment.
   let encrypted = 0;
   let encMode: string | null = null;
   let encKeyWrapped: string | null = null;
@@ -142,12 +147,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       mime,
     });
     encrypted = 1;
-    if (password) {
-      encMode = "password";
-      encKeyWrapped = await wrapKey(key, password);
+    const mode = chooseEncMode(Boolean(password), SERVER_KEY_MODE);
+    encMode = mode;
+    if (mode === "password") {
+      encKeyWrapped = await wrapKey(key, password as string);
+    } else if (mode === "server") {
+      encKeyWrapped = await wrapKey(key, MASTER_KEY);
     } else {
-      encMode = "link";
-      linkKey = key;
+      linkKey = key; // link mode: key travels in the URL fragment
     }
   } else {
     // Plaintext fallback: just move the upload into the store.
