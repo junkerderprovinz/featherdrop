@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const sv: Translation = {
   "app.tagline": "Släpp en fil, dela en länk.",
-  "app.subtitle": "Inget konto. Länkar går ut av sig själva.",
-  "app.footer": "egen server · inget konto · går ut automatiskt",
+  "app.subtitle": "Krypterat, och borta när det går ut.",
   "theme.toggle": "Växla tema",
   "language.label": "Språk",
 

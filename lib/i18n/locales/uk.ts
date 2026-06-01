@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const uk: Translation = {
   "app.tagline": "Перетягніть файл, поділіться посиланням.",
-  "app.subtitle": "Без облікового запису. Посилання спливають самі.",
-  "app.footer": "власний хостинг · без облікового запису · автоспливання",
+  "app.subtitle": "Зашифровано та зникає після завершення.",
   "theme.toggle": "Перемкнути тему",
   "language.label": "Мова",
 

@@ -5,8 +5,7 @@
 // Interpolation uses i18next syntax: {{label}}, {{count}}.
 export const en = {
   "app.tagline": "Drop a file, share a link.",
-  "app.subtitle": "No account. Links expire on their own.",
-  "app.footer": "self-hosted · no account · auto-expiring",
+  "app.subtitle": "Encrypted, and gone when it expires.",
   "theme.toggle": "Toggle theme",
   "language.label": "Language",
 

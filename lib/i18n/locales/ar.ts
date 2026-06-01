@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ar: Translation = {
   "app.tagline": "أفلِت ملفًا، وشارِك رابطًا.",
-  "app.subtitle": "بلا حساب. تنتهي صلاحية الروابط من تلقاء نفسها.",
-  "app.footer": "استضافة ذاتية · بلا حساب · انتهاء تلقائي",
+  "app.subtitle": "مشفّر، ويختفي عند انتهاء صلاحيته.",
   "theme.toggle": "تبديل السمة",
   "language.label": "اللغة",
 

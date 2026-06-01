@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ru: Translation = {
   "app.tagline": "Перетащите файл, поделитесь ссылкой.",
-  "app.subtitle": "Без аккаунта. Ссылки истекают сами.",
-  "app.footer": "самостоятельный хостинг · без аккаунта · автоистечение",
+  "app.subtitle": "Зашифровано и исчезает по истечении срока.",
   "theme.toggle": "Переключить тему",
   "language.label": "Язык",
 

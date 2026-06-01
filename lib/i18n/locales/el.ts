@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const el: Translation = {
   "app.tagline": "Ρίξε ένα αρχείο, μοιράσου έναν σύνδεσμο.",
-  "app.subtitle": "Χωρίς λογαριασμό. Οι σύνδεσμοι λήγουν μόνοι τους.",
-  "app.footer": "αυτο-φιλοξενούμενο · χωρίς λογαριασμό · αυτόματη λήξη",
+  "app.subtitle": "Κρυπτογραφημένο, και χάνεται όταν λήξει.",
   "theme.toggle": "Εναλλαγή θέματος",
   "language.label": "Γλώσσα",
 

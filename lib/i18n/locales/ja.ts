@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ja: Translation = {
   "app.tagline": "ファイルをドロップして、リンクを共有。",
-  "app.subtitle": "アカウント不要。リンクは自動で期限切れに。",
-  "app.footer": "セルフホスト · アカウント不要 · 自動期限切れ",
+  "app.subtitle": "暗号化され、期限が切れると消えます。",
   "theme.toggle": "テーマを切り替え",
   "language.label": "言語",
 

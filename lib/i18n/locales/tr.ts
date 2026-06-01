@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const tr: Translation = {
   "app.tagline": "Bir dosya bırak, bir bağlantı paylaş.",
-  "app.subtitle": "Hesap yok. Bağlantılar kendiliğinden sona erer.",
-  "app.footer": "kendi sunucunda · hesapsız · otomatik sona erme",
+  "app.subtitle": "Şifreli, ve süresi dolunca yok olur.",
   "theme.toggle": "Temayı değiştir",
   "language.label": "Dil",
 

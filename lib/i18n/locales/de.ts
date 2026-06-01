@@ -2,8 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const de: Translation = {
   "app.tagline": "Datei rein, Link raus.",
-  "app.subtitle": "Kein Konto. Links laufen von selbst ab.",
-  "app.footer": "selbst gehostet · kein Konto · läuft automatisch ab",
+  "app.subtitle": "Verschlüsselt, und weg, sobald es abläuft.",
   "theme.toggle": "Design umschalten",
   "language.label": "Sprache",
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-06-01
+
+### Changed
+
+- **Refined, modern UI.** The home page is now a **floating frosted-glass
+  window** over a soft gold/violet ambient background, with the feather mark
+  crowning the drop zone and a larger logo + wordmark in the header. The drop
+  zone is a recessed glass well that lights up gold on hover.
+- Reworked the hero copy: the subtitle now reads *"Encrypted, and gone when it
+  expires."* (localised in all 26 languages), and the redundant footer line was
+  removed.
+
 ## [2.0.1] — 2026-06-01
 
 ### Fixed
