@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.1] — 2026-06-01
+
+### Security
+
+- **Inline preview restricted to inert types.** The preview (`?inline=1`, added
+  in v2.8.0) echoed the uploader-controlled content type with an `inline`
+  disposition, which could render attacker-supplied HTML/SVG on the app's origin.
+  Inline is now allowlisted server-side to PNG/JPEG/GIF/WebP/PDF
+  (`lib/preview.ts`, enforced in `app/api/d/[slug]/route.ts`) and sent with
+  `X-Content-Type-Options: nosniff`; everything else downloads as an attachment.
+
 ## [2.8.0] — 2026-06-01
 
 ### Added

@@ -4,6 +4,7 @@ import { stat, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { MASTER_KEY, UPLOADS_DIR } from "@/lib/config";
+import { isPreviewableMime } from "@/lib/preview";
 import {
   getFileBySlug,
   registerDownload,
@@ -103,10 +104,15 @@ export async function GET(
   const cookie = req.cookies.get(COOKIE)?.value;
 
   // Preview mode (?inline=1): render the file in the browser without counting a
-  // download. Allowed ONLY for unlimited shares — otherwise a preview would
-  // bypass the download limit (a limited share falls through to a real download).
+  // download. Gated on three things, all enforced server-side because this GET is
+  // attacker-reachable directly:
+  //   - only UNLIMITED shares (else a preview would bypass the download limit), and
+  //   - only an allowlist of INERT types (no SVG/HTML), so an uploader-chosen MIME
+  //     can't turn an inline response into same-origin stored XSS.
   const wantInline =
-    req.nextUrl.searchParams.get("inline") === "1" && rec.max_downloads === null;
+    req.nextUrl.searchParams.get("inline") === "1" &&
+    rec.max_downloads === null &&
+    isPreviewableMime(rec.mime);
 
   // Plaintext blob (legacy): the password gate requires the cookie to carry the
   // unforgeable, hash-derived download token — not merely be present, or anyone
@@ -121,6 +127,7 @@ export async function GET(
           "Content-Type": rec.mime ?? "application/octet-stream",
           "Content-Length": String(rec.size),
           "Content-Disposition": contentDisposition(rec.original_name, true),
+          "X-Content-Type-Options": "nosniff",
           "Cache-Control": "private, no-store",
         },
       });
@@ -167,6 +174,7 @@ export async function GET(
       headers: {
         "Content-Type": header.mime ?? "application/octet-stream",
         "Content-Disposition": contentDisposition(header.name, true),
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
       },
     });

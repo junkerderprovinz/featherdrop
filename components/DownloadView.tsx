@@ -19,6 +19,7 @@ import { notifications } from "@mantine/notifications";
 import { IconDownload, IconLock, IconMoon, IconSun } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
+import { isPreviewableMime } from "@/lib/preview";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
@@ -138,8 +139,7 @@ export function DownloadView({
   // Inline preview for images/PDFs — only for unlimited, password-less shares
   // (a preview would otherwise consume or require a counted download). The
   // preview GET (?inline=1) never counts and is refused for limited shares.
-  const previewable =
-    !!mime && (mime.startsWith("image/") || mime === "application/pdf");
+  const previewable = isPreviewableMime(mime);
   const canPreview =
     previewable &&
     downloadsLeft === null &&
