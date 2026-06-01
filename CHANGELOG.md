@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.3] — 2026-06-01
+
+### Added
+
+- **Browser-tab favicon.** The gold feather now shows in the browser tab
+  (`app/icon.svg`, served automatically by Next.js), centered to read cleanly
+  at 16×16.
+
 ## [2.1.2] — 2026-06-01
 
 ### Fixed
