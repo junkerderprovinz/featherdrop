@@ -27,6 +27,24 @@ No accounts, no clouds, no tracking, no nonsense.
 
 <br>
 
+## Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/home-light.png" alt="featherdrop home — light" width="49%">
+  &nbsp;
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/home-dark.png" alt="featherdrop home — dark" width="49%">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/upload.png" alt="Upload with share options — expiry, password, download limit" width="49%">
+  &nbsp;
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/result.png" alt="Shareable link with QR code" width="49%">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/download.png" alt="Recipient download page" width="60%">
+</p>
+
+<br>
+
 ## Table of Contents
 
 1. [What is this?](#1-what-is-this)
