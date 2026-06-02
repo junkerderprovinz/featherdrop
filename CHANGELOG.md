@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **README aligned to the canonical layout** — removed the Buy-me-a-coffee
+  shields badge from the badge row (License is now the last badge), added the
+  official BMAC button directly under the short description, and numbered the
+  bottom support section as `## 11. Support this project` (added to the Table of
+  Contents).
 - **Richer, "sleek & modern" copy** in the README, the Unraid template
   `<Overview>` and `ca_profile.xml`, covering all key features (encryption,
   expiry/burn, preview, QR, link previews, 26 languages, custom branding, one
