@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Concise privacy line in the UI.** A muted line under the home-page subtitle —
+  "Self-hosted · encrypted · no accounts, no tracking" — translated across all 26
+  languages (`app.privacy`, rendered in `app/page.tsx`).
+
 ### Fixed
 
 - **Light/dark toggle needed two clicks for the first switch.** It read the raw
@@ -22,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and italic weights and exposes `--font-bitter`).
 - **Larger home-page logo and more space below the header** for a calmer hero
   (`app/page.tsx`).
+- **README: new "Security & Privacy" section** covering the self-hosting privacy
+  model (no accounts, no tracking, data stays on your server); the encryption
+  details are now a subsection.
 
 ## [3.0.1] — 2026-06-01
 

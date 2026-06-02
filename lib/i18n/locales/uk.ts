@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const uk: Translation = {
   "app.tagline": "Перетягніть файл, поділіться посиланням.",
   "app.subtitle": "Зашифровано та зникає після завершення.",
+  "app.privacy": "Власний хостинг · шифрування · без акаунтів і стеження",
   "theme.toggle": "Перемкнути тему",
   "language.label": "Мова",
 

@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const tr: Translation = {
   "app.tagline": "Bir dosya bırak, bir bağlantı paylaş.",
   "app.subtitle": "Şifreli, ve süresi dolunca yok olur.",
+  "app.privacy": "Kendi sunucunda · şifreli · hesap yok, takip yok",
   "theme.toggle": "Temayı değiştir",
   "language.label": "Dil",
 

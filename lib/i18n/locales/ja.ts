@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const ja: Translation = {
   "app.tagline": "ファイルをドロップして、リンクを共有。",
   "app.subtitle": "暗号化され、期限が切れると消えます。",
+  "app.privacy": "セルフホスト · 暗号化 · アカウント不要・追跡なし",
   "theme.toggle": "テーマを切り替え",
   "language.label": "言語",
 

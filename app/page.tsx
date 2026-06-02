@@ -186,6 +186,9 @@ export default function HomePage() {
             <Text c="dimmed" size="lg" ta="center">
               {t("app.subtitle")}
             </Text>
+            <Text c="dimmed" size="sm" ta="center" style={{ opacity: 0.75 }}>
+              {t("app.privacy")}
+            </Text>
           </Stack>
 
           {/* Floating frosted-glass window holding the drop zone + settings. */}

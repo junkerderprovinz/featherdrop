@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const da: Translation = {
   "app.tagline": "Slip en fil, del et link.",
   "app.subtitle": "Krypteret, og væk når det udløber.",
+  "app.privacy": "Selv-hostet · krypteret · ingen konti, ingen sporing",
   "theme.toggle": "Skift tema",
   "language.label": "Sprog",
 

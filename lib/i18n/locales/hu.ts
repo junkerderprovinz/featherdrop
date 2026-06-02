@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const hu: Translation = {
   "app.tagline": "Dobj be egy fájlt, ossz meg egy linket.",
   "app.subtitle": "Titkosítva, és eltűnik, amikor lejár.",
+  "app.privacy": "Saját tárhelyen · titkosítva · fiókok és követés nélkül",
   "theme.toggle": "Téma váltása",
   "language.label": "Nyelv",
 

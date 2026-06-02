@@ -6,6 +6,7 @@
 export const en = {
   "app.tagline": "Share a file securely — no account needed.",
   "app.subtitle": "Encrypted at rest and automatically deleted when the link expires.",
+  "app.privacy": "Self-hosted · encrypted · no accounts, no tracking",
   "theme.toggle": "Toggle theme",
   "language.label": "Language",
 

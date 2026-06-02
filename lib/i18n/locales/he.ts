@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const he: Translation = {
   "app.tagline": "שחררו קובץ, שתפו קישור.",
   "app.subtitle": "מוצפן, ונעלם כשהתוקף פג.",
+  "app.privacy": "אירוח עצמי · מוצפן · בלי חשבונות, בלי מעקב",
   "theme.toggle": "החלפת ערכת נושא",
   "language.label": "שפה",
 

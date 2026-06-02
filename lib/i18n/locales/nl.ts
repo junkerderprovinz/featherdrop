@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const nl: Translation = {
   "app.tagline": "Zet een bestand neer, deel een link.",
   "app.subtitle": "Versleuteld, en weg zodra het verloopt.",
+  "app.privacy": "Zelf-gehost · versleuteld · geen accounts, geen tracking",
   "theme.toggle": "Thema wisselen",
   "language.label": "Taal",
 
