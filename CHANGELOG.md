@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **README: new "Security & Privacy" section** covering the self-hosting privacy
   model (no accounts, no tracking, data stays on your server); the encryption
   details are now a subsection.
+- **Clarified `APP_LOGO`** (Unraid template + README): accepts a public image URL
+  **or a `data:` URI**, so a custom logo needs no external hosting and no file on
+  disk.
 
 ## [3.0.1] — 2026-06-01
 

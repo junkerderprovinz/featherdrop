@@ -123,7 +123,7 @@
     Target="APP_LOGO"
     Default=""
     Mode=""
-    Description="Optional. URL of your own logo image (SVG/PNG) to replace the feather. Use a public URL, or mount your logo into the container and point at it (e.g. put logo.svg in the Config Directory and use /config/logo.svg via a reverse proxy). Leave empty to keep the feather."
+    Description="Optional. Your own logo (SVG/PNG) to replace the feather: either a public image URL, or a data: URI so you need no hosting and no file on disk. To make a data URI, run 'base64 -w0 logo.svg' and prefix the output with data:image/svg+xml;base64, (use image/png for a PNG). Leave empty to keep the feather."
     Type="Variable"
     Display="always"
     Required="false"
