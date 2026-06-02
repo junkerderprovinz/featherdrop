@@ -20,9 +20,10 @@ export function createAppTheme(
     primaryColor: "fdgold",
     primaryShade: { light: 7, dark: 6 },
     defaultRadius: "md",
-    fontFamily:
-      "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+    // Bitter (the logo/wordmark typeface) is used for ALL text on the site.
+    fontFamily: "var(--font-bitter), Georgia, serif",
     headings: {
+      fontFamily: "var(--font-bitter), Georgia, serif",
       fontWeight: "700",
     },
   });

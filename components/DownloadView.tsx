@@ -13,6 +13,7 @@ import {
   Stack,
   Text,
   Tooltip,
+  useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -49,7 +50,11 @@ export function DownloadView({
 }: DownloadViewProps) {
   const { t } = useTranslation();
   const { appName } = useBranding();
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { setColorScheme } = useMantineColorScheme();
+  // Resolve "auto" to the displayed scheme so the first toggle isn't a no-op.
+  const computedColorScheme = useComputedColorScheme("light", {
+    getInitialValueInEffect: true,
+  });
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   // Filename: known from the server for plaintext shares, otherwise revealed
@@ -158,10 +163,10 @@ export function DownloadView({
               size="lg"
               aria-label={t("theme.toggle")}
               onClick={() =>
-                setColorScheme(colorScheme === "dark" ? "light" : "dark")
+                setColorScheme(computedColorScheme === "dark" ? "light" : "dark")
               }
             >
-              {colorScheme === "dark" ? (
+              {computedColorScheme === "dark" ? (
                 <IconSun size={18} />
               ) : (
                 <IconMoon size={18} />
@@ -178,7 +183,7 @@ export function DownloadView({
               <Text
                 fw={500}
                 size="lg"
-                style={{ fontFamily: "var(--font-wordmark), Georgia, serif", fontStyle: "italic" }}
+                style={{ fontFamily: "var(--font-bitter), Georgia, serif", fontStyle: "italic" }}
               >
                 {appName}
               </Text>
