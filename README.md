@@ -220,7 +220,7 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 | `DATA_DIR` | `/data` | Where the uploaded files live (bulk). Map this to a volume. |
 | `CONFIG_DIR` | *(= `DATA_DIR`)* | Where the SQLite database lives. Defaults to `DATA_DIR` (single volume). Set it (the Unraid template uses `/config`) to keep the small database on a separate, faster volume. |
 | `APP_NAME` | `featherdrop` | Custom app name — replaces the wordmark in the header and the browser-tab title. |
-| `APP_LOGO` | *(empty)* | URL of a custom logo (SVG/PNG) to replace the feather. Public URL, or mount your own and serve it (e.g. `/config/logo.svg`). Empty = the feather. |
+| `APP_LOGO` | *(empty)* | Custom logo (SVG/PNG) replacing the feather: a public image **URL**, or a **`data:` URI** (e.g. `data:image/svg+xml;base64,…` — generate with `base64 -w0 logo.svg`) so you need no hosting or file on disk. Empty = the feather. |
 | `ACCENT_COLOR` | `#d4af37` | A 6-digit hex colour for buttons, the upload ring and accents. Invalid values fall back to the gold. |
 
 <br>
