@@ -17,9 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   threads (title → subtitle → banner → Install/GitHub/Coffee buttons → What is
   this? / Highlights / Requirements / Posting a bug report / Credits), ready to
   paste into the Unraid forum source view. The three call-to-action buttons are
-  real images (`.github/assets/button-install-on-unraid.svg`,
-  `button-view-on-github.svg`, restyled `button-buy-me-a-coffee.svg`), and the
-  Highlights list dropped its emoji bullets.
+  the project's own polished SVGs (Arial-bold, uniform 709×151): the
+  support-thread **Install on Unraid** and **View on GitHub** buttons live in
+  `.github/assets/support-buttons/`, while the **Buy me a coffee** button
+  (`.github/assets/button-buy-me-a-coffee.svg`) is the shared GitHub-repo button
+  reused in the support-thread footer. The Highlights list dropped its emoji
+  bullets.
 - **Added UI screenshots** to the README, in a single **`## Screenshots`**
   section (stacked, `width="90%"`, `<em>` captions) per the style guide
   (`.github/assets/screenshots/`) — home light/dark, upload options, share link +
