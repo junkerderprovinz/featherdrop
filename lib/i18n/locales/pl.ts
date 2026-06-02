@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const pl: Translation = {
-  "app.tagline": "Upuść plik, udostępnij link.",
+  "app.tagline": "Udostępniaj pliki bezpiecznie i prywatnie",
   "app.subtitle": "Zaszyfrowane i znika po wygaśnięciu.",
-  "app.privacy": "Szyfrowanie · automatyczne usuwanie · bez śledzenia · bez ściemy",
+  "app.privacy": "Szyfrowanie · automatyczne usuwanie · bez śledzenia · bez konta · bez ściemy",
   "theme.toggle": "Przełącz motyw",
   "language.label": "Język",
 

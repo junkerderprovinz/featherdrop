@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const nl: Translation = {
-  "app.tagline": "Zet een bestand neer, deel een link.",
+  "app.tagline": "Deel je bestanden veilig en privé",
   "app.subtitle": "Versleuteld, en weg zodra het verloopt.",
-  "app.privacy": "Versleuteld · automatisch verwijderd · geen tracking · geen bullshit",
+  "app.privacy": "Versleuteld · automatisch verwijderd · geen tracking · geen account · geen bullshit",
   "theme.toggle": "Thema wisselen",
   "language.label": "Taal",
 

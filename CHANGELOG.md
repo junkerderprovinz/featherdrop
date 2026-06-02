@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-06-01
+
 ### Fixed
 
 - **Light/dark toggle needed two clicks for the first switch.** It read the raw
@@ -20,11 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sansation is the UI typeface** for all text, self-hosted via
   `@fontsource/sansation` (no runtime call to Google), while the wordmark stays in
   Bitter (`theme.ts`, `app/fonts.ts`, `app/layout.tsx`).
-- **Punchier hero copy.** Tagline → "Share your files securely and privately — no
-  account needed" (now lighter, less bold), with one line beneath it —
-  "Encrypted · auto-deleted · no tracking · no bullshit" — translated across all
-  26 languages; the middle subtitle was dropped from the home page
-  (`app/page.tsx`, `lib/i18n/locales/*`).
+- **Refreshed hero copy.** A lighter (less bold) tagline — "Share your files
+  securely and privately" — over a single line: "Encrypted · auto-deleted · no
+  tracking · no account · no bullshit"; translated across all 26 languages, and
+  the middle subtitle was dropped from the home page (`app/page.tsx`,
+  `lib/i18n/locales/*`).
+- **Download page now matches the home page.** The brand (logo + wordmark) sits
+  centered at the top and links home; the share card is crowned with just the
+  logo (no wordmark), like the drop zone (`components/DownloadView.tsx`).
 - **Larger home-page logo and more space below the header** for a calmer hero
   (`app/page.tsx`).
 - **README: new "Security & Privacy" section** covering the self-hosting privacy

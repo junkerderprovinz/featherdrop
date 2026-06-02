@@ -7,12 +7,15 @@ import {
   Box,
   Button,
   Center,
+  Container,
   Group,
   Paper,
   PasswordInput,
   Stack,
   Text,
+  Title,
   Tooltip,
+  rem,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -153,8 +156,8 @@ export function DownloadView({
     revealedName !== null;
 
   return (
-    <Center style={{ minHeight: "100vh" }} p="md">
-      <Box pos="absolute" top={16} right={16}>
+    <Container size="sm" py={60} style={{ position: "relative", minHeight: "100vh" }}>
+      <Box pos="absolute" top={24} right={24} style={{ zIndex: 2 }}>
         <Group gap="xs">
           <LanguageSwitcher />
           <Tooltip label={t("theme.toggle")} withArrow>
@@ -175,20 +178,32 @@ export function DownloadView({
           </Tooltip>
         </Group>
       </Box>
-      <Paper radius="lg" p="xl" maw={460} w="100%" className="fd-glass">
+
+      {/* Brand at the top, centered, linking home — same as the main page. */}
+      <Center mb={88}>
+        <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          <Group gap="sm" style={{ cursor: "pointer" }}>
+            <Logo size={52} />
+            <Title
+              order={1}
+              fw={500}
+              style={{
+                fontSize: rem(32),
+                letterSpacing: -1,
+                fontFamily: "var(--font-bitter), Georgia, serif",
+                fontStyle: "italic",
+              }}
+            >
+              {appName}
+            </Title>
+          </Group>
+        </Link>
+      </Center>
+
+      <Paper radius="lg" p="xl" maw={460} mx="auto" w="100%" className="fd-glass">
         <Stack align="center" gap="lg">
-          <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-            <Group gap={6} style={{ cursor: "pointer" }}>
-              <Logo size={22} />
-              <Text
-                fw={500}
-                size="lg"
-                style={{ fontFamily: "var(--font-bitter), Georgia, serif", fontStyle: "italic" }}
-              >
-                {appName}
-              </Text>
-            </Group>
-          </Link>
+          {/* Logo only (no wordmark) crowning the card, like the drop zone. */}
+          <Logo size={48} />
 
           <Stack align="center" gap={2}>
             <Text fw={700} size="xl" ta="center" lineClamp={2}>
@@ -280,6 +295,6 @@ export function DownloadView({
           )}
         </Stack>
       </Paper>
-    </Center>
+    </Container>
   );
 }

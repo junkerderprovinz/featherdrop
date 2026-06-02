@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const vi: Translation = {
-  "app.tagline": "Thả một tệp, chia sẻ một liên kết.",
+  "app.tagline": "Chia sẻ tệp của bạn an toàn và riêng tư",
   "app.subtitle": "Được mã hóa, và biến mất khi hết hạn.",
-  "app.privacy": "Mã hóa · tự động xóa · không theo dõi · không nhảm nhí",
+  "app.privacy": "Mã hóa · tự động xóa · không theo dõi · không cần tài khoản · không nhảm nhí",
   "theme.toggle": "Đổi giao diện",
   "language.label": "Ngôn ngữ",
 

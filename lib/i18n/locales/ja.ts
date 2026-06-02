@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const ja: Translation = {
-  "app.tagline": "ファイルをドロップして、リンクを共有。",
+  "app.tagline": "ファイルを安全かつプライベートに共有",
   "app.subtitle": "暗号化され、期限が切れると消えます。",
-  "app.privacy": "暗号化 · 自動削除 · 追跡なし · ごまかしなし",
+  "app.privacy": "暗号化 · 自動削除 · 追跡なし · アカウント不要 · ごまかしなし",
   "theme.toggle": "テーマを切り替え",
   "language.label": "言語",
 
