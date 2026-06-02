@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Concise privacy line in the UI.** A muted line under the home-page subtitle —
-  "Self-hosted · encrypted · no accounts, no tracking" — translated across all 26
-  languages (`app.privacy`, rendered in `app/page.tsx`).
-
 ### Fixed
 
 - **Light/dark toggle needed two clicks for the first switch.** It read the raw
@@ -23,14 +17,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Bitter is now the typeface for the entire UI**, not just the wordmark, applied
-  via the Mantine theme (`theme.ts`; `app/fonts.ts` now loads Bitter in upright
-  and italic weights and exposes `--font-bitter`).
+- **Sansation is the UI typeface** for all text, self-hosted via
+  `@fontsource/sansation` (no runtime call to Google), while the wordmark stays in
+  Bitter (`theme.ts`, `app/fonts.ts`, `app/layout.tsx`).
+- **Punchier hero copy.** Tagline → "Share your files securely and privately — no
+  account needed", with a single line beneath it — "encrypted · auto-deleted · no
+  tracking · no BS"; the middle subtitle was dropped from the home page
+  (`app/page.tsx`, `lib/i18n/locales/en.ts` + `de.ts`).
 - **Larger home-page logo and more space below the header** for a calmer hero
   (`app/page.tsx`).
 - **README: new "Security & Privacy" section** covering the self-hosting privacy
   model (no accounts, no tracking, data stays on your server); the encryption
   details are now a subsection.
+- **Unraid template: `BASE_URL` pre-fills** `https://featherdrop.yourdomain.tld`
+  as a placeholder default so the expected format is obvious (replace with your
+  domain; leaving it empty still uses the browser's address).
 - **Clarified `APP_LOGO`** (Unraid template + README): accepts a public image URL
   **or a `data:` URI**, so a custom logo needs no external hosting and no file on
   disk.

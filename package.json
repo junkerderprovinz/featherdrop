@@ -13,6 +13,7 @@
     "test": "node --import tsx --test \"test/**/*.test.ts\""
   },
   "dependencies": {
+    "@fontsource/sansation": "^5.2.2",
     "@mantine/core": "^7.13.0",
     "@mantine/dropzone": "^7.13.0",
     "@mantine/hooks": "^7.13.0",

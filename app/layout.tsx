@@ -2,6 +2,8 @@ import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
 import "flag-icons/css/flag-icons.min.css";
+import "@fontsource/sansation/400.css";
+import "@fontsource/sansation/700.css";
 import "./globals.css";
 
 import type { Metadata } from "next";

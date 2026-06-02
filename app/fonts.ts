@@ -1,16 +1,14 @@
 import { Bitter } from "next/font/google";
 
-// Bitter (a humanist slab serif, SIL OFL — free to embed and redistribute) is the
-// featherdrop typeface. It matches the logo wordmark and, via the Mantine theme
-// (theme.ts), sets EVERY piece of text on the site. next/font/google fetches and
-// self-hosts it at build time (subset, hashed, preloaded — no runtime call to
-// Google). Loaded with the upright weights the UI uses plus italic (the wordmark
-// is italic). Exposed as the CSS variable --font-bitter, consumed by the theme
-// and the wordmark.
+// Bitter (a humanist slab serif, SIL OFL) — used ONLY for the wordmark/logo text
+// (italic 500). next/font/google self-hosts it at build time. Var: --font-bitter.
+// The UI typeface for all other text is Sansation, self-hosted via
+// @fontsource/sansation (imported in app/layout.tsx) and applied through the
+// Mantine theme (theme.ts) — no runtime call to Google.
 export const bitter = Bitter({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  style: ["normal", "italic"],
+  weight: "500",
+  style: "italic",
   display: "swap",
   variable: "--font-bitter",
 });

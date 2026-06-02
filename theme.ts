@@ -20,10 +20,13 @@ export function createAppTheme(
     primaryColor: "fdgold",
     primaryShade: { light: 7, dark: 6 },
     defaultRadius: "md",
-    // Bitter (the logo/wordmark typeface) is used for ALL text on the site.
-    fontFamily: "var(--font-bitter), Georgia, serif",
+    // Sansation (self-hosted via @fontsource/sansation, see app/layout.tsx) is the
+    // UI typeface for all text; the wordmark stays in Bitter.
+    fontFamily:
+      "Sansation, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
     headings: {
-      fontFamily: "var(--font-bitter), Georgia, serif",
+      fontFamily:
+        "Sansation, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
       fontWeight: "700",
     },
   });
