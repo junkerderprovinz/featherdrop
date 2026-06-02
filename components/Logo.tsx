@@ -43,7 +43,7 @@ export function Logo({ size = 28 }: { size?: number }) {
           y2="1000"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0" stopColor="#F6D981" />
+          <stop offset="0" stopColor="#E0B53A" />
           <stop offset="0.5" stopColor="#D4AF37" />
           <stop offset="1" stopColor="#A97C0A" />
         </linearGradient>

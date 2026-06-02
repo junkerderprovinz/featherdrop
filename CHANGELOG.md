@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Darker top on the gold feather mark** — the lightest gradient stop went from
+  `#F6D981` to `#E0B53A` so the top of the medallion stays visible on light/white
+  backgrounds. Applied to the in-app logo, the favicon and (re-rendered) the README
+  banner, the CA icon and the link-preview cards.
 - **README aligned to the canonical layout** — removed the Buy-me-a-coffee
   shields badge from the badge row (License is now the last badge), added the
   official BMAC button directly under the short description, and numbered the
