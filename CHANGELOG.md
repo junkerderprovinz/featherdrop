@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `<Overview>` and `ca_profile.xml`, covering all key features (encryption,
   expiry/burn, preview, QR, link previews, 26 languages, custom branding, one
   container). Added a CA support-thread template (`.github/SUPPORT_THREAD.md`).
+- **Added UI screenshots** to the README (home light/dark, upload options, share
+  link + QR, download page) under `.github/assets/screenshots/`.
 
 ## [3.1.0] — 2026-06-01
 
