@@ -316,13 +316,6 @@ for metadata, and `react-i18next` for the UI languages. Files live under
 <br>
 
 <p align="center">
-  <img src=".github/assets/screenshots/result.png" alt="Share link with QR code" width="90%">
-  <br><em>Your link is ready — copy it or save the QR code.</em>
-</p>
-
-<br>
-
-<p align="center">
   <img src=".github/assets/screenshots/download.png" alt="Recipient download page" width="90%">
   <br><em>What the recipient sees: file info and a download button.</em>
 </p>
