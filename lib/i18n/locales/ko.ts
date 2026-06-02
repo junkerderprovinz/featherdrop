@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const ko: Translation = {
   "app.tagline": "파일을 놓고, 링크를 공유하세요.",
   "app.subtitle": "암호화되며, 만료되면 사라집니다.",
+  "app.privacy": "셀프호스팅 · 암호화 · 계정 없음, 추적 없음",
   "theme.toggle": "테마 전환",
   "language.label": "언어",
 

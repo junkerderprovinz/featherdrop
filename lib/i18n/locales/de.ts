@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const de: Translation = {
   "app.tagline": "Teile eine Datei sicher — ganz ohne Konto.",
   "app.subtitle": "Verschlüsselt gespeichert und automatisch gelöscht, sobald der Link abläuft.",
+  "app.privacy": "Selbst gehostet · verschlüsselt · keine Konten, kein Tracking",
   "theme.toggle": "Design umschalten",
   "language.label": "Sprache",
 

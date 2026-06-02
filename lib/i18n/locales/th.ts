@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const th: Translation = {
   "app.tagline": "วางไฟล์ แล้วแชร์ลิงก์",
   "app.subtitle": "เข้ารหัสไว้ และหายไปเมื่อหมดอายุ",
+  "app.privacy": "โฮสต์เอง · เข้ารหัส · ไม่มีบัญชี ไม่มีการติดตาม",
   "theme.toggle": "สลับธีม",
   "language.label": "ภาษา",
 

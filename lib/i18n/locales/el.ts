@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const el: Translation = {
   "app.tagline": "Ρίξε ένα αρχείο, μοιράσου έναν σύνδεσμο.",
   "app.subtitle": "Κρυπτογραφημένο, και χάνεται όταν λήξει.",
+  "app.privacy": "Αυτοφιλοξενούμενο · κρυπτογραφημένο · χωρίς λογαριασμούς, χωρίς παρακολούθηση",
   "theme.toggle": "Εναλλαγή θέματος",
   "language.label": "Γλώσσα",
 

@@ -29,7 +29,7 @@ watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
 
 1. [What is this?](#1-what-is-this)
 2. [How it works](#2-how-it-works)
-3. [Encryption](#3-encryption)
+3. [Security & Privacy](#3-security--privacy)
 4. [Languages](#4-languages)
 5. [Quick Start on Unraid](#5-quick-start-on-unraid)
 6. [Configuration](#6-configuration)
@@ -88,7 +88,31 @@ text, and large downloads **stream natively** (no in-browser buffering).
 
 <br>
 
-## 3. Encryption
+## 3. Security & Privacy
+
+featherdrop is built to be **self-hosted**: your files and their metadata live
+only on your server, and the app talks to nobody else.
+
+- **No accounts, no tracking.** No sign-up, no analytics, no telemetry, and no
+  third-party scripts or fonts pulled at runtime — nothing phones home.
+- **Your data stays yours.** Uploads sit on your `/data` volume, metadata in a
+  local SQLite file. Nothing is ever sent to a cloud or external service.
+- **Encrypted at rest by default** with age — the original filename and type are
+  encrypted *inside* the file, so a stolen disk or backup reveals neither the
+  contents nor the names ([details below](#encryption-at-rest)).
+- **Optional password protection is end-to-end:** even you, the operator, cannot
+  read a password-protected share without the password.
+- **Self-destructing.** Every share has an expiry (down to 1 hour), and an
+  optional **download limit** burns the file the moment it's reached.
+- **Minimal attack surface.** No login to brute-force, no user database to leak;
+  share slugs are unguessable, and share pages and link previews never expose the
+  file's name.
+
+> Provided under the MIT licence **without warranty** — you run it, you own the
+> data and the responsibility. Put it behind HTTPS (see
+> [Reverse Proxy](#7-reverse-proxy)) and, if you set a `MASTER_KEY`, keep it safe.
+
+### Encryption at rest
 
 Every uploaded file is **encrypted at rest** by default, using
 [age](https://age-encryption.org) — a modern, audited, streaming authenticated
@@ -190,8 +214,8 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 | `BASE_URL` | *(empty)* | Public URL featherdrop is reached at, so share links use your domain. Empty = use the address the browser is on. |
 | `DEFAULT_EXPIRY` | `7d` | Expiry pre-selected in the UI. One of `1h`, `6h`, `1d`, `7d`, `30d`, `never`. |
 | `MAX_FILE_SIZE` | `0` | Max upload size in bytes. `0` = unlimited (disk-limited). E.g. `5368709120` = 5 GB. |
-| `ENCRYPT_UPLOADS` | `true` | Encrypt new uploads at rest with age (see [Encryption](#3-encryption)). Set `false` to store plaintext. Existing files keep their stored mode. |
-| `MASTER_KEY` | *(empty)* | Optional secret that gives **short links** for password-less shares (see [Encryption](#3-encryption)). Generate with `openssl rand -base64 32`. Keep it secret, back it up; losing it makes password-less files unrecoverable. Empty = long `#key` links. |
+| `ENCRYPT_UPLOADS` | `true` | Encrypt new uploads at rest with age (see [Encryption at rest](#encryption-at-rest)). Set `false` to store plaintext. Existing files keep their stored mode. |
+| `MASTER_KEY` | *(empty)* | Optional secret that gives **short links** for password-less shares (see [Encryption at rest](#encryption-at-rest)). Generate with `openssl rand -base64 32`. Keep it secret, back it up; losing it makes password-less files unrecoverable. Empty = long `#key` links. |
 | `PORT` | `3000` | Port the server listens on. |
 | `DATA_DIR` | `/data` | Where the uploaded files live (bulk). Map this to a volume. |
 | `CONFIG_DIR` | *(= `DATA_DIR`)* | Where the SQLite database lives. Defaults to `DATA_DIR` (single volume). Set it (the Unraid template uses `/config`) to keep the small database on a separate, faster volume. |

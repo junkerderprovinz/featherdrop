@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const pt: Translation = {
   "app.tagline": "Solte um ficheiro, partilhe um link.",
   "app.subtitle": "Encriptado, e desaparece ao expirar.",
+  "app.privacy": "Auto-hospedado · encriptado · sem contas, sem rastreio",
   "theme.toggle": "Alternar tema",
   "language.label": "Idioma",
 

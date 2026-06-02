@@ -3,6 +3,7 @@ import type { Translation } from "./en.ts";
 export const cs: Translation = {
   "app.tagline": "Přetáhněte soubor, sdílejte odkaz.",
   "app.subtitle": "Šifrované a po vypršení zmizí.",
+  "app.privacy": "Vlastní hosting · šifrováno · bez účtů, bez sledování",
   "theme.toggle": "Přepnout motiv",
   "language.label": "Jazyk",
 
