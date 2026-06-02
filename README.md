@@ -19,8 +19,10 @@
 <br>
 
 <p align="center">
-featherdrop is your own self-hosted drop zone — fling a file in, get a link out,
-watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
+featherdrop is a <b>sleek, modern</b>, self-hosted drop zone for your files — drop a
+file, set how long it lives (plus an optional password or download limit), and share
+a short link or QR code. Encrypted at rest, resumable uploads, one small container.
+No accounts, no clouds, no tracking, no nonsense.
 </p>
 
 <br>
@@ -41,20 +43,37 @@ watch it self-destruct on schedule. No accounts, no clouds, no nonsense.
 
 ## 1. What is this?
 
-featherdrop is a small, good-looking file-sharing page for your own server —
-a much simpler take inspired by [Pingvin Share](https://github.com/stonith404/pingvin-share).
+featherdrop is a **sleek, modern**, self-hosted file-sharing page for your own
+server — a much simpler take inspired by [Pingvin Share](https://github.com/stonith404/pingvin-share).
 Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 **single container** with **no login** and **no separate database**:
 
 - Open the page → a central **drop zone** is right there.
-- Drop a file → a settings panel slides in (**expiry** + optional **password**),
-  and a progress ring overlays the drop zone while it uploads.
+- Drop a file → a settings panel slides in (**expiry**, optional **password**,
+  optional **download limit**), and a progress ring overlays the drop zone while
+  it uploads.
 - You get a **shareable link** plus a **QR code** you can save as a PNG. The
   recipient downloads it any time until it expires.
 - Pasting the link into a chat shows a **clean preview card** — your branding,
   never the file's name.
 - A light/dark toggle and a **flag language picker** sit in the header — the UI
   speaks [26 languages](#4-languages) and picks yours from the browser.
+
+**Highlights**
+
+- 🔒 **Encrypted at rest** with [age](https://age-encryption.org); the filename
+  and type are encrypted *inside* the file. Optional **password** shares are
+  end-to-end, and a `MASTER_KEY` gives **short links**.
+- ⏳ **Self-destructing** — expiry from 1 hour to 30 days (or never), plus an
+  optional **burn-after-N-downloads**.
+- 🖼️ **Inline image/PDF preview** and a savable **QR code** on the share page,
+  with **clean link previews** that never leak the file's name.
+- 🌍 **26 languages** (right-to-left for Arabic & Hebrew), light/dark, and
+  **custom branding** (name, logo, accent colour) via env vars.
+- 📦 **One container** — resumable uploads ([tus](https://tus.io)), a single
+  SQLite file, separate data/config volumes, multi-arch (amd64 + arm64).
+- 🧹 **Private by design** — no accounts, no telemetry, no third-party calls at
+  runtime; your files stay on your server.
 
 What it deliberately does **not** have: user accounts, OIDC/LDAP, email, malware
 scanning, S3 backends. If you need those, use Pingvin Share — that is the point.

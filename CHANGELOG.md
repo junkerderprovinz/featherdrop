@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Richer, "sleek & modern" copy** in the README, the Unraid template
+  `<Overview>` and `ca_profile.xml`, covering all key features (encryption,
+  expiry/burn, preview, QR, link previews, 26 languages, custom branding, one
+  container). Added a CA support-thread template (`.github/SUPPORT_THREAD.md`).
+
 ## [3.1.0] — 2026-06-01
 
 ### Fixed
