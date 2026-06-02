@@ -27,24 +27,6 @@ No accounts, no clouds, no tracking, no nonsense.
 
 <br>
 
-## Screenshots
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/home-light.png" alt="featherdrop home — light" width="49%">
-  &nbsp;
-  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/home-dark.png" alt="featherdrop home — dark" width="49%">
-</p>
-<p align="center">
-  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/upload.png" alt="Upload with share options — expiry, password, download limit" width="49%">
-  &nbsp;
-  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/result.png" alt="Shareable link with QR code" width="49%">
-</p>
-<p align="center">
-  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/download.png" alt="Recipient download page" width="60%">
-</p>
-
-<br>
-
 ## Table of Contents
 
 1. [What is this?](#1-what-is-this)
@@ -55,7 +37,8 @@ No accounts, no clouds, no tracking, no nonsense.
 6. [Configuration](#6-configuration)
 7. [Reverse Proxy](#7-reverse-proxy)
 8. [Local Development](#8-local-development)
-9. [Contributing / License](#9-contributing--license)
+9. [Screenshots](#9-screenshots)
+10. [Contributing / License](#10-contributing--license)
 
 <br>
 
@@ -309,7 +292,44 @@ for metadata, and `react-i18next` for the UI languages. Files live under
 
 <br>
 
-## 9. Contributing / License
+## 9. Screenshots
+
+<p align="center">
+  <img src=".github/assets/screenshots/home-light.png" alt="featherdrop home — light theme" width="90%">
+  <br><em>The home page — drop a file to share it.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/home-dark.png" alt="featherdrop home — dark theme" width="90%">
+  <br><em>Light and dark themes, with a flag language picker.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/upload.png" alt="Upload with share options" width="90%">
+  <br><em>Set an expiry, an optional password, and a download limit before sharing.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/result.png" alt="Share link with QR code" width="90%">
+  <br><em>Your link is ready — copy it or save the QR code.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/download.png" alt="Recipient download page" width="90%">
+  <br><em>What the recipient sees: file info and a download button.</em>
+</p>
+
+<br>
+
+## 10. Contributing / License
 
 Issues and pull requests welcome:
 <https://github.com/junkerderprovinz/featherdrop/issues>
