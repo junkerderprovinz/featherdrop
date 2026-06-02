@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <!--
-  Unraid Community Applications support thread, ready to paste into the forum
-  editor's source (<>) view, or open standalone in a browser.
+  Unraid Community Applications support thread for featherdrop.
+  Mirrors the README hero: banner (full width, linked) + badge row + description,
+  then the sections. Open standalone in a browser, or paste into the Unraid forum
+  editor's source (<>) view.
   Title: [Support] junkerderprovinz - featherdrop
 -->
 <html lang="en">
@@ -10,24 +12,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>[Support] junkerderprovinz - featherdrop</title>
 <style>
-  body { max-width: 760px; margin: 2rem auto; padding: 0 1rem;
-         font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  body { max-width: 920px; margin: 1.5rem auto; padding: 0 1rem;
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
          line-height: 1.55; color: #1c1c1c; }
-  h1 { font-size: 1.5rem; }
-  h2 { margin-top: 1.6rem; font-size: 1.15rem; }
+  h2 { margin-top: 1.7rem; font-size: 1.2rem; }
   code { background: #f1f1f1; padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   a { color: #c79a1e; }
   ul { padding-left: 1.2rem; }
+  img { border: 0; vertical-align: middle; }
+  .lead { font-size: 1.05rem; }
 </style>
 </head>
 <body>
 
-<h1>featherdrop</h1>
+<p align="center">
+  <a href="https://github.com/junkerderprovinz/featherdrop">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/featherdrop-banner.png" alt="featherdrop" width="100%">
+  </a>
+</p>
 
-<p><strong>featherdrop</strong> is a sleek, modern, self-hosted file sharer. Drop a
-file, set an expiry (plus an optional password or download limit), and share a short
-link or QR code. Files are encrypted at rest, uploads are resumable, and metadata
-lives in a single SQLite file — no accounts, no separate database, no tracking.</p>
+<p align="center">
+  <a href="https://github.com/junkerderprovinz/featherdrop/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/featherdrop/build.yml?branch=main&label=Build&style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/featherdrop/actions/workflows/lint.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/featherdrop/lint.yml?branch=main&label=Lint&style=for-the-badge&logo=githubactions&logoColor=white" alt="Lint" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop"><img src="https://img.shields.io/badge/Image-ghcr.io-1d99f3?style=for-the-badge&logo=docker&logoColor=white" alt="Image" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop"><img src="https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-success?style=for-the-badge&logo=linux&logoColor=white" alt="Arch" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/featherdrop#3-security--privacy"><img src="https://img.shields.io/badge/Encrypted-age-4c9a2a?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="Encrypted" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/featherdrop#4-languages"><img src="https://img.shields.io/badge/Languages-26-3daee9?style=for-the-badge&logo=googletranslate&logoColor=white" alt="Languages" height="36"></a>&nbsp;
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" height="36"></a>&nbsp;
+  <a href="https://unraid.net"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
+  <a href="https://github.com/junkerderprovinz/featherdrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>&nbsp;
+  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" height="36"></a>
+</p>
+
+<br>
+
+<p align="center" class="lead">
+<b>featherdrop</b> is a sleek, modern, self-hosted file sharer. Drop a file, set an
+expiry (plus an optional password or download limit), and share a short link or QR
+code. Files are encrypted at rest, uploads are resumable, and metadata lives in a
+single SQLite file — no accounts, no separate database, no tracking.
+</p>
 
 <h2>Links</h2>
 <ul>

@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Richer, "sleek & modern" copy** in the README, the Unraid template
   `<Overview>` and `ca_profile.xml`, covering all key features (encryption,
   expiry/burn, preview, QR, link previews, 26 languages, custom branding, one
-  container). Added a CA support-thread template (`.github/SUPPORT_THREAD.md`).
+  container). Added a CA support-thread template — `.github/SUPPORT_THREAD.md`
+  and a styled `.github/SUPPORT_THREAD.html` that mirrors the README hero (banner
+  + badge row), ready to paste into the Unraid forum source view.
 - **Added UI screenshots** to the README (home light/dark, upload options, share
   link + QR, download page) under `.github/assets/screenshots/`.
 
