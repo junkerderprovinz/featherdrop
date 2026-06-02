@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const fr: Translation = {
   "app.tagline": "Déposez un fichier, partagez un lien.",
   "app.subtitle": "Chiffré, et effacé à son expiration.",
-  "app.privacy": "Auto-hébergé · chiffré · sans compte, sans pistage",
+  "app.privacy": "Chiffrement · suppression automatique · sans pistage · sans conneries",
   "theme.toggle": "Changer de thème",
   "language.label": "Langue",
 

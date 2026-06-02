@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const pl: Translation = {
   "app.tagline": "Upuść plik, udostępnij link.",
   "app.subtitle": "Zaszyfrowane i znika po wygaśnięciu.",
-  "app.privacy": "Samodzielny hosting · szyfrowane · bez kont, bez śledzenia",
+  "app.privacy": "Szyfrowanie · automatyczne usuwanie · bez śledzenia · bez ściemy",
   "theme.toggle": "Przełącz motyw",
   "language.label": "Język",
 

@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const zh: Translation = {
   "app.tagline": "拖入文件，分享链接。",
   "app.subtitle": "已加密，过期后即消失。",
-  "app.privacy": "自托管 · 加密 · 无账户、无追踪",
+  "app.privacy": "加密 · 自动删除 · 无追踪 · 绝无废话",
   "theme.toggle": "切换主题",
   "language.label": "语言",
 

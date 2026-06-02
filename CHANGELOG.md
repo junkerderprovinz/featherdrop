@@ -21,9 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@fontsource/sansation` (no runtime call to Google), while the wordmark stays in
   Bitter (`theme.ts`, `app/fonts.ts`, `app/layout.tsx`).
 - **Punchier hero copy.** Tagline → "Share your files securely and privately — no
-  account needed", with a single line beneath it — "encrypted · auto-deleted · no
-  tracking · no BS"; the middle subtitle was dropped from the home page
-  (`app/page.tsx`, `lib/i18n/locales/en.ts` + `de.ts`).
+  account needed" (now lighter, less bold), with one line beneath it —
+  "Encrypted · auto-deleted · no tracking · no bullshit" — translated across all
+  26 languages; the middle subtitle was dropped from the home page
+  (`app/page.tsx`, `lib/i18n/locales/*`).
 - **Larger home-page logo and more space below the header** for a calmer hero
   (`app/page.tsx`).
 - **README: new "Security & Privacy" section** covering the self-hosting privacy

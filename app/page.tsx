@@ -180,7 +180,7 @@ export default function HomePage() {
       ) : (
         <Stack align="center" gap={0}>
           <Stack align="center" gap={6} mb={36}>
-            <Text fw={700} size={rem(28)} ta="center" style={{ letterSpacing: -0.5 }}>
+            <Text fw={500} size={rem(26)} ta="center" style={{ letterSpacing: -0.3 }}>
               {t("app.tagline")}
             </Text>
             <Text c="dimmed" size="md" ta="center">

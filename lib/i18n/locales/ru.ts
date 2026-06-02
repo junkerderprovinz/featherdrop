@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const ru: Translation = {
   "app.tagline": "Перетащите файл, поделитесь ссылкой.",
   "app.subtitle": "Зашифровано и исчезает по истечении срока.",
-  "app.privacy": "Свой хостинг · шифрование · без аккаунтов и слежки",
+  "app.privacy": "Шифрование · автоудаление · без слежки · без хрени",
   "theme.toggle": "Переключить тему",
   "language.label": "Язык",
 

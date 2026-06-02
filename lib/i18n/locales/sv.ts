@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const sv: Translation = {
   "app.tagline": "Släpp en fil, dela en länk.",
   "app.subtitle": "Krypterat, och borta när det går ut.",
-  "app.privacy": "Självhostad · krypterad · inga konton, ingen spårning",
+  "app.privacy": "Kryptering · automatisk radering · ingen spårning · inget skitsnack",
   "theme.toggle": "Växla tema",
   "language.label": "Språk",
 

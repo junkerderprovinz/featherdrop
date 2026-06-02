@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const ar: Translation = {
   "app.tagline": "أفلِت ملفًا، وشارِك رابطًا.",
   "app.subtitle": "مشفّر، ويختفي عند انتهاء صلاحيته.",
-  "app.privacy": "استضافة ذاتية · مشفّر · بلا حسابات ولا تتبّع",
+  "app.privacy": "تشفير · حذف تلقائي · بدون تتبّع · بدون هراء",
   "theme.toggle": "تبديل السمة",
   "language.label": "اللغة",
 
