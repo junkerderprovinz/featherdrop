@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const fi: Translation = {
   "app.tagline": "Pudota tiedosto, jaa linkki.",
   "app.subtitle": "Salattu, ja poissa kun se vanhenee.",
-  "app.privacy": "Itse isännöity · salattu · ei tilejä, ei seurantaa",
+  "app.privacy": "Salaus · automaattinen poisto · ei seurantaa · ei paskapuhetta",
   "theme.toggle": "Vaihda teemaa",
   "language.label": "Kieli",
 

@@ -3,7 +3,7 @@ import type { Translation } from "./en.ts";
 export const vi: Translation = {
   "app.tagline": "Thả một tệp, chia sẻ một liên kết.",
   "app.subtitle": "Được mã hóa, và biến mất khi hết hạn.",
-  "app.privacy": "Tự lưu trữ · mã hóa · không tài khoản, không theo dõi",
+  "app.privacy": "Mã hóa · tự động xóa · không theo dõi · không nhảm nhí",
   "theme.toggle": "Đổi giao diện",
   "language.label": "Ngôn ngữ",
 
