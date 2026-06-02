@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <!--
   Unraid Community Applications support thread for featherdrop.
-  Mirrors the README hero: banner (full width, linked) + badge row + description,
-  then the sections. Open standalone in a browser, or paste into the Unraid forum
-  editor's source (<>) view.
+  Structure mirrors the sister-app threads (e.g. Krusader):
+  title -> subtitle -> banner -> badges -> What is this? -> Highlights ->
+  Requirements -> Posting a bug report -> Credits -> disclaimer.
+  Open standalone in a browser, or paste into the Unraid forum editor's source.
   Title: [Support] junkerderprovinz - featherdrop
 -->
 <html lang="en">
@@ -12,18 +13,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>[Support] junkerderprovinz - featherdrop</title>
 <style>
-  body { max-width: 920px; margin: 1.5rem auto; padding: 0 1rem;
+  body { max-width: 900px; margin: 1.5rem auto; padding: 0 1rem;
          font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         line-height: 1.55; color: #1c1c1c; }
-  h2 { margin-top: 1.7rem; font-size: 1.2rem; }
+         line-height: 1.6; color: #1c1c1c; }
+  h1 { text-align: center; font-size: 1.7rem; margin-bottom: .2rem; }
+  .subtitle { text-align: center; color: #666; font-style: italic; margin-top: 0; }
+  h2 { margin-top: 1.9rem; font-size: 1.25rem; }
   code { background: #f1f1f1; padding: .1em .35em; border-radius: 4px; font-size: .9em; }
   a { color: #c79a1e; }
   ul { padding-left: 1.2rem; }
+  li { margin: .25rem 0; }
   img { border: 0; vertical-align: middle; }
-  .lead { font-size: 1.05rem; }
+  .footnote { color: #777; font-size: .9em; font-style: italic; text-align: center; margin-top: 2rem; }
 </style>
 </head>
 <body>
+
+<h1>featherdrop — a sleek, modern file sharer for Unraid</h1>
+<p class="subtitle">Drop a file, get a link — encrypted, self-destructing, no accounts.</p>
 
 <p align="center">
   <a href="https://github.com/junkerderprovinz/featherdrop">
@@ -32,67 +39,64 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/junkerderprovinz/featherdrop/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/featherdrop/build.yml?branch=main&label=Build&style=for-the-badge&logo=githubactions&logoColor=white" alt="Build" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/featherdrop/actions/workflows/lint.yml"><img src="https://img.shields.io/github/actions/workflow/status/junkerderprovinz/featherdrop/lint.yml?branch=main&label=Lint&style=for-the-badge&logo=githubactions&logoColor=white" alt="Lint" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop"><img src="https://img.shields.io/badge/Image-ghcr.io-1d99f3?style=for-the-badge&logo=docker&logoColor=white" alt="Image" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop"><img src="https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-success?style=for-the-badge&logo=linux&logoColor=white" alt="Arch" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/featherdrop#3-security--privacy"><img src="https://img.shields.io/badge/Encrypted-age-4c9a2a?style=for-the-badge&logo=letsencrypt&logoColor=white" alt="Encrypted" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/featherdrop#4-languages"><img src="https://img.shields.io/badge/Languages-26-3daee9?style=for-the-badge&logo=googletranslate&logoColor=white" alt="Languages" height="36"></a>&nbsp;
-  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" height="36"></a>&nbsp;
-  <a href="https://unraid.net"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
-  <a href="https://github.com/junkerderprovinz/featherdrop/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>&nbsp;
-  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" height="36"></a>
+  <a href="https://unraid.net/community/apps?q=featherdrop" style="display:inline-block;margin:6px;padding:13px 30px;background:#f15a2c;color:#ffffff;font-weight:700;font-size:16px;text-decoration:none;border-radius:12px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:9px"><rect x="3" y="5" width="3.5" height="14" rx="1"></rect><rect x="10.25" y="5" width="3.5" height="14" rx="1"></rect><rect x="17.5" y="5" width="3.5" height="14" rx="1"></rect></svg>Install on Unraid</a>
+  <a href="https://github.com/junkerderprovinz/featherdrop" style="display:inline-block;margin:6px;padding:13px 30px;background:#24292f;color:#ffffff;font-weight:700;font-size:16px;text-decoration:none;border-radius:12px;">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;margin-right:9px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>View on GitHub</a>
+  <a href="https://buymeacoffee.com/junkerderprovinz" style="display:inline-block;margin:6px;padding:13px 30px;background:#FFDD00;color:#000000;font-weight:700;font-size:16px;text-decoration:none;border-radius:12px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:9px"><path d="M4 4h13v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V4zm14 1h1.5A2.5 2.5 0 0 1 22 7.5 2.5 2.5 0 0 1 19.5 10H18V5zM3 18h15v2H3z"></path></svg>Buy me a coffee</a>
 </p>
 
-<br>
-
-<p align="center" class="lead">
-<b>featherdrop</b> is a sleek, modern, self-hosted file sharer. Drop a file, set an
+<h2>What is this?</h2>
+<p>A clean, login-free, self-hosted file sharer. Open the page, drop a file, set an
 expiry (plus an optional password or download limit), and share a short link or QR
-code. Files are encrypted at rest, uploads are resumable, and metadata lives in a
-single SQLite file — no accounts, no separate database, no tracking.
-</p>
+code. Files are <strong>encrypted at rest</strong>, uploads are <strong>resumable</strong>,
+and metadata is a single SQLite file — no accounts, no separate database, no tracking.
+Built with Next.js + Mantine, it runs as one small container and is configured entirely
+from the Unraid template — no SSH or config-file editing.</p>
 
-<h2>Links</h2>
+<h2>Highlights</h2>
 <ul>
-  <li>Source: <a href="https://github.com/junkerderprovinz/featherdrop">github.com/junkerderprovinz/featherdrop</a></li>
-  <li>Image: <code>ghcr.io/junkerderprovinz/featherdrop:latest</code> (amd64 + arm64)</li>
-  <li>Changelog: <a href="https://github.com/junkerderprovinz/featherdrop/releases">github.com/junkerderprovinz/featherdrop/releases</a></li>
+  <li>🔒 <strong>Encrypted at rest</strong> with age — the original filename and type are encrypted <em>inside</em> the file, so a stolen disk or backup reveals neither contents nor names</li>
+  <li>🔑 Optional <strong>password</strong> shares are end-to-end; set a <code>MASTER_KEY</code> for <strong>short links</strong></li>
+  <li>⏳ <strong>Self-destructing</strong> — expiry from 1 hour to 30 days (or never), plus optional <strong>burn-after-N-downloads</strong></li>
+  <li>🖼️ Inline <strong>image/PDF preview</strong>, a savable <strong>QR code</strong>, and clean <strong>link previews</strong> that never leak the file's name</li>
+  <li>🌍 <strong>26 UI languages</strong> (right-to-left for Arabic &amp; Hebrew), light/dark, picked from the browser</li>
+  <li>🎨 <strong>Custom branding</strong> — app name, logo and accent colour via env vars</li>
+  <li>📦 <strong>One container</strong> — resumable uploads (tus), a single SQLite file, separate data/config volumes</li>
+  <li>🧹 <strong>Private by design</strong> — no accounts, no telemetry, no third-party calls at runtime</li>
+  <li>Multi-arch — amd64 + arm64</li>
+  <li>Image: <code>ghcr.io/junkerderprovinz/featherdrop:latest</code></li>
 </ul>
 
-<h2>Features</h2>
+<h2>Requirements</h2>
 <ul>
-  <li>🔒 Encrypted at rest (age) — filename and type encrypted inside the file</li>
-  <li>🔑 Optional password (end-to-end), or short links via a server <code>MASTER_KEY</code></li>
-  <li>⏳ Expiry 1h–30d or never, plus optional burn-after-N-downloads</li>
-  <li>🖼️ Inline image/PDF preview · savable QR code · clean link previews</li>
-  <li>🌍 26 languages (right-to-left for Arabic/Hebrew) · light/dark</li>
-  <li>🎨 Custom branding — name, logo, accent colour (env vars)</li>
-  <li>📦 One container · resumable uploads (tus) · SQLite (no DB server)</li>
-  <li>🧹 No accounts, no telemetry — your files stay on your server</li>
+  <li>Unraid 6.10+</li>
+  <li>A reverse proxy with <strong>HTTPS</strong> is recommended — set <code>BASE_URL</code> to your public URL so share links are correct (and so a link's decryption key in the URL fragment stays private in transit)</li>
+  <li>Allow <strong>large uploads</strong> in your proxy (e.g. <code>client_max_body_size 0</code> and generous timeouts) for big files</li>
 </ul>
 
-<h2>Installation</h2>
-<p>Search "featherdrop" in Community Applications and click Install. Map the
-<strong>Data</strong> directory (uploads) and <strong>Config</strong> directory
-(database), pick a port, and — behind a reverse proxy — set <code>BASE_URL</code> to
-your public URL. Apply, then open the WebUI.</p>
-
-<h2>Configuration (key variables)</h2>
+<h2>Posting a bug report</h2>
+<p>Please post:</p>
 <ul>
-  <li><code>BASE_URL</code> — your public URL, so share links use your domain</li>
-  <li><code>DEFAULT_EXPIRY</code> — <code>1h</code> | <code>6h</code> | <code>1d</code> | <code>7d</code> | <code>30d</code> | <code>never</code></li>
-  <li><code>MAX_FILE_SIZE</code> — bytes; <code>0</code> = unlimited</li>
-  <li><code>ENCRYPT_UPLOADS</code> — encrypt new uploads at rest (default <code>true</code>)</li>
-  <li><code>MASTER_KEY</code> — optional secret → short links for password-less shares</li>
-  <li><code>APP_NAME</code> / <code>APP_LOGO</code> / <code>ACCENT_COLOR</code> — custom branding</li>
+  <li>Unraid version (Settings → System Information)</li>
+  <li>Image tag (<code>latest</code> or a pinned <code>vX.Y.Z</code>)</li>
+  <li>Output of <code>docker logs --tail 200 featherdrop</code></li>
+  <li>Browser + OS you're using</li>
+  <li>Whether you changed <code>BASE_URL</code>, <code>ENCRYPT_UPLOADS</code>, <code>MASTER_KEY</code>, <code>DEFAULT_EXPIRY</code>, the branding vars, or the <code>/data</code> / <code>/config</code> mounts</li>
 </ul>
+<p>GitHub issues with the same info are also welcome:
+<a href="https://github.com/junkerderprovinz/featherdrop/issues">github.com/junkerderprovinz/featherdrop/issues</a></p>
 
-<h2>Support</h2>
-<p>Reply here, or open an issue:
-<a href="https://github.com/junkerderprovinz/featherdrop/issues">github.com/junkerderprovinz/featherdrop/issues</a>.</p>
-<p>If featherdrop saves you a trip to a third-party host, you can
+<h2>Credits</h2>
+<p>A much simpler take inspired by
+<a href="https://github.com/stonith404/pingvin-share">Pingvin Share</a>. Built on
+<a href="https://age-encryption.org">age</a> (encryption),
+<a href="https://tus.io">tus</a> (resumable uploads), Next.js, Mantine and
+better-sqlite3. If featherdrop saves you a trip to a third-party host, you can
 <a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
+
+<p class="footnote">Self-hosted, MIT-licensed — you run it, you own your data and the responsibility.</p>
 
 </body>
 </html>
