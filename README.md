@@ -12,8 +12,7 @@
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" height="36"></a>&nbsp;
   <a href="https://mantine.dev"><img src="https://img.shields.io/badge/Mantine-339af0?style=for-the-badge&logo=mantine&logoColor=white" alt="Mantine" height="36"></a>&nbsp;
   <a href="https://unraid.net"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>&nbsp;
-  <a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" height="36"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>
 </p>
 
 <br>
@@ -23,6 +22,14 @@ featherdrop is a <b>sleek, modern</b>, self-hosted drop zone for your files — 
 file, set how long it lives (plus an optional password or download limit), and share
 a short link or QR code. Encrypted at rest, resumable uploads, one small container.
 No accounts, no clouds, no tracking, no nonsense.
+</p>
+
+<br>
+
+<p align="center">
+  <a href="https://buymeacoffee.com/junkerderprovinz">
+    <img src=".github/assets/button-buy-me-a-coffee.svg" alt="Buy me a coffee" width="220">
+  </a>
 </p>
 
 <br>
@@ -39,6 +46,7 @@ No accounts, no clouds, no tracking, no nonsense.
 8. [Local Development](#8-local-development)
 9. [Screenshots](#9-screenshots)
 10. [Contributing / License](#10-contributing--license)
+11. [Support this project](#11-support-this-project)
 
 <br>
 
@@ -338,7 +346,7 @@ Licensed under the [MIT License](LICENSE).
 
 <br>
 
-## Support this project
+## 11. Support this project
 
 If featherdrop saves you a trip to a third-party file host, consider buying me a coffee:
 
