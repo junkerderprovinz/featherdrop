@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="featherdrop logo">
   <defs>
     <linearGradient id="fd-gold" x1="500" y1="0" x2="500" y2="1000" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F6D981"/>
+      <stop offset="0" stop-color="#E0B53A"/>
       <stop offset="0.5" stop-color="#D4AF37"/>
       <stop offset="1" stop-color="#A97C0A"/>
     </linearGradient>
