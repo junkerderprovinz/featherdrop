@@ -58,10 +58,18 @@ const bannerSvg =
 writeFileSync(new URL("featherdrop-banner.svg", ASSETS), bannerSvg);
 writeFileSync(new URL("featherdrop-banner.png", ASSETS), renderPng(bannerSvg, BW));
 
-// --- Icon: square, feather centered with 10% padding, 512x512 ---
+// --- Icon: square, feather centered with 10% padding, 512x512, on a solid
+//     #121212 background so the Community Applications tile matches Unraid's dark
+//     theme (this PNG is the CA <Icon>; the favicon and in-app logo stay
+//     transparent/gradient and are unaffected). ---
 const side = Math.max(w, h) * 1.2;
 const iconSvg = wrap(x - (side - w) / 2, y - (side - h) / 2, side, side);
-writeFileSync(new URL("icon.png", ASSETS), renderPng(iconSvg, 512));
+writeFileSync(
+  new URL("icon.png", ASSETS),
+  new Resvg(iconSvg, { background: "#121212", fitTo: { mode: "width", value: 512 } })
+    .render()
+    .asPng(),
+);
 
 // --- Social card: 1200x630 dark "aurora" card with the medallion on the left
 //     and the wordmark + tagline on the right. Served by Next's
