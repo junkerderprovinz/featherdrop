@@ -9,7 +9,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/junkerderprovinz/featherdrop/issues</Support>
   <Project>https://github.com/junkerderprovinz/featherdrop</Project>
-  <Overview>A clean, login-free, self-hosted file sharer. Open the page, drop a file, set an expiry and optional password, and share the link. Files are encrypted at rest with age; set a MASTER_KEY to get short share links. Resumable uploads (tus), files on a local volume, metadata in a single SQLite file — no separate database, no accounts. Put it behind a reverse proxy and set BASE_URL so share links use your public domain.</Overview>
+  <Overview>featherdrop is a sleek, modern, self-hosted file sharer. Open the page, drop a file, set an expiry (plus an optional password or download limit), and share a short link or QR code. Files are encrypted at rest with age; set a MASTER_KEY to get short share links. Resumable uploads (tus), files on a local volume, metadata in a single SQLite file — no separate database, no accounts, no tracking. 26 languages, light/dark, and custom branding (APP_NAME/APP_LOGO/ACCENT_COLOR). Put it behind a reverse proxy and set BASE_URL so share links use your public domain.</Overview>
   <Category>Tools:Utilities Productivity:</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/templates/featherdrop.xml</TemplateURL>
