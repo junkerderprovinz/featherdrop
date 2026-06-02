@@ -16,7 +16,7 @@ import { Notifications } from "@mantine/notifications";
 import { createAppTheme } from "@/theme";
 import { BASE_URL, BRANDING } from "@/lib/config";
 import { BrandingProvider } from "@/components/BrandingProvider";
-import { wordmark } from "./fonts";
+import { bitter } from "./fonts";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { SUPPORTED, DEFAULT_LANGUAGE, isRtl } from "@/lib/i18n/locales";
 import { COOKIE, pickLanguage } from "@/lib/i18n/detect";
@@ -72,7 +72,7 @@ export default function RootLayout({
           content="minimum-scale=1, initial-scale=1, width=device-width"
         />
       </head>
-      <body className={wordmark.variable}>
+      <body className={bitter.variable}>
         <DirectionProvider initialDirection={dir} detectDirection={false}>
           <MantineProvider
             theme={createAppTheme(BRANDING.accentColor)}

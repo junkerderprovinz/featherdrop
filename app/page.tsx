@@ -16,6 +16,7 @@ import {
   Transition,
   UnstyledButton,
   rem,
+  useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
@@ -35,7 +36,13 @@ type Status = "idle" | "ready" | "uploading" | "done";
 export default function HomePage() {
   const { t } = useTranslation();
   const { appName } = useBranding();
-  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const { setColorScheme } = useMantineColorScheme();
+  // Resolve "auto" to the actually-displayed scheme so the first click always
+  // flips what the user sees (using the raw colorScheme, which starts as "auto",
+  // makes the first toggle a no-op when it matches the system theme).
+  const computedColorScheme = useComputedColorScheme("light", {
+    getInitialValueInEffect: true,
+  });
   const [status, setStatus] = useState<Status>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
@@ -134,10 +141,10 @@ export default function HomePage() {
               size="lg"
               aria-label={t("theme.toggle")}
               onClick={() =>
-                setColorScheme(colorScheme === "dark" ? "light" : "dark")
+                setColorScheme(computedColorScheme === "dark" ? "light" : "dark")
               }
             >
-              {colorScheme === "dark" ? (
+              {computedColorScheme === "dark" ? (
                 <IconSun size={18} />
               ) : (
                 <IconMoon size={18} />
@@ -148,17 +155,17 @@ export default function HomePage() {
       </Box>
 
       {/* Clicking the brand returns to the start screen (resets any upload). */}
-      <Center mb={56}>
+      <Center mb={88}>
         <UnstyledButton onClick={reset} aria-label={t("app.tagline")}>
           <Group gap="sm" style={{ cursor: "pointer" }}>
-            <Logo size={40} />
+            <Logo size={52} />
             <Title
               order={1}
               fw={500}
               style={{
                 fontSize: rem(32),
                 letterSpacing: -1,
-                fontFamily: "var(--font-wordmark), Georgia, serif",
+                fontFamily: "var(--font-bitter), Georgia, serif",
                 fontStyle: "italic",
               }}
             >

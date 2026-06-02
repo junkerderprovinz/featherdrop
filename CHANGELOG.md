@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Light/dark toggle needed two clicks for the first switch.** It read the raw
+  color scheme (which starts as `auto`), so the first click set an explicit
+  scheme that often matched the system theme — a visual no-op. It now uses
+  Mantine's computed color scheme (`useComputedColorScheme`), so the first click
+  always flips what's shown (`app/page.tsx`, `components/DownloadView.tsx`).
+
+### Changed
+
+- **Bitter is now the typeface for the entire UI**, not just the wordmark, applied
+  via the Mantine theme (`theme.ts`; `app/fonts.ts` now loads Bitter in upright
+  and italic weights and exposes `--font-bitter`).
+- **Larger home-page logo and more space below the header** for a calmer hero
+  (`app/page.tsx`).
+
 ## [3.0.1] — 2026-06-01
 
 ### Fixed
