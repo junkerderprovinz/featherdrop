@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const hu: Translation = {
-  "app.tagline": "Dobj be egy fájlt, ossz meg egy linket.",
+  "app.tagline": "Oszd meg fájljaidat biztonságosan és privátan",
   "app.subtitle": "Titkosítva, és eltűnik, amikor lejár.",
-  "app.privacy": "Titkosítás · automatikus törlés · követés nélkül · semmi kamu",
+  "app.privacy": "Titkosítás · automatikus törlés · követés nélkül · fiók nélkül · semmi kamu",
   "theme.toggle": "Téma váltása",
   "language.label": "Nyelv",
 

@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const no: Translation = {
-  "app.tagline": "Slipp en fil, del en lenke.",
+  "app.tagline": "Del filene dine sikkert og privat",
   "app.subtitle": "Kryptert, og borte når det utløper.",
-  "app.privacy": "Kryptering · automatisk sletting · ingen sporing · ingen bullshit",
+  "app.privacy": "Kryptering · automatisk sletting · ingen sporing · ingen konto · ingen bullshit",
   "theme.toggle": "Bytt tema",
   "language.label": "Språk",
 

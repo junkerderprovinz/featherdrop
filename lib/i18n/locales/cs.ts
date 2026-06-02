@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const cs: Translation = {
-  "app.tagline": "Přetáhněte soubor, sdílejte odkaz.",
+  "app.tagline": "Sdílejte soubory bezpečně a soukromě",
   "app.subtitle": "Šifrované a po vypršení zmizí.",
-  "app.privacy": "Šifrování · automatické mazání · bez sledování · žádné kecy",
+  "app.privacy": "Šifrování · automatické mazání · bez sledování · bez účtu · žádné kecy",
   "theme.toggle": "Přepnout motiv",
   "language.label": "Jazyk",
 

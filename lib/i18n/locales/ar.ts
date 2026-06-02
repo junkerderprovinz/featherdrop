@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const ar: Translation = {
-  "app.tagline": "أفلِت ملفًا، وشارِك رابطًا.",
+  "app.tagline": "شارك ملفاتك بأمان وخصوصية",
   "app.subtitle": "مشفّر، ويختفي عند انتهاء صلاحيته.",
-  "app.privacy": "تشفير · حذف تلقائي · بدون تتبّع · بدون هراء",
+  "app.privacy": "تشفير · حذف تلقائي · بدون تتبّع · بدون حساب · بدون هراء",
   "theme.toggle": "تبديل السمة",
   "language.label": "اللغة",
 

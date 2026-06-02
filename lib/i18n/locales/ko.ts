@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const ko: Translation = {
-  "app.tagline": "파일을 놓고, 링크를 공유하세요.",
+  "app.tagline": "파일을 안전하고 비공개로 공유하세요",
   "app.subtitle": "암호화되며, 만료되면 사라집니다.",
-  "app.privacy": "암호화 · 자동 삭제 · 추적 없음 · 허튼소리 없음",
+  "app.privacy": "암호화 · 자동 삭제 · 추적 없음 · 계정 불필요 · 허튼소리 없음",
   "theme.toggle": "테마 전환",
   "language.label": "언어",
 

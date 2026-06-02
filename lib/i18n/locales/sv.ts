@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const sv: Translation = {
-  "app.tagline": "Släpp en fil, dela en länk.",
+  "app.tagline": "Dela dina filer säkert och privat",
   "app.subtitle": "Krypterat, och borta när det går ut.",
-  "app.privacy": "Kryptering · automatisk radering · ingen spårning · inget skitsnack",
+  "app.privacy": "Kryptering · automatisk radering · ingen spårning · inget konto · inget skitsnack",
   "theme.toggle": "Växla tema",
   "language.label": "Språk",
 

@@ -1,9 +1,9 @@
 import type { Translation } from "./en.ts";
 
 export const es: Translation = {
-  "app.tagline": "Suelta un archivo, comparte un enlace.",
+  "app.tagline": "Comparte tus archivos de forma segura y privada",
   "app.subtitle": "Cifrado, y desaparece al caducar.",
-  "app.privacy": "Cifrado · borrado automático · sin rastreo · sin chorradas",
+  "app.privacy": "Cifrado · borrado automático · sin rastreo · sin cuenta · sin chorradas",
   "theme.toggle": "Cambiar tema",
   "language.label": "Idioma",
 
