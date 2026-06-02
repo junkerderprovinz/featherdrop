@@ -61,9 +61,9 @@
   <Config
     Name="Public Base URL"
     Target="BASE_URL"
-    Default=""
+    Default="https://featherdrop.yourdomain.tld"
     Mode=""
-    Description="Public URL featherdrop is reached at, e.g. https://share.yourdomain.tld. Used so generated share links point at your domain when behind a reverse proxy. Leave empty to use the address the browser is on."
+    Description="Public URL featherdrop is reached at — replace this placeholder with your own domain (e.g. https://featherdrop.yourdomain.tld). Used so generated share links point at your domain behind a reverse proxy. Leave empty to use the address the browser is on."
     Type="Variable"
     Display="always"
     Required="false"

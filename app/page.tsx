@@ -183,10 +183,7 @@ export default function HomePage() {
             <Text fw={700} size={rem(28)} ta="center" style={{ letterSpacing: -0.5 }}>
               {t("app.tagline")}
             </Text>
-            <Text c="dimmed" size="lg" ta="center">
-              {t("app.subtitle")}
-            </Text>
-            <Text c="dimmed" size="sm" ta="center" style={{ opacity: 0.75 }}>
+            <Text c="dimmed" size="md" ta="center">
               {t("app.privacy")}
             </Text>
           </Stack>
