@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>featherdrop</Name>
-  <Repository>ghcr.io/junkerderprovinz/featherdrop:latest</Repository>
-  <Registry>https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop</Registry>
+  <Repository>junkerderprovinz/featherdrop:latest</Repository>
+  <Registry>https://hub.docker.com/r/junkerderprovinz/featherdrop</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>bash</Shell>
