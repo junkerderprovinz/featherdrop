@@ -1,7 +1,10 @@
 name: Build & Push Docker Image
 
 # Builds the multi-arch image from the Dockerfile and pushes it to GHCR on every
-# push to main (and manually). Tags: :latest and :sha-<short>.
+# push to main (and manually). Tags: :latest and :sha-<short>. Also mirrors to
+# Docker Hub (docker.io/<DOCKERHUB_USERNAME>/featherdrop) once the
+# DOCKERHUB_USERNAME variable + DOCKERHUB_TOKEN secret are set together; until
+# then the build stays GHCR-only.
 
 on:
   push:
@@ -44,11 +47,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Docker Hub mirror — active only once DOCKERHUB_USERNAME (variable) and
+      # DOCKERHUB_TOKEN (secret) are set together; otherwise skipped (GHCR-only).
+      - name: Log in to Docker Hub
+        if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: |
+            ${{ env.IMAGE_NAME }}
+            name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/featherdrop,enable=${{ vars.DOCKERHUB_USERNAME != '' }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
@@ -63,3 +77,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Mirror the repo README onto the Docker Hub page (only when mirroring is on).
+      - name: Sync README to Docker Hub
+        if: ${{ vars.DOCKERHUB_USERNAME != '' && github.event_name != 'pull_request' }}
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/featherdrop
+          readme-filepath: ./README.md
