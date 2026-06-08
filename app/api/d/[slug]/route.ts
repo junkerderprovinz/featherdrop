@@ -170,9 +170,12 @@ export async function GET(
 
   if (wantInline) {
     // Preview an unlimited encrypted share: stream decrypted, inline, no count.
+    // Serve the gate-validated allowlisted type (rec.mime, the same value
+    // wantInline checked) rather than the header copy — consistent with the
+    // plaintext branch and never an empty Content-Type that nosniff would block.
     return new Response(plaintext, {
       headers: {
-        "Content-Type": header.mime ?? "application/octet-stream",
+        "Content-Type": rec.mime || "application/octet-stream",
         "Content-Disposition": contentDisposition(header.name, true),
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",

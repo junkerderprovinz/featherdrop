@@ -11,7 +11,7 @@ export const zh: Translation = {
   "drop.browse": "或点击浏览",
   "drop.replace": "拖入另一个以替换",
 
-  "settings.title": "分享选项",
+  "settings.title": "下载选项",
   "settings.expiresAfter": "过期时间",
   "settings.password": "密码（可选）",
   "settings.passwordPlaceholder": "留空表示无密码",

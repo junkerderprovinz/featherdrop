@@ -11,7 +11,7 @@ export const no: Translation = {
   "drop.browse": "eller klikk for å bla gjennom",
   "drop.replace": "slipp en annen for å erstatte",
 
-  "settings.title": "Delingsalternativer",
+  "settings.title": "Nedlastingsalternativer",
   "settings.expiresAfter": "Utløper etter",
   "settings.password": "Passord (valgfritt)",
   "settings.passwordPlaceholder": "La stå tomt for ingen",

@@ -11,7 +11,7 @@ export const pl: Translation = {
   "drop.browse": "lub kliknij, aby wybrać",
   "drop.replace": "upuść inny, aby zastąpić",
 
-  "settings.title": "Opcje udostępniania",
+  "settings.title": "Opcje pobierania",
   "settings.expiresAfter": "Wygasa po",
   "settings.password": "Hasło (opcjonalne)",
   "settings.passwordPlaceholder": "Pozostaw puste, aby brak",

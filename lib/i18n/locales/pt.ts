@@ -11,7 +11,7 @@ export const pt: Translation = {
   "drop.browse": "ou clique para procurar",
   "drop.replace": "solte outro para substituir",
 
-  "settings.title": "Opções de partilha",
+  "settings.title": "Opções de transferência",
   "settings.expiresAfter": "Expira após",
   "settings.password": "Palavra-passe (opcional)",
   "settings.passwordPlaceholder": "Deixe vazio para nenhuma",

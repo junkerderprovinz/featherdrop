@@ -11,7 +11,7 @@ export const th: Translation = {
   "drop.browse": "หรือคลิกเพื่อเลือก",
   "drop.replace": "วางไฟล์อื่นเพื่อแทนที่",
 
-  "settings.title": "ตัวเลือกการแชร์",
+  "settings.title": "ตัวเลือกการดาวน์โหลด",
   "settings.expiresAfter": "หมดอายุหลังจาก",
   "settings.password": "รหัสผ่าน (ไม่บังคับ)",
   "settings.passwordPlaceholder": "เว้นว่างไว้หากไม่ต้องการ",

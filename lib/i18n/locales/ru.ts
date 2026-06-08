@@ -11,7 +11,7 @@ export const ru: Translation = {
   "drop.browse": "или нажмите для выбора",
   "drop.replace": "перетащите другой для замены",
 
-  "settings.title": "Параметры доступа",
+  "settings.title": "Параметры загрузки",
   "settings.expiresAfter": "Истекает через",
   "settings.password": "Пароль (необязательно)",
   "settings.passwordPlaceholder": "Оставьте пустым, чтобы без пароля",

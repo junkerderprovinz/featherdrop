@@ -11,7 +11,7 @@ export const el: Translation = {
   "drop.browse": "ή κάνε κλικ για περιήγηση",
   "drop.replace": "ρίξε άλλο για αντικατάσταση",
 
-  "settings.title": "Επιλογές κοινής χρήσης",
+  "settings.title": "Επιλογές λήψης",
   "settings.expiresAfter": "Λήγει μετά από",
   "settings.password": "Κωδικός (προαιρετικός)",
   "settings.passwordPlaceholder": "Άφησέ το κενό για κανέναν",

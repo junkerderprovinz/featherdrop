@@ -18,6 +18,7 @@ import { isUploadComplete } from "@/lib/upload";
 import { parseMaxDownloads } from "@/lib/downloads";
 import { chooseEncMode } from "@/lib/encmode";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
+import { mimeFromName } from "@/lib/mime";
 import { hashPassword } from "@/lib/password";
 import { createFileRecord, getFileBySlug } from "@/server/db";
 import { encryptStream, wrapKey } from "@/server/crypto";
@@ -126,7 +127,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const meta = sidecar?.metadata ?? {};
   const originalName = (meta.filename ?? "download").slice(0, 255);
-  const mime = meta.filetype ?? null;
+  // Trust the browser-supplied type, but fall back to the filename extension
+  // when it is missing/empty — otherwise such a file would never preview, since
+  // the preview gate and the inline Content-Type both key off a known MIME.
+  const mime = meta.filetype?.trim() || mimeFromName(originalName);
 
   const storedId = uploadId;
   const storedPath = join(UPLOADS_DIR, storedId);

@@ -11,7 +11,7 @@ export const he: Translation = {
   "drop.browse": "או לחצו לעיון",
   "drop.replace": "שחררו אחר כדי להחליף",
 
-  "settings.title": "אפשרויות שיתוף",
+  "settings.title": "אפשרויות הורדה",
   "settings.expiresAfter": "פג אחרי",
   "settings.password": "סיסמה (אופציונלי)",
   "settings.passwordPlaceholder": "השאירו ריק עבור ללא",

@@ -11,7 +11,7 @@ export const nl: Translation = {
   "drop.browse": "of klik om te bladeren",
   "drop.replace": "zet een ander neer om te vervangen",
 
-  "settings.title": "Deelopties",
+  "settings.title": "Downloadopties",
   "settings.expiresAfter": "Verloopt na",
   "settings.password": "Wachtwoord (optioneel)",
   "settings.passwordPlaceholder": "Laat leeg voor geen",

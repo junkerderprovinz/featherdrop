@@ -11,7 +11,7 @@ export const ko: Translation = {
   "drop.browse": "또는 클릭하여 찾아보기",
   "drop.replace": "교체하려면 다른 파일을 놓으세요",
 
-  "settings.title": "공유 옵션",
+  "settings.title": "다운로드 옵션",
   "settings.expiresAfter": "만료 시점",
   "settings.password": "비밀번호 (선택)",
   "settings.passwordPlaceholder": "없으면 비워 두세요",

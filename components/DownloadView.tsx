@@ -63,6 +63,9 @@ export function DownloadView({
   // Filename: known from the server for plaintext shares, otherwise revealed
   // after we decrypt the header (link mode on mount, password mode on unlock).
   const [revealedName, setRevealedName] = useState<string | null>(name);
+  // Content type used to decide/render the preview. Starts from the DB column and
+  // is refined to the authoritative type from the decrypted header once revealed.
+  const [revealedMime, setRevealedMime] = useState<string | null>(mime);
   const downloadUrl = `/api/d/${slug}`;
 
   const exp = describeExpiry(expiresAt);
@@ -131,8 +134,13 @@ export function DownloadView({
           body: JSON.stringify(cred),
         });
         if (!res.ok) return;
-        const data = (await res.json()) as { name?: string };
-        if (!cancelled && data.name) setRevealedName(data.name);
+        const data = (await res.json()) as {
+          name?: string;
+          mime?: string | null;
+        };
+        if (cancelled) return;
+        if (data.name) setRevealedName(data.name);
+        if (data.mime) setRevealedMime(data.mime);
       } catch {
         // Leave the name hidden; the download button still works.
       }
@@ -147,7 +155,10 @@ export function DownloadView({
   // Inline preview for images/PDFs — only for unlimited, password-less shares
   // (a preview would otherwise consume or require a counted download). The
   // preview GET (?inline=1) never counts and is refused for limited shares.
-  const previewable = isPreviewableMime(mime);
+  // Prefer the type revealed from the decrypted header over the DB column, which
+  // can be empty when the uploader's browser supplied no content type.
+  const effectiveMime = revealedMime ?? mime;
+  const previewable = isPreviewableMime(effectiveMime);
   const canPreview =
     previewable &&
     downloadsLeft === null &&
@@ -223,18 +234,23 @@ export function DownloadView({
             <Box
               w="100%"
               style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                minHeight: rem(160),
                 borderRadius: "var(--mantine-radius-md)",
                 overflow: "hidden",
+                background: "var(--mantine-color-default-hover)",
               }}
             >
-              {mime?.startsWith("image/") ? (
+              {effectiveMime?.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${downloadUrl}?inline=1`}
                   alt={revealedName ?? ""}
                   style={{
                     display: "block",
-                    width: "100%",
+                    maxWidth: "100%",
                     maxHeight: 360,
                     objectFit: "contain",
                   }}
