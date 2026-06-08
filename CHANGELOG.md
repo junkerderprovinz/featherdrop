@@ -9,16 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Image/PDF preview reliability.** The download-page preview now keys off the
-  content type revealed from the decrypted file header (`data.mime` from the
-  reveal POST) rather than the DB column, which is empty when the uploader's
-  browser supplies no type (`components/DownloadView.tsx`). The inline response
-  serves the gate-validated allowlisted type (`rec.mime`, consistent with the
-  plaintext branch — never an empty `Content-Type` that `nosniff` would block,
-  `app/api/d/[slug]/route.ts`), and a finalized upload's MIME falls back to the
-  filename extension when the browser sends none (`lib/mime.ts`, TDD,
-  `app/api/finalize`). The preview frame is now centered on the card with a
-  minimum height, so it can no longer collapse to an invisible strip.
+- **Image/PDF preview reliability.** The inline preview URL now includes the
+  per-file link key as `?k=` so the server can decrypt without requiring the
+  `fd_key` cookie to reach the image/embed GET. Reverse proxies can delay or
+  strip `Set-Cookie` delivery, which caused the inline request to return 401
+  and the preview to silently fail. The key is already in the URL fragment
+  on the download page, so no new information is exposed. The server accepts
+  `?k=` strictly on the `inline=1` / unlimited-share path — never for actual
+  downloads (`app/api/d/[slug]/route.ts`). Additionally: preview keys off the
+  content type revealed from the decrypted file header (`data.mime`) so it
+  works even when the DB column is empty; a finalized upload's MIME falls back
+  to the filename extension (`lib/mime.ts`, TDD); the preview frame is centered
+  with a minimum height so it can't collapse to an invisible strip.
 
 - **Lint CI is green again** — removed the obsolete `XML Template Lint` job. The
   Unraid template now lives in the central
