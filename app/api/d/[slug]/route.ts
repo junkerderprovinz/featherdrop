@@ -146,12 +146,24 @@ export async function GET(
     });
   }
 
-  if (!cookie) {
+  // For inline preview of unlimited link-mode shares, accept the per-file key
+  // from the `?k=` query param as a fallback to the cookie. The key is already
+  // in the URL fragment on the download page (the client has it); passing it to
+  // the inline sub-resource avoids relying on the cookie reaching the image GET
+  // (reverse proxies can interfere with Set-Cookie delivery timing). Gated
+  // strictly on `wantInline` — this path can never trigger a download or count.
+  const inlineParamKey =
+    wantInline && rec.enc_mode === "link"
+      ? (req.nextUrl.searchParams.get("k") ?? null)
+      : null;
+
+  if (!cookie && !inlineParamKey) {
     return NextResponse.json({ error: "unauthorized" }, { status: 403 });
   }
 
-  // Decrypt the header first to prove the cookie's key is valid, THEN count the
-  // download — so a bogus cookie can't burn through a limited share's downloads.
+  // Decrypt the header first to prove the key is valid, THEN count the download —
+  // so a bogus credential can't burn through a limited share's downloads.
+  const decryptKey = cookie ?? (inlineParamKey as string);
   const path = join(UPLOADS_DIR, rec.id);
   const rs = createReadStream(path);
   let header: { name: string; mime: string | null };
@@ -159,7 +171,7 @@ export async function GET(
   try {
     const out = await decryptStream(
       Readable.toWeb(rs) as ReadableStream<Uint8Array>,
-      cookie,
+      decryptKey,
     );
     header = out.header;
     plaintext = out.plaintext;

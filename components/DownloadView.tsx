@@ -152,6 +152,12 @@ export function DownloadView({
 
   const missingKey = linkMode && !linkKey;
 
+  // Inline preview URL: pass the link key as ?k= so the server can decrypt
+  // without relying on the fd_key cookie reaching the image/embed GET (which can
+  // fail when a reverse proxy delays or strips Set-Cookie delivery). The key is
+  // already in the URL fragment on this page, so no new information is exposed.
+  const inlineSrc = `${downloadUrl}?inline=1${linkKey ? `&k=${encodeURIComponent(linkKey)}` : ""}`;
+
   // Inline preview for images/PDFs — only for unlimited, password-less shares
   // (a preview would otherwise consume or require a counted download). The
   // preview GET (?inline=1) never counts and is refused for limited shares.
@@ -246,7 +252,7 @@ export function DownloadView({
               {effectiveMime?.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={`${downloadUrl}?inline=1`}
+                  src={inlineSrc}
                   alt={revealedName ?? ""}
                   style={{
                     display: "block",
@@ -257,7 +263,7 @@ export function DownloadView({
                 />
               ) : (
                 <embed
-                  src={`${downloadUrl}?inline=1`}
+                  src={inlineSrc}
                   type="application/pdf"
                   style={{
                     display: "block",
