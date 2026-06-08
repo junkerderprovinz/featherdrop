@@ -7,11 +7,9 @@
 # License: MIT
 #
 # Debian-slim base (not alpine) so better-sqlite3's native addon builds and runs
-# without musl friction. Multi-stage:
-#   deps    – full install incl. toolchain → compiles the better-sqlite3 binary
-#   build   – next build (output: standalone) + esbuild-bundled custom server
-#   runtime – ONLY Next's standalone output (its traced node_modules is ~24 MB,
-#             vs ~500 MB for the full one) + static assets. No tsx, no dev deps.
+# without musl friction. Multi-stage: deps (with toolchain) -> build -> a lean
+# runtime that reuses the deps node_modules (which already has the compiled
+# better-sqlite3 binary).
 # =============================================================================
 ARG NODE_VERSION=22
 
@@ -27,31 +25,13 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # -----------------------------------------------------------------------------
-# Stage 2 — build the standalone Next.js app + bundle the custom server
+# Stage 2 — build the Next.js app (reuses deps' node_modules with the binary)
 # -----------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# 1) next build (output:standalone) → .next/standalone: server.js + a minimal traced
-#    node_modules (next, react, better-sqlite3's JS, ...) + the build output.
-# 2) Bundle our custom server; next + better-sqlite3 stay external (resolved from the
-#    traced node_modules at runtime); @tus/* is inlined. (age-encryption and nanoid are
-#    used only by Next route handlers, which live in .next/server — not in this bundle.)
-# 3) Next's trace can't follow better-sqlite3's dynamic bindings() lookup, so the native
-#    *.node binary is NOT traced into standalone — copy its build/ dir in explicitly,
-#    else new Database() throws "Could not locate the bindings file" at runtime.
-# 4) next() loads the config machinery (webpack) at runtime; the production trace can
-#    omit it — copy the compiled webpack in so app.prepare() doesn't fail on './bundle5'.
-RUN npm run build \
-    && node_modules/.bin/esbuild custom-server.ts --bundle --platform=node --format=cjs \
-        --target=node${NODE_VERSION} --external:next --external:better-sqlite3 \
-        --outfile=.next/standalone/custom-server.cjs \
-    && cp -r node_modules/better-sqlite3/build \
-        .next/standalone/node_modules/better-sqlite3/build \
-    && cp -rn node_modules/next/dist/compiled/webpack/. \
-        .next/standalone/node_modules/next/dist/compiled/webpack/
+RUN npm run build
 
 # -----------------------------------------------------------------------------
 # Stage 3 — lean runtime
@@ -62,8 +42,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     PORT=3000 \
-    HOSTNAME=0.0.0.0 \
-    NEXT_TELEMETRY_DISABLED=1
+    HOSTNAME=0.0.0.0
 
 LABEL org.opencontainers.image.title="featherdrop" \
       org.opencontainers.image.description="Self-hosted file sharer — drop a file, set an expiry, share a link." \
@@ -71,12 +50,15 @@ LABEL org.opencontainers.image.title="featherdrop" \
       org.opencontainers.image.licenses="MIT" \
       maintainer="junkerderprovinz"
 
-# Self-contained standalone bundle: the traced node_modules (with the compiled
-# better-sqlite3 binary, next, react + the compiled webpack added in build), the
-# esbuild-bundled custom server, and the build output. ~24 MB instead of ~500 MB.
-COPY --from=build /app/.next/standalone ./
-# Next does not place static assets inside standalone — add them.
-COPY --from=build /app/.next/static ./.next/static
+# Carry the deps node_modules (with the compiled better-sqlite3 binary), the
+# compiled .next, and the sources tsx executes at runtime (custom-server +
+# server/ + lib/). The app/ and components/ sources are compiled into .next and
+# are not needed at runtime; Next serves them from the build output.
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY package.json package-lock.json next.config.mjs tsconfig.json custom-server.ts ./
+COPY server ./server
+COPY lib ./lib
 
 # Init-log banner (brand art is a shared asset; container name passed at runtime).
 COPY .github/assets/banner-raw.txt /usr/local/share/banner-raw.txt
