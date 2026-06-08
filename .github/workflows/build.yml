@@ -78,25 +78,48 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: featherdrop:smoke
+          tags: featherdrop:smoke-amd64
           cache-from: type=gha
 
-      - name: Smoke test — container must boot and serve /
+      - name: Build arm64 image for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          load: true
+          tags: featherdrop:smoke-arm64
+          cache-from: type=gha
+
+      # Boot BOTH published arches before anything is pushed — :latest is
+      # multi-arch, so a green amd64 alone would still let a broken arm64 image
+      # (e.g. its QEMU-built better-sqlite3 addon) reach :latest. arm64 runs
+      # under QEMU emulation here, so it gets a larger boot budget.
+      - name: Smoke test — both arches must boot and serve /
         run: |
           set -euo pipefail
-          docker run -d --name fd-smoke -p 3000:3000 featherdrop:smoke
-          for i in $(seq 1 40); do
-            if curl -fsS -o /dev/null http://localhost:3000/; then
-              echo "✅ Container served / after ${i}s"
-              docker rm -f fd-smoke >/dev/null
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "❌ Container did not serve / within 40s — logs:"
-          docker logs fd-smoke || true
-          docker rm -f fd-smoke >/dev/null
-          exit 1
+          smoke() {
+            local tag="$1" platform="$2" budget="$3"
+            local name="fd-smoke-${platform##*/}"
+            echo "::group::smoke ${platform}"
+            docker run -d --name "$name" --platform "$platform" -p 3000:3000 "$tag"
+            for i in $(seq 1 "$budget"); do
+              if curl -fsS -o /dev/null http://localhost:3000/; then
+                echo "✅ ${platform} served / after ${i}s"
+                docker rm -f "$name" >/dev/null
+                echo "::endgroup::"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "❌ ${platform} did not serve / within ${budget}s — logs:"
+            docker logs "$name" || true
+            docker rm -f "$name" >/dev/null
+            echo "::endgroup::"
+            return 1
+          }
+          smoke featherdrop:smoke-amd64 linux/amd64 40
+          smoke featherdrop:smoke-arm64 linux/arm64 150
 
       - name: Build & push
         uses: docker/build-push-action@v6
