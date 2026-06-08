@@ -10,7 +10,7 @@ template's <Support> at the thread URL. Title format matches the sister apps.
 
 # Body
 
-**featherdrop** is a sleek, modern, self-hosted file sharer. Drop a file, set an
+**featherdrop** is a sleek, feather-light, self-hosted file sharer. Drop a file, set an
 expiry (plus an optional password or download limit), and share a short link or
 QR code. Files are encrypted at rest, uploads are resumable, and metadata lives
 in a single SQLite file — no accounts, no separate database, no tracking.

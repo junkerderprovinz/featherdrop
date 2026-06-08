@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **"Feather-light" wording** in the short description — the GitHub repo
+  description, README intro, Unraid template `<Overview>` and the templates-repo
+  card now lead with a nod to the feather logo instead of the generic "clean /
+  modern" phrasing.
 - **Darker top on the gold feather mark** — the lightest gradient stop went from
   `#F6D981` to `#E0B53A` so the top of the medallion stays visible on light/white
   backgrounds. Applied to the in-app logo, the favicon and (re-rendered) the README
