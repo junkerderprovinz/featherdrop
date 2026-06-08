@@ -11,7 +11,7 @@ export const da: Translation = {
   "drop.browse": "eller klik for at gennemse",
   "drop.replace": "slip en anden for at erstatte",
 
-  "settings.title": "Delingsindstillinger",
+  "settings.title": "Downloadindstillinger",
   "settings.expiresAfter": "Udløber efter",
   "settings.password": "Adgangskode (valgfri)",
   "settings.passwordPlaceholder": "Lad stå tom for ingen",

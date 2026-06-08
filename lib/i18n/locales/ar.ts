@@ -11,7 +11,7 @@ export const ar: Translation = {
   "drop.browse": "أو انقر للتصفح",
   "drop.replace": "أفلِت ملفًا آخر للاستبدال",
 
-  "settings.title": "خيارات المشاركة",
+  "settings.title": "خيارات التنزيل",
   "settings.expiresAfter": "تنتهي الصلاحية بعد",
   "settings.password": "كلمة المرور (اختيارية)",
   "settings.passwordPlaceholder": "اتركها فارغة لعدم وجود كلمة مرور",

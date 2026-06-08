@@ -11,7 +11,7 @@ export const uk: Translation = {
   "drop.browse": "або натисніть для вибору",
   "drop.replace": "перетягніть інший для заміни",
 
-  "settings.title": "Параметри доступу",
+  "settings.title": "Параметри завантаження",
   "settings.expiresAfter": "Спливає через",
   "settings.password": "Пароль (необов’язково)",
   "settings.passwordPlaceholder": "Залиште порожнім, щоб без пароля",

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Image/PDF preview reliability.** The download-page preview now keys off the
+  content type revealed from the decrypted file header (`data.mime` from the
+  reveal POST) rather than the DB column, which is empty when the uploader's
+  browser supplies no type (`components/DownloadView.tsx`). The inline response
+  serves the gate-validated allowlisted type (`rec.mime`, consistent with the
+  plaintext branch — never an empty `Content-Type` that `nosniff` would block,
+  `app/api/d/[slug]/route.ts`), and a finalized upload's MIME falls back to the
+  filename extension when the browser sends none (`lib/mime.ts`, TDD,
+  `app/api/finalize`). The preview frame is now centered on the card with a
+  minimum height, so it can no longer collapse to an invisible strip.
+
 - **Lint CI is green again** — removed the obsolete `XML Template Lint` job. The
   Unraid template now lives in the central
   [templates repo](https://github.com/junkerderprovinz/unraid-docker-templates)
@@ -24,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Reworked upload options panel** (`components/SettingsPanel.tsx`). Expiry is
+  now behind an on/off toggle like the download limit — off shares the file with
+  no expiry — and the options are ordered expiry → download limit → password. The
+  divider above the upload button was removed for a cleaner stack.
+- **"Download options" heading** — `settings.title` renamed from "Share options"
+  across all 26 languages.
+- **German grammar** — the 7-/30-day expiry labels read "7 Tagen" / "30 Tagen"
+  (dative) so "Läuft ab nach 7 Tagen" is correct.
 - **"Feather-light" wording** in the short description — the GitHub repo
   description, README intro, Unraid template `<Overview>` and the templates-repo
   card now lead with a nod to the feather logo instead of the generic "clean /

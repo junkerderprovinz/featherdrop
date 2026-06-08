@@ -11,7 +11,7 @@ export const it: Translation = {
   "drop.browse": "o clicca per sfogliare",
   "drop.replace": "rilasciane un altro per sostituire",
 
-  "settings.title": "Opzioni di condivisione",
+  "settings.title": "Opzioni di download",
   "settings.expiresAfter": "Scade dopo",
   "settings.password": "Password (facoltativa)",
   "settings.passwordPlaceholder": "Lascia vuoto per nessuna",

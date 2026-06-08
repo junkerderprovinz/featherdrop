@@ -11,7 +11,7 @@ export const sv: Translation = {
   "drop.browse": "eller klicka för att bläddra",
   "drop.replace": "släpp en annan för att ersätta",
 
-  "settings.title": "Delningsalternativ",
+  "settings.title": "Nedladdningsalternativ",
   "settings.expiresAfter": "Går ut efter",
   "settings.password": "Lösenord (valfritt)",
   "settings.passwordPlaceholder": "Lämna tomt för inget",

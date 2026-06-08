@@ -14,7 +14,7 @@ export const en = {
   "drop.browse": "or click to choose one",
   "drop.replace": "drop another file to replace it",
 
-  "settings.title": "Share options",
+  "settings.title": "Download options",
   "settings.expiresAfter": "Expires after",
   "settings.password": "Password (optional)",
   "settings.passwordPlaceholder": "Leave empty for none",

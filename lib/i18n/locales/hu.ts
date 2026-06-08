@@ -11,7 +11,7 @@ export const hu: Translation = {
   "drop.browse": "vagy kattints a tallózáshoz",
   "drop.replace": "dobj be másikat a cseréhez",
 
-  "settings.title": "Megosztási beállítások",
+  "settings.title": "Letöltési beállítások",
   "settings.expiresAfter": "Lejár ennyi után",
   "settings.password": "Jelszó (nem kötelező)",
   "settings.passwordPlaceholder": "Hagyd üresen, ha nincs",

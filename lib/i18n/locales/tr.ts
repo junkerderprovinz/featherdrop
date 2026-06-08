@@ -11,7 +11,7 @@ export const tr: Translation = {
   "drop.browse": "ya da göz atmak için tıkla",
   "drop.replace": "değiştirmek için başka birini bırak",
 
-  "settings.title": "Paylaşım seçenekleri",
+  "settings.title": "İndirme seçenekleri",
   "settings.expiresAfter": "Şu süre sonra sona erer",
   "settings.password": "Parola (isteğe bağlı)",
   "settings.passwordPlaceholder": "Hiçbiri için boş bırakın",

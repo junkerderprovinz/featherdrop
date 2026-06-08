@@ -11,7 +11,7 @@ export const vi: Translation = {
   "drop.browse": "hoặc nhấp để duyệt",
   "drop.replace": "thả tệp khác để thay thế",
 
-  "settings.title": "Tùy chọn chia sẻ",
+  "settings.title": "Tùy chọn tải xuống",
   "settings.expiresAfter": "Hết hạn sau",
   "settings.password": "Mật khẩu (tùy chọn)",
   "settings.passwordPlaceholder": "Để trống nếu không có",

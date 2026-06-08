@@ -11,7 +11,7 @@ export const de: Translation = {
   "drop.browse": "oder klicken zum Auswählen",
   "drop.replace": "andere Datei ablegen zum Ersetzen",
 
-  "settings.title": "Freigabe-Optionen",
+  "settings.title": "Download-Optionen",
   "settings.expiresAfter": "Läuft ab nach",
   "settings.password": "Passwort (optional)",
   "settings.passwordPlaceholder": "Leer lassen für keins",
@@ -52,8 +52,8 @@ export const de: Translation = {
   "expiry.1h": "1 Stunde",
   "expiry.6h": "6 Stunden",
   "expiry.1d": "1 Tag",
-  "expiry.7d": "7 Tage",
-  "expiry.30d": "30 Tage",
+  "expiry.7d": "7 Tagen",
+  "expiry.30d": "30 Tagen",
   "expiry.never": "Nie",
 
   "relexp.never": "Läuft nie ab",

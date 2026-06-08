@@ -11,7 +11,7 @@ export const cs: Translation = {
   "drop.browse": "nebo klikněte pro procházení",
   "drop.replace": "přetáhněte jiný pro nahrazení",
 
-  "settings.title": "Možnosti sdílení",
+  "settings.title": "Možnosti stažení",
   "settings.expiresAfter": "Vyprší za",
   "settings.password": "Heslo (volitelné)",
   "settings.passwordPlaceholder": "Ponechte prázdné pro žádné",

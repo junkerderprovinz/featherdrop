@@ -11,7 +11,7 @@ export const fi: Translation = {
   "drop.browse": "tai klikkaa selataksesi",
   "drop.replace": "pudota toinen korvataksesi",
 
-  "settings.title": "Jakoasetukset",
+  "settings.title": "Latausasetukset",
   "settings.expiresAfter": "Vanhenee",
   "settings.password": "Salasana (valinnainen)",
   "settings.passwordPlaceholder": "Jätä tyhjäksi, jos ei salasanaa",

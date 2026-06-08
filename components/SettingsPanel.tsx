@@ -2,7 +2,6 @@
 
 import {
   Button,
-  Divider,
   NumberInput,
   Paper,
   PasswordInput,
@@ -15,6 +14,10 @@ import { IconLock, IconSend } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { EXPIRY_OPTIONS } from "@/lib/expiry";
 
+// Finite expiry pre-selected when the expiry toggle is switched on (matches the
+// page's initial state and the server's DEFAULT_EXPIRY).
+const EXPIRY_WHEN_ON = "7d";
+
 interface SettingsPanelProps {
   expiry: string;
   onExpiryChange: (value: string) => void;
@@ -26,8 +29,10 @@ interface SettingsPanelProps {
   uploading: boolean;
 }
 
-// Right-hand panel that appears once a file is selected: the few options the
-// uploader can set (expiry + optional password) and the action button.
+// Right-hand panel that appears once a file is selected: the options the uploader
+// can set and the action button, in order — expiry, download limit, password.
+// Expiry and the download limit are each behind a toggle; switching expiry off
+// shares the file with no expiry ("never").
 export function SettingsPanel({
   expiry,
   onExpiryChange,
@@ -39,6 +44,7 @@ export function SettingsPanel({
   uploading,
 }: SettingsPanelProps) {
   const { t } = useTranslation();
+  const expires = expiry !== "never";
   return (
     <Paper
       radius="lg"
@@ -49,30 +55,31 @@ export function SettingsPanel({
       <Stack gap="md">
         <Text fw={600}>{t("settings.title")}</Text>
 
-        <Select
+        {/* 1. Expiry — toggle a finite lifetime on/off (off = never expires). */}
+        <Switch
           label={t("settings.expiresAfter")}
-          value={expiry}
-          onChange={(v) => v && onExpiryChange(v)}
-          data={EXPIRY_OPTIONS.map((o) => ({
-            value: o.value,
-            label: t(`expiry.${o.value}`),
-          }))}
-          allowDeselect={false}
-          disabled={uploading}
-          comboboxProps={{ withinPortal: true }}
-        />
-
-        <PasswordInput
-          label={t("settings.password")}
-          placeholder={t("settings.passwordPlaceholder")}
-          leftSection={<IconLock size={16} />}
-          value={password}
-          onChange={(e) => onPasswordChange(e.currentTarget.value)}
+          checked={expires}
+          onChange={(e) =>
+            onExpiryChange(e.currentTarget.checked ? EXPIRY_WHEN_ON : "never")
+          }
           disabled={uploading}
         />
+        {expires && (
+          <Select
+            value={expiry}
+            onChange={(v) => v && onExpiryChange(v)}
+            data={EXPIRY_OPTIONS.filter((o) => o.value !== "never").map((o) => ({
+              value: o.value,
+              label: t(`expiry.${o.value}`),
+            }))}
+            allowDeselect={false}
+            disabled={uploading}
+            comboboxProps={{ withinPortal: true }}
+          />
+        )}
 
-        {/* Optional download limit / burn-after-download. The switch toggles
-            between unlimited (null) and a capped count (defaulting to 1). */}
+        {/* 2. Download limit / burn-after-download. The switch toggles between
+            unlimited (null) and a capped count (defaulting to 1). */}
         <Switch
           label={t("settings.limitDownloads")}
           checked={maxDownloads !== null}
@@ -95,7 +102,15 @@ export function SettingsPanel({
           />
         )}
 
-        <Divider />
+        {/* 3. Optional password. */}
+        <PasswordInput
+          label={t("settings.password")}
+          placeholder={t("settings.passwordPlaceholder")}
+          leftSection={<IconLock size={16} />}
+          value={password}
+          onChange={(e) => onPasswordChange(e.currentTarget.value)}
+          disabled={uploading}
+        />
 
         <Button
           fullWidth

@@ -11,7 +11,7 @@ export const ja: Translation = {
   "drop.browse": "またはクリックして選択",
   "drop.replace": "別のファイルをドロップして置き換え",
 
-  "settings.title": "共有オプション",
+  "settings.title": "ダウンロードオプション",
   "settings.expiresAfter": "有効期限",
   "settings.password": "パスワード（任意）",
   "settings.passwordPlaceholder": "なしの場合は空欄",

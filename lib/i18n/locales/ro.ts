@@ -11,7 +11,7 @@ export const ro: Translation = {
   "drop.browse": "sau dă clic pentru a răsfoi",
   "drop.replace": "lasă altul pentru a înlocui",
 
-  "settings.title": "Opțiuni de partajare",
+  "settings.title": "Opțiuni de descărcare",
   "settings.expiresAfter": "Expiră după",
   "settings.password": "Parolă (opțional)",
   "settings.passwordPlaceholder": "Lasă gol pentru niciuna",
