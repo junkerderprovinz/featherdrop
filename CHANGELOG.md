@@ -9,18 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Image/PDF preview reliability.** The inline preview URL now includes the
-  per-file link key as `?k=` so the server can decrypt without requiring the
-  `fd_key` cookie to reach the image/embed GET. Reverse proxies can delay or
-  strip `Set-Cookie` delivery, which caused the inline request to return 401
-  and the preview to silently fail. The key is already in the URL fragment
-  on the download page, so no new information is exposed. The server accepts
-  `?k=` strictly on the `inline=1` / unlimited-share path — never for actual
-  downloads (`app/api/d/[slug]/route.ts`). Additionally: preview keys off the
-  content type revealed from the decrypted file header (`data.mime`) so it
-  works even when the DB column is empty; a finalized upload's MIME falls back
-  to the filename extension (`lib/mime.ts`, TDD); the preview frame is centered
-  with a minimum height so it can't collapse to an invisible strip.
+- **Image/PDF preview reliability.** Three-layer fix for the preview never
+  appearing ("only the filename shown"):
+
+  1. **Null/empty MIME in the DB caused `canPreview = false`.** When the
+     uploader's browser sends no `filetype` in the tus metadata, the `@tus/utils`
+     `Metadata.parse` function stores `null` (not empty-string), and the old
+     finalize code wrote that `null` to the DB. On the download page the MIME
+     prop was `null`, so `previewable = false` and the preview box was never
+     rendered. Fix: client now resolves the effective MIME via
+     `revealedMime || mime || mimeFromName(revealedName)`, falling back to the
+     inferred type from the revealed filename (`||` catches both null and
+     empty-string, unlike `??`). Server's `wantInline` gate and inline
+     Content-Type also use `mimeFromName(rec.original_name)` as a fallback, so
+     old files without a DB MIME value can still be previewed. New uploads are
+     already covered by the finalize extension-fallback (`lib/mime.ts`).
+
+  2. **Inline GET failed behind a reverse proxy (cookie not received in time).**
+     The `fd_key` auth cookie set by the reveal POST was not reliably reaching
+     the `<img>`/`<embed>` GET in some reverse-proxy configurations. The
+     per-file link key (already in the URL fragment on the page) is now also
+     accepted as `?k=` on the `?inline=1` / unlimited-share path — never for
+     actual counted downloads.
+
+  3. **Preview frame could collapse to 0 height on load failure.** Added
+     `minHeight` and flexbox centering so the box is always visible.
 
 - **Lint CI is green again** — removed the obsolete `XML Template Lint` job. The
   Unraid template now lives in the central

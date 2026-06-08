@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import { MASTER_KEY, UPLOADS_DIR } from "@/lib/config";
 import { isPreviewableMime } from "@/lib/preview";
+import { mimeFromName } from "@/lib/mime";
 import {
   getFileBySlug,
   registerDownload,
@@ -109,10 +110,14 @@ export async function GET(
   //   - only UNLIMITED shares (else a preview would bypass the download limit), and
   //   - only an allowlist of INERT types (no SVG/HTML), so an uploader-chosen MIME
   //     can't turn an inline response into same-origin stored XSS.
+  // The stored MIME can be null/empty for files uploaded before the
+  // filename-extension fallback was added. Use `||` (not `??`) so both
+  // null and empty-string are treated as missing, then infer from the name.
+  const inlineMime = rec.mime || mimeFromName(rec.original_name);
   const wantInline =
     req.nextUrl.searchParams.get("inline") === "1" &&
     rec.max_downloads === null &&
-    isPreviewableMime(rec.mime);
+    isPreviewableMime(inlineMime);
 
   // Plaintext blob (legacy): the password gate requires the cookie to carry the
   // unforgeable, hash-derived download token — not merely be present, or anyone
@@ -124,7 +129,7 @@ export async function GET(
     if (wantInline) {
       return new Response(fileStream(rec.id), {
         headers: {
-          "Content-Type": rec.mime ?? "application/octet-stream",
+          "Content-Type": inlineMime ?? "application/octet-stream",
           "Content-Length": String(rec.size),
           "Content-Disposition": contentDisposition(rec.original_name, true),
           "X-Content-Type-Options": "nosniff",
@@ -187,7 +192,7 @@ export async function GET(
     // plaintext branch and never an empty Content-Type that nosniff would block.
     return new Response(plaintext, {
       headers: {
-        "Content-Type": rec.mime || "application/octet-stream",
+        "Content-Type": inlineMime || "application/octet-stream",
         "Content-Disposition": contentDisposition(header.name, true),
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",

@@ -24,6 +24,7 @@ import { IconDownload, IconLock, IconMoon, IconSun } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
 import { isPreviewableMime } from "@/lib/preview";
+import { mimeFromName } from "@/lib/mime";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
@@ -161,9 +162,13 @@ export function DownloadView({
   // Inline preview for images/PDFs — only for unlimited, password-less shares
   // (a preview would otherwise consume or require a counted download). The
   // preview GET (?inline=1) never counts and is refused for limited shares.
-  // Prefer the type revealed from the decrypted header over the DB column, which
-  // can be empty when the uploader's browser supplied no content type.
-  const effectiveMime = revealedMime ?? mime;
+  // Prefer the type revealed from the decrypted header over the DB column.
+  // Use `||` (not `??`) so both null AND empty-string are treated as missing.
+  // Fall back to inferring from the revealed filename: old files stored mime=null
+  // (tus encodes empty file.type as null in the sidecar) and the DB column was
+  // written before the filename-extension fallback was added to finalize.
+  const effectiveMime =
+    revealedMime || mime || mimeFromName(revealedName ?? name ?? "");
   const previewable = isPreviewableMime(effectiveMime);
   const canPreview =
     previewable &&
