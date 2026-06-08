@@ -22,6 +22,8 @@ export const MAX_FILE_SIZE = Number(process.env.MAX_FILE_SIZE ?? 0);
 export const DEFAULT_EXPIRY = process.env.DEFAULT_EXPIRY ?? "7d";
 
 // Public base URL used to build share links (needed behind a reverse proxy).
+// Resolved on the server and passed to the client via ServerConfigProvider
+// (a plain runtime env var is not visible to client components otherwise).
 // When unset the client falls back to window.location.origin.
 export const BASE_URL = process.env.BASE_URL ?? "";
 

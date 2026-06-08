@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`BASE_URL` now applies to generated share links** (#1). The link was built
+  from the browser's address (`window.location.origin`) and ignored `BASE_URL`,
+  so behind a reverse proxy / custom domain the share link used the internal
+  address. `BASE_URL` is now resolved on the server and passed to the client
+  (via `ServerConfigProvider`), and the link uses it — falling back to the
+  browser origin only when `BASE_URL` is unset.
+
 ### Changed
 
 - **Darker top on the gold feather mark** — the lightest gradient stop went from
