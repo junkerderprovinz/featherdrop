@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-06-09
+
+### Changed
+
+- **~58% smaller image via Next `output: "standalone"`.** The runtime now ships
+  only the trace-pruned server and its ~24 MB of `node_modules` (down from
+  ~498 MB) instead of the full dependency tree; the published image drops from
+  ~203 MB to ~85 MB compressed. Same ports, `/data` volume and configuration —
+  nothing changes on upgrade. The custom server (which mounts a tus handler
+  alongside Next, so it can't use Next's generated `server.js`) now hands Next
+  the pre-resolved config via `__NEXT_PRIVATE_STANDALONE_CONFIG`, so the
+  standalone runtime starts without the webpack/config machinery that standalone
+  prunes from `node_modules`. The server is esbuild-bundled into the standalone
+  output; better-sqlite3's native addon (untraceable through `bindings()`) is
+  copied in explicitly.
+
+### Fixed
+
+- **Language flag and light/dark toggle now sit in the same place on every
+  page.** They were absolutely positioned inside each page's content container,
+  and the download page uses a narrower `Container` (`size="sm"`) than the
+  upload page (`size="lg"`), so on wide screens the controls landed at different
+  horizontal positions. Both are now pinned to the viewport's top-right corner
+  (`pos="fixed"`).
+
+### Internal
+
+- **Image push gated on a boot smoke test.** CI now builds the image, runs it,
+  and requires it to actually serve `/` — for both `amd64` and `arm64` (the
+  latter under QEMU) — before publishing `:latest`. A build that compiles but
+  cannot start can no longer reach the published tag.
+
 ## [3.2.0] — 2026-06-08
 
 ### Fixed
