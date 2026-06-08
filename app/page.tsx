@@ -134,8 +134,9 @@ export default function HomePage() {
 
   return (
     <Container size="lg" py={60} style={{ position: "relative", minHeight: "100vh" }}>
-      {/* Controls float top-right so the brand can sit centered like the rest. */}
-      <Box pos="absolute" top={24} right={24} style={{ zIndex: 2 }}>
+      {/* Controls pinned to the viewport top-right so they sit at the exact same
+          spot on every page, independent of each page's Container width. */}
+      <Box pos="fixed" top={24} right={24} style={{ zIndex: 2 }}>
         <Group gap="xs">
           <LanguageSwitcher />
           <Tooltip label={t("theme.toggle")} withArrow>

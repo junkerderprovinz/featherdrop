@@ -179,7 +179,9 @@ export function DownloadView({
 
   return (
     <Container size="sm" py={60} style={{ position: "relative", minHeight: "100vh" }}>
-      <Box pos="absolute" top={24} right={24} style={{ zIndex: 2 }}>
+      {/* Pinned to the viewport top-right — same spot as the upload page,
+          independent of this page's narrower Container width. */}
+      <Box pos="fixed" top={24} right={24} style={{ zIndex: 2 }}>
         <Group gap="xs">
           <LanguageSwitcher />
           <Tooltip label={t("theme.toggle")} withArrow>
