@@ -67,6 +67,37 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
 
+      # Smoke-test gate: build the amd64 image, boot it, and require it to serve /
+      # before anything is pushed. A green Docker build only proves the image
+      # *builds* — this proves it actually *starts* (catches a custom-server /
+      # native-addon / standalone-trace crash that would otherwise reach :latest).
+      - name: Build amd64 image for smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: featherdrop:smoke
+          cache-from: type=gha
+
+      - name: Smoke test — container must boot and serve /
+        run: |
+          set -euo pipefail
+          docker run -d --name fd-smoke -p 3000:3000 featherdrop:smoke
+          for i in $(seq 1 40); do
+            if curl -fsS -o /dev/null http://localhost:3000/; then
+              echo "✅ Container served / after ${i}s"
+              docker rm -f fd-smoke >/dev/null
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "❌ Container did not serve / within 40s — logs:"
+          docker logs fd-smoke || true
+          docker rm -f fd-smoke >/dev/null
+          exit 1
+
       - name: Build & push
         uses: docker/build-push-action@v6
         with:
