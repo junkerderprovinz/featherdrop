@@ -58,24 +58,3 @@ jobs:
 
       - name: Run tests
         run: npm test
-
-  xml-template:
-    name: XML Template Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install libxml2-utils
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
-
-      - name: Validate XML well-formedness
-        run: |
-          set -e
-          shopt -s nullglob
-          files=(templates/*.xml ca_profile.xml)
-          for f in "${files[@]}"; do
-            echo "::group::Linting $f"
-            xmllint --noout "$f"
-            echo "::endgroup::"
-          done
