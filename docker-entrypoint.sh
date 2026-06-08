@@ -9,4 +9,5 @@ set -e
     "Encrypted at rest, auto-deleted when the link expires"
 
 # exec so the Node process becomes PID 1 and receives container signals.
-exec node_modules/.bin/tsx custom-server.ts
+# custom-server.cjs is the esbuild-bundled server inside the standalone output.
+exec node custom-server.cjs

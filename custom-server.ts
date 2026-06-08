@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { readFileSync } from "node:fs";
 import { parse } from "node:url";
 import next from "next";
 import { tusServer } from "./server/tus";
@@ -11,6 +12,19 @@ import { startCleanup } from "./server/cleanup";
 const port = Number(process.env.PORT ?? 3000);
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
 const dev = process.env.NODE_ENV !== "production";
+
+// In a Next "standalone" image the webpack/config machinery is pruned from the
+// traced node_modules. A bare next() calls loadWebpackHook() and would crash
+// (Cannot find module 'next/dist/compiled/...'). Next's own generated
+// server.js avoids this by handing the already-resolved config to loadConfig()
+// via this env var, which makes it skip the webpack hook entirely. We replicate
+// that, reading the config the build wrote into .next/required-server-files.json.
+if (!dev && !process.env.__NEXT_PRIVATE_STANDALONE_CONFIG) {
+  const { config } = JSON.parse(
+    readFileSync(".next/required-server-files.json", "utf8"),
+  ) as { config: unknown };
+  process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(config);
+}
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
