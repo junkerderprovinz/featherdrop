@@ -18,6 +18,7 @@ import { Notifications } from "@mantine/notifications";
 import { createAppTheme } from "@/theme";
 import { BASE_URL, BRANDING } from "@/lib/config";
 import { BrandingProvider } from "@/components/BrandingProvider";
+import { ServerConfigProvider } from "@/components/ServerConfigProvider";
 import { bitter } from "./fonts";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { SUPPORTED, DEFAULT_LANGUAGE, isRtl } from "@/lib/i18n/locales";
@@ -80,18 +81,20 @@ export default function RootLayout({
             theme={createAppTheme(BRANDING.accentColor)}
             defaultColorScheme="auto"
           >
-            <BrandingProvider
-              branding={{
-                appName: BRANDING.appName,
-                logoUrl: BRANDING.logoUrl,
-              }}
-            >
-              <Notifications position="top-center" />
-              <div className="fd-aurora" aria-hidden="true" />
-              <div className="fd-content">
-                <I18nProvider initialLanguage={lang}>{children}</I18nProvider>
-              </div>
-            </BrandingProvider>
+            <ServerConfigProvider config={{ baseUrl: BASE_URL }}>
+              <BrandingProvider
+                branding={{
+                  appName: BRANDING.appName,
+                  logoUrl: BRANDING.logoUrl,
+                }}
+              >
+                <Notifications position="top-center" />
+                <div className="fd-aurora" aria-hidden="true" />
+                <div className="fd-content">
+                  <I18nProvider initialLanguage={lang}>{children}</I18nProvider>
+                </div>
+              </BrandingProvider>
+            </ServerConfigProvider>
           </MantineProvider>
         </DirectionProvider>
       </body>

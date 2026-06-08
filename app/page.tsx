@@ -30,12 +30,15 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { EXPIRY_OPTIONS } from "@/lib/expiry";
+import { buildShareUrl } from "@/lib/share-url";
+import { useServerConfig } from "@/components/ServerConfigProvider";
 
 type Status = "idle" | "ready" | "uploading" | "done";
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { appName } = useBranding();
+  const { baseUrl } = useServerConfig();
   const { setColorScheme } = useMantineColorScheme();
   // Resolve "auto" to the actually-displayed scheme so the first click always
   // flips what the user sees (using the raw colorScheme, which starts as "auto",
@@ -118,7 +121,7 @@ export default function HomePage() {
 
   const shareUrl =
     slug && typeof window !== "undefined"
-      ? `${window.location.origin}/d/${slug}${linkKey ? `#k=${linkKey}` : ""}`
+      ? buildShareUrl(baseUrl, window.location.origin, slug, linkKey)
       : "";
   const uploading = status === "uploading";
   const showPanel = status === "ready" || status === "uploading";
