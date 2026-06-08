@@ -9,4 +9,6 @@ set -e
     "Encrypted at rest, auto-deleted when the link expires"
 
 # exec so the Node process becomes PID 1 and receives container signals.
-exec node_modules/.bin/tsx custom-server.ts
+# custom-server.cjs is the esbuild-bundled custom server inside Next's standalone
+# output; it reuses standalone's traced node_modules (next, better-sqlite3, ...).
+exec node custom-server.cjs
