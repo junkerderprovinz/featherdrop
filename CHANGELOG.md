@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Lint CI is green again** — removed the obsolete `XML Template Lint` job. The
+  Unraid template now lives in the central
+  [templates repo](https://github.com/junkerderprovinz/unraid-docker-templates)
+  (validated there), so this repo no longer ships `templates/*.xml` or
+  `ca_profile.xml`; the job failed trying to lint the missing files. This matches
+  the other own-image repos (krusader/jdownloader/matrix), which carry no XML job.
 - **`BASE_URL` now applies to generated share links** (#1). The link was built
   from the browser's address (`window.location.origin`) and ignored `BASE_URL`,
   so behind a reverse proxy / custom domain the share link used the internal
