@@ -49,6 +49,7 @@
     "esbuild": "^0.28.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.15",
+    "playwright": "^1.60.0",
     "postcss": "^8.4.47",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
