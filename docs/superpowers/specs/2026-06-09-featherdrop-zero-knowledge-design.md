@@ -50,14 +50,15 @@ streaming-capable, audited. Same primitives available in Node for tests.
 
 **Content encryption** — `crypto_secretstream_xchacha20poly1305` (XChaCha20-
 Poly1305), the standard streaming AEAD:
-- File is split into fixed-size chunks (e.g. **64 KiB**).
+- File is split into fixed-size **64 KiB** chunks (**locked**; ~0.03 % tag
+  overhead, good throughput, low memory).
 - Each chunk is an authenticated secretstream message; the final chunk carries
   the `TAG_FINAL` so truncation is detectable.
 - The stream **header** (24 bytes) is written first in the blob.
 
 **Metadata encryption** — the real filename + MIME type are serialized to JSON
-and encrypted with `K` via `crypto_secretstream` (or a single
-`crypto_secretbox`) into a small `enc_meta` blob. The server stores `enc_meta`
+and encrypted with `K` via `crypto_secretbox` (XSalsa20-Poly1305; random 24-byte
+nonce prefixed) into a small `enc_meta` blob. The server stores `enc_meta`
 opaquely and never sees the name/type.
 
 **Blob layout on the server** (one object per share):
@@ -67,13 +68,21 @@ opaquely and never sees the name/type.
 So one streamed read yields metadata first, then the content stream.
 
 **Key delivery — two modes only (master-key mode removed):**
-1. **Link mode (default):** `K` is base64url-encoded into the URL fragment:
-   `https://host/d/<slug>#<K>`. The fragment is never sent in any HTTP request.
+1. **Link mode (default):** `K` is base64url-encoded (no padding, ~43 chars) into
+   the URL fragment as `https://host/d/<slug>#k=<K>` (keeps today's `#k=`
+   convention). The fragment is never sent in any HTTP request.
 2. **Password mode (optional):** `K` is wrapped with a password-derived key
-   (`crypto_pwhash`, Argon2id, random salt) → `wrapped_key`. The server stores
-   `wrapped_key` + `kdf_salt` (opaque). The share link has **no** fragment; the
-   downloader types the password, the client derives the KEK, unwraps `K`, and
-   decrypts. The server never sees the password or `K`. Still zero-knowledge.
+   (`crypto_pwhash`, Argon2id `ALG_ARGON2ID13`, **opslimit 3, memlimit 64 MiB**,
+   random 16-byte salt — chosen so it still runs on mobile browsers; tunable
+   upward) → `wrapped_key`. The server stores `wrapped_key` + `kdf_salt`
+   (opaque). The share link has **no** fragment; the downloader types the
+   password, the client derives the KEK, unwraps `K`, and decrypts. The server
+   never sees the password or `K`. Still zero-knowledge.
+
+**Locked parameters (v4):** content = XChaCha20-Poly1305 secretstream, 64 KiB
+chunks; metadata = `crypto_secretbox`; password KDF = Argon2id (ops 3 / mem
+64 MiB); key = 32 B, base64url in `#k=`. Crypto primitives come only from
+libsodium — **nothing hand-rolled**.
 
 ## 5. Client components (isolation-first)
 
