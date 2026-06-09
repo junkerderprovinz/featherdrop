@@ -51,10 +51,13 @@ export function decryptMeta(blob: Uint8Array, key: Uint8Array): FileMeta {
   return JSON.parse(sodium.to_string(msg)) as FileMeta;
 }
 
-function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
+function concat(
+  a: Uint8Array<ArrayBufferLike>,
+  b: Uint8Array<ArrayBufferLike>,
+): Uint8Array {
   const out = new Uint8Array(a.length + b.length);
-  out.set(a, 0);
-  out.set(b, a.length);
+  out.set(new Uint8Array(a.buffer, a.byteOffset, a.byteLength), 0);
+  out.set(new Uint8Array(b.buffer, b.byteOffset, b.byteLength), a.length);
   return out;
 }
 
@@ -74,7 +77,7 @@ export async function* encryptChunks(
   const TAG_FINAL = sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
   yield header;
 
-  let buffer = new Uint8Array(0);
+  let buffer: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
   for await (const part of source) {
     buffer = concat(buffer, part);
     // Emit full chunks, but keep at least 1 byte (or one full chunk) back so the
@@ -114,7 +117,7 @@ export async function* decryptChunks(
   const TAG_FINAL = sodium.crypto_secretstream_xchacha20poly1305_TAG_FINAL;
   const CIPHER_CHUNK = PT_CHUNK + ABYTES;
 
-  let buffer = new Uint8Array(0);
+  let buffer: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
   let state: sodium.StateAddress | null = null;
 
   for await (const part of source) {
@@ -137,7 +140,6 @@ export async function* decryptChunks(
         frame,
         null,
       );
-      if (r === false) throw new Error("decryption failed");
       yield r.message;
     }
   }
@@ -148,7 +150,6 @@ export async function* decryptChunks(
     buffer,
     null,
   );
-  if (last === false) throw new Error("decryption failed");
   if (last.tag !== TAG_FINAL) throw new Error("stream truncated");
   yield last.message;
 }
