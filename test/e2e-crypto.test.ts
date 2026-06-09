@@ -79,6 +79,13 @@ test("decrypt with the wrong key throws", async () => {
   await assert.rejects(() => collect(decryptChunks(one(cipher), generateKey())));
 });
 
+test("decrypt multi-frame ciphertext with the wrong key throws (no undefined chunks)", async () => {
+  // > 1 frame, so the while-loop pull path is exercised: a wrong key must throw,
+  // never yield an undefined chunk before the final-frame check.
+  const cipher = await collect(encryptChunks(one(bytes(PT_CHUNK * 2 + 10)), generateKey()));
+  await assert.rejects(() => collect(decryptChunks(one(cipher), generateKey())));
+});
+
 test("a flipped ciphertext byte throws", async () => {
   const key = generateKey();
   const cipher = await collect(encryptChunks(one(bytes(5000)), key));

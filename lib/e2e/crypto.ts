@@ -135,11 +135,14 @@ export async function* decryptChunks(
     while (buffer.length > CIPHER_CHUNK) {
       const frame = buffer.subarray(0, CIPHER_CHUNK);
       buffer = buffer.subarray(CIPHER_CHUNK);
+      // pull() returns `false` on auth failure (wrong key / tampered frame); the
+      // bundled @types omit this `| false`, hence the cast. Never yield on failure.
       const r = sodium.crypto_secretstream_xchacha20poly1305_pull(
         state,
         frame,
         null,
-      );
+      ) as unknown as { message: Uint8Array; tag: number } | false;
+      if (r === false) throw new Error("decryption failed");
       yield r.message;
     }
   }
@@ -149,7 +152,8 @@ export async function* decryptChunks(
     state,
     buffer,
     null,
-  );
+  ) as unknown as { message: Uint8Array; tag: number } | false;
+  if (last === false) throw new Error("decryption failed");
   if (last.tag !== TAG_FINAL) throw new Error("stream truncated");
   yield last.message;
 }
