@@ -1,7 +1,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import sodium from "libsodium-wrappers";
-import { ready, generateKey, encodeKey, decodeKey, encryptMeta, decryptMeta, encryptChunks, decryptChunks, PT_CHUNK } from "../lib/e2e/crypto";
+import sodium from "libsodium-wrappers-sumo";
+import { ready, generateKey, encodeKey, decodeKey, encryptMeta, decryptMeta, encryptChunks, decryptChunks, PT_CHUNK, wrapKey, unwrapKey } from "../lib/e2e/crypto";
 
 before(async () => {
   await ready();
@@ -100,4 +100,22 @@ test("ciphertext does not contain the plaintext", async () => {
   const cipher = await collect(encryptChunks(one(marker), key));
   const hay = new TextDecoder("latin1").decode(cipher);
   assert.ok(!hay.includes("FEATHERDROP_SECRET_MARKER"));
+});
+
+test("wrapKey/unwrapKey round-trips with the right password", () => {
+  const key = generateKey();
+  const { wrapped, salt } = wrapKey(key, "correct horse battery staple");
+  assert.deepEqual(unwrapKey(wrapped, salt, "correct horse battery staple"), key);
+});
+
+test("unwrapKey with the wrong password throws", () => {
+  const { wrapped, salt } = wrapKey(generateKey(), "right");
+  assert.throws(() => unwrapKey(wrapped, salt, "wrong"));
+});
+
+test("wrapped key does not contain the bare key", () => {
+  const key = generateKey();
+  const { wrapped } = wrapKey(key, "pw");
+  const hay = new TextDecoder("latin1").decode(wrapped);
+  assert.ok(!hay.includes(new TextDecoder("latin1").decode(key)));
 });

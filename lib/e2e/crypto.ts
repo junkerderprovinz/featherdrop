@@ -1,4 +1,4 @@
-import sodium from "libsodium-wrappers";
+import sodium from "libsodium-wrappers-sumo";
 
 /** Plaintext chunk size for streaming content encryption (locked, spec §4). */
 export const PT_CHUNK = 65536; // 64 KiB
@@ -151,4 +151,47 @@ export async function* decryptChunks(
   if (last === false) throw new Error("decryption failed");
   if (last.tag !== TAG_FINAL) throw new Error("stream truncated");
   yield last.message;
+}
+
+// Argon2id parameters (spec §4 — tuned to still run on mobile browsers).
+const PW_OPSLIMIT = 3;
+const PW_MEMLIMIT = 64 * 1024 * 1024; // 64 MiB
+
+function deriveKek(password: string, salt: Uint8Array): Uint8Array {
+  return sodium.crypto_pwhash(
+    sodium.crypto_secretbox_KEYBYTES, // 32
+    password,
+    salt,
+    PW_OPSLIMIT,
+    PW_MEMLIMIT,
+    sodium.crypto_pwhash_ALG_ARGON2ID13,
+  );
+}
+
+/** Wrap the content key with a password-derived key. Returns wrapped + salt. */
+export function wrapKey(
+  key: Uint8Array,
+  password: string,
+): { wrapped: Uint8Array; salt: Uint8Array } {
+  const salt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES);
+  const kek = deriveKek(password, salt);
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+  const cipher = sodium.crypto_secretbox_easy(key, nonce, kek);
+  const wrapped = new Uint8Array(nonce.length + cipher.length);
+  wrapped.set(nonce, 0);
+  wrapped.set(cipher, nonce.length);
+  return { wrapped, salt };
+}
+
+/** Unwrap the content key. Throws on a wrong password or tampered blob. */
+export function unwrapKey(
+  wrapped: Uint8Array,
+  salt: Uint8Array,
+  password: string,
+): Uint8Array {
+  const kek = deriveKek(password, salt);
+  const n = sodium.crypto_secretbox_NONCEBYTES;
+  const nonce = wrapped.subarray(0, n);
+  const cipher = wrapped.subarray(n);
+  return sodium.crypto_secretbox_open_easy(cipher, nonce, kek);
 }
