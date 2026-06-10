@@ -5,7 +5,7 @@
 // Interpolation uses i18next syntax: {{label}}, {{count}}.
 export const en = {
   "app.tagline": "Share your files securely and privately",
-  "app.subtitle": "End-to-end encrypted in your browser — the server never sees your files. Deleted automatically when the link expires.",
+  "app.subtitle": "End-to-end encrypted — the server never sees your files. Deleted automatically.",
   "app.privacy": "End-to-end encrypted · auto-deleted · no tracking · no account · no bullshit",
   "theme.toggle": "Toggle theme",
   "language.label": "Language",

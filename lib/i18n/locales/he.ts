@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const he: Translation = {
   "app.tagline": "שתפו את הקבצים שלכם בבטחה ובפרטיות",
-  "app.subtitle": "מוצפן, ונעלם כשהתוקף פג.",
-  "app.privacy": "הצפנה · מחיקה אוטומטית · בלי מעקב · בלי חשבון · בלי שטויות",
+  "app.subtitle": "מוצפן מקצה לקצה — השרת לא רואה את הקבצים שלך אף פעם. נמחק אוטומטית.",
+  "app.privacy": "הצפנה מקצה לקצה · מחיקה אוטומטית · בלי מעקב · בלי חשבון · בלי שטויות",
   "theme.toggle": "החלפת ערכת נושא",
   "language.label": "שפה",
 

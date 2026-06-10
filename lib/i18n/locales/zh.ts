@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const zh: Translation = {
   "app.tagline": "安全且私密地分享你的文件",
-  "app.subtitle": "已加密，过期后即消失。",
-  "app.privacy": "加密 · 自动删除 · 无追踪 · 无需账户 · 绝无废话",
+  "app.subtitle": "端到端加密 — 服务器永远看不到你的文件。自动删除。",
+  "app.privacy": "端到端加密 · 自动删除 · 无追踪 · 无需账户 · 绝无废话",
   "theme.toggle": "切换主题",
   "language.label": "语言",
 

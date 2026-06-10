@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const pt: Translation = {
   "app.tagline": "Partilha os teus ficheiros de forma segura e privada",
-  "app.subtitle": "Encriptado, e desaparece ao expirar.",
-  "app.privacy": "Encriptação · eliminação automática · sem rastreio · sem conta · sem tretas",
+  "app.subtitle": "Encriptado de ponta a ponta — o servidor nunca vê os teus ficheiros. Eliminado automaticamente.",
+  "app.privacy": "Encriptação de ponta a ponta · eliminação automática · sem rastreio · sem conta · sem tretas",
   "theme.toggle": "Alternar tema",
   "language.label": "Idioma",
 

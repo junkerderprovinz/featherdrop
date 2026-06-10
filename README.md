@@ -21,7 +21,7 @@
 <p align="center">
 featherdrop is a <b>sleek, feather-light</b>, self-hosted drop zone for your files — drop a
 file, set how long it lives (plus an optional password or download limit), and share
-a short link or QR code. Encrypted at rest, resumable uploads, one small container.
+a short link or QR code. End-to-end encrypted, resumable uploads, one small container.
 No accounts, no clouds, no tracking, no nonsense.
 </p>
 
@@ -71,9 +71,9 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 
 **Highlights**
 
-- 🔒 **Encrypted at rest** with [age](https://age-encryption.org); the filename
-  and type are encrypted *inside* the file. Optional **password** shares are
-  end-to-end, and a `MASTER_KEY` gives **short links**.
+- 🔒 **Zero-knowledge** — files are **end-to-end encrypted in your browser**
+  before upload (libsodium XChaCha20-Poly1305); the server only ever stores
+  opaque ciphertext and never sees your files, their names, or the key.
 - ⏳ **Self-destructing** — expiry from 1 hour to 30 days (or never), plus an
   optional **burn-after-N-downloads**.
 - 🖼️ **Inline image/PDF preview** and a savable **QR code** on the share page,
@@ -126,11 +126,12 @@ only on your server, and the app talks to nobody else.
   third-party scripts or fonts pulled at runtime — nothing phones home.
 - **Your data stays yours.** Uploads sit on your `/data` volume, metadata in a
   local SQLite file. Nothing is ever sent to a cloud or external service.
-- **Encrypted at rest by default** with age — the original filename and type are
-  encrypted *inside* the file, so a stolen disk or backup reveals neither the
-  contents nor the names ([details below](#encryption-at-rest)).
-- **Optional password protection is end-to-end:** even you, the operator, cannot
-  read a password-protected share without the password.
+- **Zero-knowledge by design** — every file is **end-to-end encrypted in your
+  browser** before upload; the filename and type are encrypted *inside* the blob,
+  so the server (and any stolen disk or backup) sees only opaque ciphertext, never
+  your files or their names ([details below](#zero-knowledge-encryption)).
+- **The operator can't read your files either.** The key never reaches the
+  server — it lives in the link's `#fragment`, or is derived from your password.
 - **Self-destructing.** Every share has an expiry (down to 1 hour), and an
   optional **download limit** burns the file the moment it's reached.
 - **Minimal attack surface.** No login to brute-force, no user database to leak;
@@ -139,43 +140,38 @@ only on your server, and the app talks to nobody else.
 
 > Provided under the MIT licence **without warranty** — you run it, you own the
 > data and the responsibility. Put it behind HTTPS (see
-> [Reverse Proxy](#7-reverse-proxy)) and, if you set a `MASTER_KEY`, keep it safe.
+> [Reverse Proxy](#7-reverse-proxy)) — the in-browser crypto and clipboard need a
+> secure context.
 
-### Encryption at rest
+### Zero-knowledge encryption
 
-Every uploaded file is **encrypted at rest** by default, using
-[age](https://age-encryption.org) — a modern, audited, streaming authenticated
-encryption format. Each file gets its own key, and the **original filename and
-type are encrypted inside the file**, so a stolen disk or backup reveals neither
-the contents nor the names.
+Every file is **encrypted in your browser before it is uploaded**, with
+[libsodium](https://doc.libsodium.org)'s `XChaCha20-Poly1305` streaming AEAD
+(64 KiB chunks). The **original filename and content type are encrypted inside
+the blob**, so the server only ever stores — and serves back — opaque ciphertext
+and its length. It performs no cryptography and never receives the key.
 
-How the per-file key is protected depends on whether you set a password, and on
-whether you've configured a master key:
+The content key never reaches the server. Where it lives depends on the share type:
 
 | Share type | Where the key lives | Link | What the server can decrypt |
 |---|---|---|---|
-| **Password** | Wrapped with your password (age scrypt) | `…/d/<slug>` | Nothing without the password — not even the operator |
-| **Server** (no password, `MASTER_KEY` set) | Wrapped with the server master key | `…/d/<slug>` — **short** | The file (it holds the master key); a stolen *data* backup alone cannot |
-| **Link** (no password, no master key) | In the share link's `#fragment` | `…/d/<slug>#k=…` — long | Nothing from the database alone; the key never reaches the server |
+| **Link** (default) | In the share link's `#fragment` | `…/d/<slug>#k=…` | Nothing — the key never leaves the browser |
+| **Password** | Derived from your password (Argon2id); only a wrapped copy is stored | `…/d/<slug>` | Nothing without the password — not even the operator |
 
-**Short links.** By default a password-less share carries its key in the URL
-`#fragment`, which makes the link long but means the server can never decrypt it.
-If you'd rather have **short links** (`…/d/aB3xK`), set a **`MASTER_KEY`** (see
-[Configuration](#6-configuration)): password-less files are then wrapped with it
-and stored. The trade-off: the running server *can* decrypt those files — but a
-stolen `/data` backup still can't, because the master key lives only in the
-container environment, not in the volume. Keep it secret and **back it up** —
-losing it makes password-less files unrecoverable. Password shares are
-unaffected and stay end-to-end.
+Because the link key lives in the URL **fragment** (`#k=…`), it is never sent in
+an HTTP request and never appears in server logs or your reverse proxy. **Treat
+the whole link as the secret:** anyone who has it can download the file until it
+expires, and a link copied without its `#k=…` part can't be decrypted — by
+design, since the server never had the key.
 
-Because the key in a link share lives in the URL **fragment**, it is never sent
-in an HTTP request and never appears in server logs or your reverse proxy. Treat
-the full link as the secret: anyone who has it can download the file until it
-expires.
+Encryption and decryption stream through the Origin Private File System and a
+service worker, so multi-GB files are never buffered in memory. Inline image/PDF
+previews are produced entirely in the browser from the decrypted bytes.
 
-Encryption streams (age's 64 KiB authenticated chunks), so multi-GB files are
-never buffered in memory. Set `ENCRYPT_UPLOADS=false` to store new uploads as
-plaintext if you ever need to; files keep the mode they were stored with.
+> **Upgrading from v3 or earlier?** Shares created before v4 used at-rest
+> encryption (age) and stay readable with their original links until they expire.
+> The `MASTER_KEY` / `ENCRYPT_UPLOADS` settings only affect those legacy shares
+> and no longer apply to new uploads.
 
 <br>
 
@@ -243,8 +239,8 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 | `BASE_URL` | *(empty)* | Public URL featherdrop is reached at, so share links use your domain. Empty = use the address the browser is on. |
 | `DEFAULT_EXPIRY` | `7d` | Expiry pre-selected in the UI. One of `1h`, `6h`, `1d`, `7d`, `30d`, `never`. |
 | `MAX_FILE_SIZE` | `0` | Max upload size in bytes. `0` = unlimited (disk-limited). E.g. `5368709120` = 5 GB. |
-| `ENCRYPT_UPLOADS` | `true` | Encrypt new uploads at rest with age (see [Encryption at rest](#encryption-at-rest)). Set `false` to store plaintext. Existing files keep their stored mode. |
-| `MASTER_KEY` | *(empty)* | Optional secret that gives **short links** for password-less shares (see [Encryption at rest](#encryption-at-rest)). Generate with `openssl rand -base64 32`. Keep it secret, back it up; losing it makes password-less files unrecoverable. Empty = long `#key` links. |
+| `MASTER_KEY` | *(empty)* | **Legacy.** Only decrypts pre-v4 server-mode shares until they expire; has no effect on new uploads, which are end-to-end encrypted in the browser (see [Zero-knowledge encryption](#zero-knowledge-encryption)). |
+| `ENCRYPT_UPLOADS` | `true` | **Legacy.** Applies to the old at-rest path only; new uploads are always end-to-end encrypted client-side. |
 | `PORT` | `3000` | Port the server listens on. |
 | `DATA_DIR` | `/data` | Where the uploaded files live (bulk). Map this to a volume. |
 | `CONFIG_DIR` | *(= `DATA_DIR`)* | Where the SQLite database lives. Defaults to `DATA_DIR` (single volume). Set it (the Unraid template uses `/config`) to keep the small database on a separate, faster volume. |

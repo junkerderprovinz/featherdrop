@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const fr: Translation = {
   "app.tagline": "Partagez vos fichiers en toute sécurité et confidentialité",
-  "app.subtitle": "Chiffré, et effacé à son expiration.",
-  "app.privacy": "Chiffrement · suppression automatique · sans pistage · sans compte · sans conneries",
+  "app.subtitle": "Chiffré de bout en bout — le serveur ne voit jamais vos fichiers. Supprimé automatiquement.",
+  "app.privacy": "Chiffrement de bout en bout · suppression automatique · sans pistage · sans compte · sans conneries",
   "theme.toggle": "Changer de thème",
   "language.label": "Langue",
 

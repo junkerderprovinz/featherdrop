@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const hu: Translation = {
   "app.tagline": "Oszd meg fájljaidat biztonságosan és privátan",
-  "app.subtitle": "Titkosítva, és eltűnik, amikor lejár.",
-  "app.privacy": "Titkosítás · automatikus törlés · követés nélkül · fiók nélkül · semmi kamu",
+  "app.subtitle": "Végpontok közötti titkosítás — a szerver soha nem látja a fájljaidat. Automatikusan törlődik.",
+  "app.privacy": "Végpontok közötti titkosítás · automatikus törlés · követés nélkül · fiók nélkül · semmi kamu",
   "theme.toggle": "Téma váltása",
   "language.label": "Nyelv",
 

@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const tr: Translation = {
   "app.tagline": "Dosyalarını güvenli ve gizli paylaş",
-  "app.subtitle": "Şifreli, ve süresi dolunca yok olur.",
-  "app.privacy": "Şifreleme · otomatik silme · takip yok · hesap yok · saçmalık yok",
+  "app.subtitle": "Uçtan uca şifreli — sunucu dosyalarını asla görmez. Otomatik olarak silinir.",
+  "app.privacy": "Uçtan uca şifreleme · otomatik silme · takip yok · hesap yok · saçmalık yok",
   "theme.toggle": "Temayı değiştir",
   "language.label": "Dil",
 

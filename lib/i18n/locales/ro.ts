@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const ro: Translation = {
   "app.tagline": "Partajează-ți fișierele în siguranță și confidențial",
-  "app.subtitle": "Criptat și dispare la expirare.",
-  "app.privacy": "Criptare · ștergere automată · fără urmărire · fără cont · fără prostii",
+  "app.subtitle": "Criptat end-to-end — serverul nu îți vede niciodată fișierele. Se șterge automat.",
+  "app.privacy": "Criptare end-to-end · ștergere automată · fără urmărire · fără cont · fără prostii",
   "theme.toggle": "Comută tema",
   "language.label": "Limbă",
 

@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const pl: Translation = {
   "app.tagline": "Udostępniaj pliki bezpiecznie i prywatnie",
-  "app.subtitle": "Zaszyfrowane i znika po wygaśnięciu.",
-  "app.privacy": "Szyfrowanie · automatyczne usuwanie · bez śledzenia · bez konta · bez ściemy",
+  "app.subtitle": "Szyfrowanie end-to-end — serwer nigdy nie widzi twoich plików. Usuwane automatycznie.",
+  "app.privacy": "Szyfrowanie end-to-end · automatyczne usuwanie · bez śledzenia · bez konta · bez ściemy",
   "theme.toggle": "Przełącz motyw",
   "language.label": "Język",
 

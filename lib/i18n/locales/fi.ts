@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const fi: Translation = {
   "app.tagline": "Jaa tiedostosi turvallisesti ja yksityisesti",
-  "app.subtitle": "Salattu, ja poissa kun se vanhenee.",
-  "app.privacy": "Salaus · automaattinen poisto · ei seurantaa · ei tiliä · ei paskapuhetta",
+  "app.subtitle": "Päästä päähän salattu — palvelin ei koskaan näe tiedostojasi. Poistetaan automaattisesti.",
+  "app.privacy": "Päästä päähän -salaus · automaattinen poisto · ei seurantaa · ei tiliä · ei paskapuhetta",
   "theme.toggle": "Vaihda teemaa",
   "language.label": "Kieli",
 
