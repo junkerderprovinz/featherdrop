@@ -181,6 +181,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     encrypted,
     enc_mode: encMode,
     enc_key_wrapped: encKeyWrapped,
+    // v2 zero-knowledge fields — not yet used by the v1 finalize path;
+    // new v2 uploads will set these explicitly once the ZK upload flow lands.
+    format: 1,
+    wrapped_key: null,
+    kdf_salt: null,
   });
 
   // The link key (link mode) goes to the uploader only, in the JSON response —
