@@ -17,6 +17,40 @@ async function opfsRoot(): Promise<ScratchDir> {
 }
 
 /**
+ * True when the Origin Private File System is usable. OPFS lives on
+ * `navigator.storage`, which browsers expose only in a **secure context**
+ * (HTTPS or localhost); on plain HTTP `navigator.storage` is undefined, so
+ * touching it would throw "Cannot read properties of undefined (getDirectory)".
+ * Callers use this to pick the in-memory fallback instead.
+ */
+export function canUseOpfs(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    navigator.storage != null &&
+    typeof navigator.storage.getDirectory === "function"
+  );
+}
+
+/**
+ * In-memory fallback for contexts without OPFS (e.g. plain HTTP). Collects the
+ * encrypted blob into a single File so the resumable tus upload still has a
+ * sliceable source. The whole blob is held in memory, so callers must cap the
+ * size before choosing this path. The cleanup is a no-op (GC reclaims it).
+ */
+export async function writeMemoryScratch(
+  blob: AsyncIterable<Uint8Array>,
+): Promise<{ file: File; cleanup: () => Promise<void> }> {
+  const parts: BlobPart[] = [];
+  // Cast: chunks are real ArrayBuffer-backed Uint8Arrays at runtime; the cast
+  // satisfies TS 5.9's stricter Uint8Array<ArrayBuffer> requirement for BlobPart.
+  for await (const chunk of blob) parts.push(chunk as Uint8Array<ArrayBuffer>);
+  const file = new File(parts, "fd-upload.bin", {
+    type: "application/octet-stream",
+  });
+  return { file, cleanup: async () => {} };
+}
+
+/**
  * Stream `blob` into a fresh OPFS scratch file. Returns the file (a sliceable
  * Blob) and a cleanup to delete it. On write failure the partial file is removed
  * and the error rethrown.

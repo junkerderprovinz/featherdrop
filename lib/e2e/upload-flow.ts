@@ -3,8 +3,13 @@
 // its own — those are injected via UploadDeps so the flow is unit-testable.
 
 import { encryptForUpload } from "./pipeline";
-import { writeScratch } from "./opfs-scratch";
+import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
+
+// Without OPFS (e.g. on plain HTTP) the encrypted blob is buffered in memory, so
+// cap the original file size on that path to avoid exhausting the tab's memory.
+// OPFS (the secure-context path) is disk-backed and has no such limit.
+const MEMORY_FALLBACK_MAX_BYTES = 500 * 1024 * 1024; // 500 MB
 
 export interface FinalizeRequest {
   uploadId: string;
@@ -51,8 +56,23 @@ export async function uploadEncrypted(
   );
   onPhase?.("encrypting", 1);
 
-  // Stream the encrypted blob into OPFS so tus can seek/slice it.
-  const { file: scratchFile, cleanup } = await writeScratch(blob);
+  // Give tus a sliceable source for the encrypted blob. Prefer OPFS (disk-backed,
+  // any size); fall back to an in-memory File when OPFS is unavailable — e.g. on
+  // plain HTTP, which exposes no navigator.storage. The in-memory path is capped
+  // so a huge file can't exhaust the tab; point such users at the HTTPS address.
+  let scratchFile: File;
+  let cleanup: () => Promise<void>;
+  if (canUseOpfs()) {
+    ({ file: scratchFile, cleanup } = await writeScratch(blob));
+  } else {
+    if (file.size > MEMORY_FALLBACK_MAX_BYTES) {
+      throw new Error(
+        "This file is too large to encrypt without OPFS. Open featherdrop over " +
+          "HTTPS (a secure context), or choose a file under 500 MB.",
+      );
+    }
+    ({ file: scratchFile, cleanup } = await writeMemoryScratch(blob));
+  }
 
   try {
     // Phase 2: upload.
