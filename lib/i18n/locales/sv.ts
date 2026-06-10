@@ -47,6 +47,7 @@ export const sv: Translation = {
 
   "upload.failed": "Uppladdningen misslyckades",
   "upload.finalizeFailed": "Kunde inte slutföra delningen",
+  "upload.encrypting": "Krypterar…",
 
   "expiry.1h": "1 timme",
   "expiry.6h": "6 timmar",

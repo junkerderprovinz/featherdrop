@@ -47,6 +47,7 @@ export const th: Translation = {
 
   "upload.failed": "อัปโหลดล้มเหลว",
   "upload.finalizeFailed": "ไม่สามารถดำเนินการแชร์ให้เสร็จสิ้นได้",
+  "upload.encrypting": "กำลังเข้ารหัส…",
 
   "expiry.1h": "1 ชั่วโมง",
   "expiry.6h": "6 ชั่วโมง",

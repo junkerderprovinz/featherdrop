@@ -47,6 +47,7 @@ export const es: Translation = {
 
   "upload.failed": "Error al subir",
   "upload.finalizeFailed": "No se pudo finalizar el recurso compartido",
+  "upload.encrypting": "Cifrando…",
 
   "expiry.1h": "1 hora",
   "expiry.6h": "6 horas",

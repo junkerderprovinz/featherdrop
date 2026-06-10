@@ -47,6 +47,7 @@ export const cs: Translation = {
 
   "upload.failed": "Nahrávání selhalo",
   "upload.finalizeFailed": "Sdílení se nepodařilo dokončit",
+  "upload.encrypting": "Šifrování…",
 
   "expiry.1h": "1 hodina",
   "expiry.6h": "6 hodin",

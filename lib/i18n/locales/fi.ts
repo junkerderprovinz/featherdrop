@@ -47,6 +47,7 @@ export const fi: Translation = {
 
   "upload.failed": "Lataus epäonnistui",
   "upload.finalizeFailed": "Jakoa ei voitu viimeistellä",
+  "upload.encrypting": "Salataan…",
 
   "expiry.1h": "1 tunti",
   "expiry.6h": "6 tuntia",

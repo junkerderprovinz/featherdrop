@@ -28,6 +28,12 @@ import { mimeFromName } from "@/lib/mime";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { downloadDecrypted, type DownloadSecret } from "@/lib/e2e/download-flow";
+import {
+  canStreamDownload,
+  streamToDownload,
+  blobDownload,
+} from "@/lib/e2e/stream-download";
 
 interface DownloadViewProps {
   slug: string;
@@ -39,6 +45,10 @@ interface DownloadViewProps {
   linkMode: boolean; // encrypted, key carried in the URL #fragment
   serverMode: boolean; // encrypted, key wrapped with the server master key
   downloadsLeft: number | null; // remaining downloads, or null when unlimited
+  // v2 zero-knowledge props (optional; absent for v1)
+  format?: number; // 2 = zero-knowledge; absent/undefined = v1 legacy
+  wrappedKey?: string | null; // base64-encoded wrapped content key (password mode)
+  kdfSalt?: string | null; // base64-encoded KDF salt (password mode)
 }
 
 export function DownloadView({
@@ -51,6 +61,9 @@ export function DownloadView({
   linkMode,
   serverMode,
   downloadsLeft,
+  format,
+  wrappedKey,
+  kdfSalt,
 }: DownloadViewProps) {
   const { t } = useTranslation();
   const { appName } = useBranding();
@@ -81,6 +94,85 @@ export function DownloadView({
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.hash.slice(1)).get("k") ?? ""
       : "";
+
+  // -------------------------------------------------------------------------
+  // v2 zero-knowledge download handler
+  // The server streams back the raw ciphertext; the browser decrypts in-place.
+  // -------------------------------------------------------------------------
+  const isV2 = format === 2;
+
+  const v2Download = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // Determine the decryption secret.
+      // Link mode: key from the URL fragment (#k=<key>).
+      // Password mode: password + wrapped key material from the server props.
+      let secret: DownloadSecret;
+      if (linkKey) {
+        secret = { keyFromUrl: linkKey };
+      } else if (hasPassword && wrappedKey && kdfSalt) {
+        // Decode base64 → Uint8Array<ArrayBuffer>.
+        // Cast required for TS 5.9 strict Uint8Array<ArrayBuffer> variance.
+        const wrapped = Uint8Array.from(
+          atob(wrappedKey),
+          (c) => c.charCodeAt(0),
+        ) as unknown as Uint8Array<ArrayBuffer>;
+        const salt = Uint8Array.from(
+          atob(kdfSalt),
+          (c) => c.charCodeAt(0),
+        ) as unknown as Uint8Array<ArrayBuffer>;
+        secret = { password, wrapped, salt };
+      } else {
+        // No key in URL and no password material — link was shared without the
+        // fragment and has no password; can't decrypt.
+        notifications.show({ color: "red", message: t("download.missingKey") });
+        return;
+      }
+
+      const { meta } = await downloadDecrypted(
+        () =>
+          fetch(downloadUrl).then((r) => {
+            if (!r.ok) throw new Error(`fetch ${r.status}`);
+            // r.body is ReadableStream<Uint8Array> at runtime.
+            return r.body as ReadableStream<Uint8Array>;
+          }),
+        secret,
+        async (plaintext, filename) => {
+          if (canStreamDownload()) {
+            await streamToDownload(plaintext, filename, size);
+          } else {
+            // Blob fallback: collect the stream into memory.
+            // Cast to Uint8Array<ArrayBuffer> so TS 5.9 strict variance accepts
+            // the chunks as BlobPart[] (SharedArrayBuffer variant is excluded).
+            const reader = plaintext.getReader();
+            const chunks: Uint8Array<ArrayBuffer>[] = [];
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value as unknown as Uint8Array<ArrayBuffer>);
+            }
+            blobDownload(new Blob(chunks), filename);
+          }
+        },
+      );
+      // Reveal the real filename after a successful decrypt.
+      setRevealedName(meta.name);
+      setRevealedMime(meta.type);
+    } catch {
+      // downloadDecrypted rejects on a wrong key/password.
+      notifications.show({
+        color: "red",
+        message: hasPassword ? t("download.wrongPassword") : t("download.failed"),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // v1 helpers (unchanged)
+  // -------------------------------------------------------------------------
 
   // Authorize the download (POST), then trigger the native streaming GET.
   const authorizeThenDownload = async (cred: {
@@ -124,6 +216,8 @@ export function DownloadView({
   // with its master key, so an empty credential is enough). A POST that decrypts
   // just the header, without downloading yet.
   useEffect(() => {
+    // v2 shares reveal the name after decryption — skip this v1-only effect.
+    if (isV2) return;
     const cred = linkMode && linkKey ? { key: linkKey } : serverMode ? {} : null;
     if (!cred) return;
     let cancelled = false;
@@ -149,7 +243,7 @@ export function DownloadView({
     return () => {
       cancelled = true;
     };
-  }, [linkMode, linkKey, serverMode, downloadUrl]);
+  }, [isV2, linkMode, linkKey, serverMode, downloadUrl]);
 
   const missingKey = linkMode && !linkKey;
 
@@ -283,7 +377,52 @@ export function DownloadView({
             </Box>
           )}
 
-          {missingKey ? (
+          {/* -----------------------------------------------------------
+              v2 zero-knowledge download UI
+              Link mode:     a single Download button (key is in the fragment).
+              Password mode: password input + Unlock button.
+              No key, no password props: show missing-key error.
+              ----------------------------------------------------------- */}
+          {isV2 ? (
+            !linkKey && !hasPassword ? (
+              <Text c="red" ta="center" size="sm">
+                {t("download.missingKey")}
+              </Text>
+            ) : hasPassword && !linkKey ? (
+              <Stack w="100%" gap="sm">
+                <PasswordInput
+                  label={t("download.protected")}
+                  placeholder={t("download.passwordPlaceholder")}
+                  leftSection={<IconLock size={16} />}
+                  value={password}
+                  onChange={(e) => setPassword(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void v2Download()}
+                />
+                <Button
+                  fullWidth
+                  size="md"
+                  leftSection={<IconDownload size={18} />}
+                  loading={busy}
+                  onClick={() => void v2Download()}
+                >
+                  {t("download.unlock")}
+                </Button>
+              </Stack>
+            ) : (
+              <Button
+                fullWidth
+                size="md"
+                leftSection={<IconDownload size={18} />}
+                loading={busy}
+                onClick={() => void v2Download()}
+              >
+                {t("download.download")}
+              </Button>
+            )
+          ) : /* -----------------------------------------------------------
+              v1 legacy download UI (unchanged)
+              ----------------------------------------------------------- */
+          missingKey ? (
             <Text c="red" ta="center" size="sm">
               {t("download.missingKey")}
             </Text>

@@ -47,6 +47,7 @@ export const no: Translation = {
 
   "upload.failed": "Opplasting mislyktes",
   "upload.finalizeFailed": "Kunne ikke fullføre delingen",
+  "upload.encrypting": "Krypterer…",
 
   "expiry.1h": "1 time",
   "expiry.6h": "6 timer",

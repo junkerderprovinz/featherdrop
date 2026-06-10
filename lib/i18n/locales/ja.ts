@@ -47,6 +47,7 @@ export const ja: Translation = {
 
   "upload.failed": "アップロードに失敗しました",
   "upload.finalizeFailed": "共有を完了できませんでした",
+  "upload.encrypting": "暗号化中…",
 
   "expiry.1h": "1時間",
   "expiry.6h": "6時間",

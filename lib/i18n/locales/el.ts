@@ -47,6 +47,7 @@ export const el: Translation = {
 
   "upload.failed": "Η μεταφόρτωση απέτυχε",
   "upload.finalizeFailed": "Δεν ήταν δυνατή η ολοκλήρωση της κοινής χρήσης",
+  "upload.encrypting": "Κρυπτογράφηση…",
 
   "expiry.1h": "1 ώρα",
   "expiry.6h": "6 ώρες",

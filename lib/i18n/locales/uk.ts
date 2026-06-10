@@ -47,6 +47,7 @@ export const uk: Translation = {
 
   "upload.failed": "Не вдалося завантажити",
   "upload.finalizeFailed": "Не вдалося завершити публікацію",
+  "upload.encrypting": "Шифрування…",
 
   "expiry.1h": "1 година",
   "expiry.6h": "6 годин",

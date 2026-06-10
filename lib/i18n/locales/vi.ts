@@ -47,6 +47,7 @@ export const vi: Translation = {
 
   "upload.failed": "Tải lên thất bại",
   "upload.finalizeFailed": "Không thể hoàn tất việc chia sẻ",
+  "upload.encrypting": "Đang mã hóa…",
 
   "expiry.1h": "1 giờ",
   "expiry.6h": "6 giờ",

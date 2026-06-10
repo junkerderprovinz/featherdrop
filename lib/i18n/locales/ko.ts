@@ -47,6 +47,7 @@ export const ko: Translation = {
 
   "upload.failed": "업로드 실패",
   "upload.finalizeFailed": "공유를 완료할 수 없습니다",
+  "upload.encrypting": "암호화 중…",
 
   "expiry.1h": "1시간",
   "expiry.6h": "6시간",

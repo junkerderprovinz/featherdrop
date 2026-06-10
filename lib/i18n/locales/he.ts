@@ -47,6 +47,7 @@ export const he: Translation = {
 
   "upload.failed": "ההעלאה נכשלה",
   "upload.finalizeFailed": "לא ניתן היה להשלים את השיתוף",
+  "upload.encrypting": "מצפין…",
 
   "expiry.1h": "שעה אחת",
   "expiry.6h": "6 שעות",

@@ -47,6 +47,7 @@ export const tr: Translation = {
 
   "upload.failed": "Yükleme başarısız oldu",
   "upload.finalizeFailed": "Paylaşım tamamlanamadı",
+  "upload.encrypting": "Şifreleniyor…",
 
   "expiry.1h": "1 saat",
   "expiry.6h": "6 saat",

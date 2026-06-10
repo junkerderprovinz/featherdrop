@@ -47,6 +47,7 @@ export const hu: Translation = {
 
   "upload.failed": "A feltöltés sikertelen",
   "upload.finalizeFailed": "A megosztást nem sikerült véglegesíteni",
+  "upload.encrypting": "Titkosítás…",
 
   "expiry.1h": "1 óra",
   "expiry.6h": "6 óra",

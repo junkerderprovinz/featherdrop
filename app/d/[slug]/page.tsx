@@ -19,6 +19,36 @@ export default function DownloadPage({
     notFound();
   }
 
+  // -------------------------------------------------------------------------
+  // v2 zero-knowledge path: name and MIME are inside the client-encrypted blob
+  // and are invisible to the server. The client decrypts them in the browser.
+  // -------------------------------------------------------------------------
+  if (rec.format === 2) {
+    return (
+      <DownloadView
+        slug={rec.slug}
+        name={null}
+        size={rec.size}
+        mime={null}
+        expiresAt={rec.expires_at}
+        hasPassword={rec.wrapped_key !== null}
+        linkMode={false}
+        serverMode={false}
+        downloadsLeft={downloadsLeft(rec.download_count, rec.max_downloads)}
+        format={2}
+        wrappedKey={
+          rec.wrapped_key ? Buffer.from(rec.wrapped_key).toString("base64") : null
+        }
+        kdfSalt={
+          rec.kdf_salt ? Buffer.from(rec.kdf_salt).toString("base64") : null
+        }
+      />
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // v1 legacy path — unchanged
+  // -------------------------------------------------------------------------
   // The real filename is inside the encrypted blob, so the server doesn't know
   // it for any encrypted share — the client reveals it after authorizing:
   //   - link:     decrypt with the #fragment key.

@@ -48,6 +48,7 @@ export const de: Translation = {
 
   "upload.failed": "Upload fehlgeschlagen",
   "upload.finalizeFailed": "Freigabe konnte nicht abgeschlossen werden",
+  "upload.encrypting": "Verschlüsselung läuft…",
 
   "expiry.1h": "1 Stunde",
   "expiry.6h": "6 Stunden",

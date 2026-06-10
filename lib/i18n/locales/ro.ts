@@ -47,6 +47,7 @@ export const ro: Translation = {
 
   "upload.failed": "Încărcarea a eșuat",
   "upload.finalizeFailed": "Partajarea nu a putut fi finalizată",
+  "upload.encrypting": "Se criptează…",
 
   "expiry.1h": "1 oră",
   "expiry.6h": "6 ore",

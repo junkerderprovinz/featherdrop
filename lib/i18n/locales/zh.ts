@@ -47,6 +47,7 @@ export const zh: Translation = {
 
   "upload.failed": "上传失败",
   "upload.finalizeFailed": "无法完成分享",
+  "upload.encrypting": "加密中…",
 
   "expiry.1h": "1 小时",
   "expiry.6h": "6 小时",

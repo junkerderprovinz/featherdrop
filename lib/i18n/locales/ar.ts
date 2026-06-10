@@ -47,6 +47,7 @@ export const ar: Translation = {
 
   "upload.failed": "فشل الرفع",
   "upload.finalizeFailed": "تعذّر إتمام المشاركة",
+  "upload.encrypting": "جارٍ التشفير…",
 
   "expiry.1h": "ساعة واحدة",
   "expiry.6h": "6 ساعات",

@@ -47,6 +47,7 @@ export const it: Translation = {
 
   "upload.failed": "Caricamento non riuscito",
   "upload.finalizeFailed": "Impossibile finalizzare la condivisione",
+  "upload.encrypting": "Cifratura in corso…",
 
   "expiry.1h": "1 ora",
   "expiry.6h": "6 ore",

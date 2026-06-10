@@ -47,6 +47,7 @@ export const ru: Translation = {
 
   "upload.failed": "Не удалось загрузить",
   "upload.finalizeFailed": "Не удалось завершить публикацию",
+  "upload.encrypting": "Шифрование…",
 
   "expiry.1h": "1 час",
   "expiry.6h": "6 часов",

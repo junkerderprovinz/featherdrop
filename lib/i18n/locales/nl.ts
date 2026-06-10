@@ -47,6 +47,7 @@ export const nl: Translation = {
 
   "upload.failed": "Uploaden mislukt",
   "upload.finalizeFailed": "Kon delen niet voltooien",
+  "upload.encrypting": "Versleutelen…",
 
   "expiry.1h": "1 uur",
   "expiry.6h": "6 uur",

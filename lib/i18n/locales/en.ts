@@ -47,6 +47,7 @@ export const en = {
 
   "upload.failed": "Upload failed",
   "upload.finalizeFailed": "Could not finalize share",
+  "upload.encrypting": "Encrypting…",
 
   "expiry.1h": "1 hour",
   "expiry.6h": "6 hours",
