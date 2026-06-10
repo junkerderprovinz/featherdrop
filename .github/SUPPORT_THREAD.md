@@ -12,8 +12,9 @@ template's <Support> at the thread URL. Title format matches the sister apps.
 
 **featherdrop** is a sleek, feather-light, self-hosted file sharer. Drop a file, set an
 expiry (plus an optional password or download limit), and share a short link or
-QR code. Files are encrypted at rest, uploads are resumable, and metadata lives
-in a single SQLite file — no accounts, no separate database, no tracking.
+QR code. Files are end-to-end encrypted in your browser before upload, uploads are
+resumable, and metadata lives in a single SQLite file — no accounts, no separate
+database, no tracking.
 
 **Links**
 - Source: https://github.com/junkerderprovinz/featherdrop
@@ -21,8 +22,8 @@ in a single SQLite file — no accounts, no separate database, no tracking.
 - Changelog: https://github.com/junkerderprovinz/featherdrop/releases
 
 **Features**
-- 🔒 Encrypted at rest (age) — filename and type encrypted inside the file
-- 🔑 Optional password (end-to-end), or short links via a server `MASTER_KEY`
+- 🔒 Zero-knowledge — end-to-end encrypted in your browser; the server only ever stores opaque ciphertext (name and type encrypted inside)
+- 🔑 Link mode (key in the URL `#fragment`) or optional password (Argon2id) — the key never reaches the server
 - ⏳ Expiry 1h–30d or never, plus optional burn-after-N-downloads
 - 🖼️ Inline image/PDF preview · savable QR code · clean link previews
 - 🌍 26 languages (right-to-left for Arabic/Hebrew) · light/dark
@@ -39,8 +40,6 @@ a reverse proxy — set `BASE_URL` to your public URL. Apply, then open the WebU
 - `BASE_URL` — your public URL, so share links use your domain
 - `DEFAULT_EXPIRY` — `1h` | `6h` | `1d` | `7d` | `30d` | `never`
 - `MAX_FILE_SIZE` — bytes; `0` = unlimited
-- `ENCRYPT_UPLOADS` — encrypt new uploads at rest (default `true`)
-- `MASTER_KEY` — optional secret → short links for password-less shares
 - `APP_NAME` / `APP_LOGO` / `ACCENT_COLOR` — custom branding
 
 **Support**
