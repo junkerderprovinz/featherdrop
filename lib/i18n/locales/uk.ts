@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const uk: Translation = {
   "app.tagline": "Діліться файлами безпечно та конфіденційно",
-  "app.subtitle": "Зашифровано та зникає після завершення.",
-  "app.privacy": "Шифрування · автовидалення · без стеження · без акаунта · без фігні",
+  "app.subtitle": "Наскрізне шифрування — сервер ніколи не бачить ваші файли. Видаляється автоматично.",
+  "app.privacy": "Наскрізне шифрування · автовидалення · без стеження · без акаунта · без фігні",
   "theme.toggle": "Перемкнути тему",
   "language.label": "Мова",
 
@@ -47,6 +47,7 @@ export const uk: Translation = {
 
   "upload.failed": "Не вдалося завантажити",
   "upload.finalizeFailed": "Не вдалося завершити публікацію",
+  "upload.encrypting": "Шифрування…",
 
   "expiry.1h": "1 година",
   "expiry.6h": "6 годин",

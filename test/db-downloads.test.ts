@@ -48,6 +48,9 @@ function makeShare(maxDownloads: number | null): string {
     encrypted: 0,
     enc_mode: null,
     enc_key_wrapped: null,
+    format: 1,
+    wrapped_key: null,
+    kdf_salt: null,
   });
   return slug;
 }

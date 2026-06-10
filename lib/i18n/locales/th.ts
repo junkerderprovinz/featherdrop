@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const th: Translation = {
   "app.tagline": "แชร์ไฟล์ของคุณอย่างปลอดภัยและเป็นส่วนตัว",
-  "app.subtitle": "เข้ารหัสไว้ และหายไปเมื่อหมดอายุ",
-  "app.privacy": "เข้ารหัส · ลบอัตโนมัติ · ไม่มีการติดตาม · ไม่ต้องมีบัญชี · ไม่มีเรื่องไร้สาระ",
+  "app.subtitle": "เข้ารหัสแบบ end-to-end — เซิร์ฟเวอร์ไม่เคยเห็นไฟล์ของคุณ ลบอัตโนมัติ",
+  "app.privacy": "เข้ารหัสแบบ end-to-end · ลบอัตโนมัติ · ไม่มีการติดตาม · ไม่ต้องมีบัญชี · ไม่มีเรื่องไร้สาระ",
   "theme.toggle": "สลับธีม",
   "language.label": "ภาษา",
 
@@ -47,6 +47,7 @@ export const th: Translation = {
 
   "upload.failed": "อัปโหลดล้มเหลว",
   "upload.finalizeFailed": "ไม่สามารถดำเนินการแชร์ให้เสร็จสิ้นได้",
+  "upload.encrypting": "กำลังเข้ารหัส…",
 
   "expiry.1h": "1 ชั่วโมง",
   "expiry.6h": "6 ชั่วโมง",

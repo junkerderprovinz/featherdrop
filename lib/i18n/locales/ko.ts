@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const ko: Translation = {
   "app.tagline": "파일을 안전하고 비공개로 공유하세요",
-  "app.subtitle": "암호화되며, 만료되면 사라집니다.",
-  "app.privacy": "암호화 · 자동 삭제 · 추적 없음 · 계정 불필요 · 허튼소리 없음",
+  "app.subtitle": "종단 간 암호화 — 서버는 당신의 파일을 절대 볼 수 없습니다. 자동으로 삭제됩니다.",
+  "app.privacy": "종단 간 암호화 · 자동 삭제 · 추적 없음 · 계정 불필요 · 허튼소리 없음",
   "theme.toggle": "테마 전환",
   "language.label": "언어",
 
@@ -47,6 +47,7 @@ export const ko: Translation = {
 
   "upload.failed": "업로드 실패",
   "upload.finalizeFailed": "공유를 완료할 수 없습니다",
+  "upload.encrypting": "암호화 중…",
 
   "expiry.1h": "1시간",
   "expiry.6h": "6시간",

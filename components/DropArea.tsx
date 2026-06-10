@@ -13,6 +13,8 @@ interface DropAreaProps {
   progress: number; // 0–100
   fileName?: string;
   fileSize?: number;
+  /** Optional label shown beneath the progress ring (e.g. "Encrypting…"). */
+  phaseLabel?: string;
 }
 
 // The central, always-visible drop target — a frosted-glass panel with the
@@ -24,6 +26,7 @@ export function DropArea({
   progress,
   fileName,
   fileSize,
+  phaseLabel,
 }: DropAreaProps) {
   const { t } = useTranslation();
   return (
@@ -90,17 +93,24 @@ export function DropArea({
             background: "rgba(10, 8, 4, 0.45)",
           }}
         >
-          <RingProgress
-            size={130}
-            thickness={9}
-            roundCaps
-            sections={[{ value: progress, color: "fdgold" }]}
-            label={
-              <Text c="white" fw={700} ta="center" size="lg">
-                {Math.round(progress)}%
+          <Stack align="center" gap={8}>
+            <RingProgress
+              size={130}
+              thickness={9}
+              roundCaps
+              sections={[{ value: progress, color: "fdgold" }]}
+              label={
+                <Text c="white" fw={700} ta="center" size="lg">
+                  {Math.round(progress)}%
+                </Text>
+              }
+            />
+            {phaseLabel && (
+              <Text c="white" size="sm" ta="center">
+                {phaseLabel}
               </Text>
-            }
-          />
+            )}
+          </Stack>
         </Center>
       )}
     </Box>

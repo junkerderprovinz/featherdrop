@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const no: Translation = {
   "app.tagline": "Del filene dine sikkert og privat",
-  "app.subtitle": "Kryptert, og borte når det utløper.",
-  "app.privacy": "Kryptering · automatisk sletting · ingen sporing · ingen konto · ingen bullshit",
+  "app.subtitle": "Ende-til-ende-kryptert — serveren ser aldri filene dine. Slettes automatisk.",
+  "app.privacy": "Ende-til-ende-kryptering · automatisk sletting · ingen sporing · ingen konto · ingen bullshit",
   "theme.toggle": "Bytt tema",
   "language.label": "Språk",
 
@@ -47,6 +47,7 @@ export const no: Translation = {
 
   "upload.failed": "Opplasting mislyktes",
   "upload.finalizeFailed": "Kunne ikke fullføre delingen",
+  "upload.encrypting": "Krypterer…",
 
   "expiry.1h": "1 time",
   "expiry.6h": "6 timer",

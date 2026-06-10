@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const cs: Translation = {
   "app.tagline": "Sdílejte soubory bezpečně a soukromě",
-  "app.subtitle": "Šifrované a po vypršení zmizí.",
-  "app.privacy": "Šifrování · automatické mazání · bez sledování · bez účtu · žádné kecy",
+  "app.subtitle": "Šifrováno end-to-end — server vaše soubory nikdy nevidí. Automaticky smazáno.",
+  "app.privacy": "End-to-end šifrování · automatické mazání · bez sledování · bez účtu · žádné kecy",
   "theme.toggle": "Přepnout motiv",
   "language.label": "Jazyk",
 
@@ -47,6 +47,7 @@ export const cs: Translation = {
 
   "upload.failed": "Nahrávání selhalo",
   "upload.finalizeFailed": "Sdílení se nepodařilo dokončit",
+  "upload.encrypting": "Šifrování…",
 
   "expiry.1h": "1 hodina",
   "expiry.6h": "6 hodin",

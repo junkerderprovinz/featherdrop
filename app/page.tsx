@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -30,10 +30,11 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { EXPIRY_OPTIONS } from "@/lib/expiry";
-import { buildShareUrl } from "@/lib/share-url";
 import { useServerConfig } from "@/components/ServerConfigProvider";
+import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
 
-type Status = "idle" | "ready" | "uploading" | "done";
+// "encrypting" is a client-side phase before the actual network upload starts.
+type Status = "idle" | "ready" | "encrypting" | "uploading" | "done";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -52,11 +53,7 @@ export default function HomePage() {
   const [expiry, setExpiry] = useState("7d");
   const [password, setPassword] = useState("");
   const [maxDownloads, setMaxDownloads] = useState<number | null>(null);
-  const [slug, setSlug] = useState<string | null>(null);
-  // Link-mode per-file key returned by finalize (only when no password). It is
-  // appended to the share URL as a #fragment and never stored server-side.
-  const [linkKey, setLinkKey] = useState<string | null>(null);
-  const uploadRef = useRef<tus.Upload | null>(null);
+  const [shareUrl, setShareUrl] = useState<string>("");
 
   const onDrop = (f: File) => {
     setFile(f);
@@ -65,8 +62,7 @@ export default function HomePage() {
 
   const reset = () => {
     setFile(null);
-    setSlug(null);
-    setLinkKey(null);
+    setShareUrl("");
     setProgress(0);
     setPassword("");
     setExpiry("7d");
@@ -76,55 +72,77 @@ export default function HomePage() {
 
   const startUpload = () => {
     if (!file) return;
-    setStatus("uploading");
+    setStatus("encrypting");
     setProgress(0);
 
-    const upload = new tus.Upload(file, {
-      endpoint: "/files",
-      retryDelays: [0, 1000, 3000, 5000],
-      metadata: { filename: file.name, filetype: file.type },
-      onError: (err) => {
+    // Build the UploadDeps that uploadEncrypted injects for tus and finalize.
+    const deps: UploadDeps = {
+      upload(scratchFile, onProgress) {
+        return new Promise<string>((resolve, reject) => {
+          const upload = new tus.Upload(scratchFile, {
+            endpoint: "/files",
+            retryDelays: [0, 1000, 3000, 5000],
+            // Name/type are encrypted inside the blob — do NOT send them to tus.
+            onError: (err) => reject(err),
+            onProgress: (sent, total) => onProgress(sent, total),
+            onSuccess: () => {
+              const uploadId = upload.url?.split("/").pop();
+              if (!uploadId) {
+                reject(new Error("tus upload missing URL"));
+                return;
+              }
+              resolve(uploadId);
+            },
+          });
+          upload.start();
+        });
+      },
+      finalize(body) {
+        return fetch("/api/finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }).then(async (res) => {
+          if (!res.ok) throw new Error(`finalize ${res.status}`);
+          return res.json() as Promise<{ slug: string }>;
+        });
+      },
+      baseUrl,
+    };
+
+    uploadEncrypted(
+      file,
+      { expiry, maxDownloads, password: password || undefined },
+      deps,
+      (phase, fraction) => {
+        if (phase === "encrypting") {
+          setStatus("encrypting");
+          // Show a 0–50 % range for the encrypt phase so the bar moves.
+          setProgress(fraction * 50);
+        } else {
+          setStatus("uploading");
+          // Map upload fraction to 50–100 % so the bar continues smoothly.
+          setProgress(50 + fraction * 50);
+        }
+      },
+    )
+      .then(({ shareUrl: url }) => {
+        setShareUrl(url);
+        setStatus("done");
+      })
+      .catch((e: unknown) => {
         setStatus("ready");
         notifications.show({
           color: "red",
           title: t("upload.failed"),
-          message: err.message,
+          message: e instanceof Error ? e.message : "unknown error",
         });
-      },
-      onProgress: (sent, total) => setProgress((sent / total) * 100),
-      onSuccess: async () => {
-        try {
-          const uploadId = upload.url?.split("/").pop();
-          const res = await fetch("/api/finalize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uploadId, expiry, password, maxDownloads }),
-          });
-          if (!res.ok) throw new Error(`finalize ${res.status}`);
-          const data = (await res.json()) as { slug: string; key?: string };
-          setSlug(data.slug);
-          setLinkKey(data.key ?? null);
-          setStatus("done");
-        } catch (e) {
-          setStatus("ready");
-          notifications.show({
-            color: "red",
-            title: t("upload.finalizeFailed"),
-            message: e instanceof Error ? e.message : "unknown error",
-          });
-        }
-      },
-    });
-    uploadRef.current = upload;
-    upload.start();
+      });
   };
 
-  const shareUrl =
-    slug && typeof window !== "undefined"
-      ? buildShareUrl(baseUrl, window.location.origin, slug, linkKey)
-      : "";
-  const uploading = status === "uploading";
-  const showPanel = status === "ready" || status === "uploading";
+  // The upload is "in progress" during both the encrypt and upload phases.
+  const uploading = status === "uploading" || status === "encrypting";
+  const showPanel = status === "ready" || uploading;
 
   const expiryOpt = EXPIRY_OPTIONS.find((o) => o.value === expiry);
   const expiryText =
@@ -205,6 +223,7 @@ export default function HomePage() {
                 progress={progress}
                 fileName={file?.name}
                 fileSize={file?.size}
+                phaseLabel={status === "encrypting" ? t("upload.encrypting") : undefined}
               />
               <Transition mounted={showPanel} transition="slide-left" duration={200}>
                 {(styles) => (

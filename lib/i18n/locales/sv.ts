@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const sv: Translation = {
   "app.tagline": "Dela dina filer säkert och privat",
-  "app.subtitle": "Krypterat, och borta när det går ut.",
-  "app.privacy": "Kryptering · automatisk radering · ingen spårning · inget konto · inget skitsnack",
+  "app.subtitle": "Totalsträckskrypterat — servern ser aldrig dina filer. Raderas automatiskt.",
+  "app.privacy": "Totalsträckskryptering · automatisk radering · ingen spårning · inget konto · inget skitsnack",
   "theme.toggle": "Växla tema",
   "language.label": "Språk",
 
@@ -47,6 +47,7 @@ export const sv: Translation = {
 
   "upload.failed": "Uppladdningen misslyckades",
   "upload.finalizeFailed": "Kunde inte slutföra delningen",
+  "upload.encrypting": "Krypterar…",
 
   "expiry.1h": "1 timme",
   "expiry.6h": "6 timmar",

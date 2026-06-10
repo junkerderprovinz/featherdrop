@@ -28,6 +28,18 @@ import { mimeFromName } from "@/lib/mime";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { downloadDecrypted, type DownloadSecret } from "@/lib/e2e/download-flow";
+import {
+  canStreamDownload,
+  streamToDownload,
+  blobDownload,
+} from "@/lib/e2e/stream-download";
+
+// Inline preview is fully client-side for v2 shares (the server has no ?inline
+// route). Below this size we decrypt the whole file into memory once, so we can
+// both render a blob: preview and serve the eventual download without a second
+// fetch; larger files skip the prefetch and stream straight to disk. (Spec §5.6)
+const PREVIEW_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
 interface DownloadViewProps {
   slug: string;
@@ -39,6 +51,10 @@ interface DownloadViewProps {
   linkMode: boolean; // encrypted, key carried in the URL #fragment
   serverMode: boolean; // encrypted, key wrapped with the server master key
   downloadsLeft: number | null; // remaining downloads, or null when unlimited
+  // v2 zero-knowledge props (optional; absent for v1)
+  format?: number; // 2 = zero-knowledge; absent/undefined = v1 legacy
+  wrappedKey?: string | null; // base64-encoded wrapped content key (password mode)
+  kdfSalt?: string | null; // base64-encoded KDF salt (password mode)
 }
 
 export function DownloadView({
@@ -51,6 +67,9 @@ export function DownloadView({
   linkMode,
   serverMode,
   downloadsLeft,
+  format,
+  wrappedKey,
+  kdfSalt,
 }: DownloadViewProps) {
   const { t } = useTranslation();
   const { appName } = useBranding();
@@ -67,6 +86,15 @@ export function DownloadView({
   // Content type used to decide/render the preview. Starts from the DB column and
   // is refined to the authoritative type from the decrypted header once revealed.
   const [revealedMime, setRevealedMime] = useState<string | null>(mime);
+  // For small v2 shares we decrypt the whole file once on mount: `decrypted`
+  // caches the plaintext blob (reused by the download button — no re-fetch) and
+  // `previewUrl` is a blob: URL backing the inline image/PDF preview.
+  const [decrypted, setDecrypted] = useState<{
+    blob: Blob;
+    name: string;
+    type: string;
+  } | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const downloadUrl = `/api/d/${slug}`;
 
   const exp = describeExpiry(expiresAt);
@@ -81,6 +109,140 @@ export function DownloadView({
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.hash.slice(1)).get("k") ?? ""
       : "";
+
+  // -------------------------------------------------------------------------
+  // v2 zero-knowledge download handler
+  // The server streams back the raw ciphertext; the browser decrypts in-place.
+  // -------------------------------------------------------------------------
+  const isV2 = format === 2;
+
+  const v2Download = async () => {
+    if (busy) return;
+    // Small share already decrypted on mount for the preview — just save the
+    // cached blob, no second fetch/decrypt.
+    if (decrypted) {
+      blobDownload(decrypted.blob, decrypted.name);
+      return;
+    }
+    setBusy(true);
+    try {
+      // Determine the decryption secret.
+      // Link mode: key from the URL fragment (#k=<key>).
+      // Password mode: password + wrapped key material from the server props.
+      let secret: DownloadSecret;
+      if (linkKey) {
+        secret = { keyFromUrl: linkKey };
+      } else if (hasPassword && wrappedKey && kdfSalt) {
+        // Decode base64 → Uint8Array<ArrayBuffer>.
+        // Cast required for TS 5.9 strict Uint8Array<ArrayBuffer> variance.
+        const wrapped = Uint8Array.from(
+          atob(wrappedKey),
+          (c) => c.charCodeAt(0),
+        ) as unknown as Uint8Array<ArrayBuffer>;
+        const salt = Uint8Array.from(
+          atob(kdfSalt),
+          (c) => c.charCodeAt(0),
+        ) as unknown as Uint8Array<ArrayBuffer>;
+        secret = { password, wrapped, salt };
+      } else {
+        // No key in URL and no password material — link was shared without the
+        // fragment and has no password; can't decrypt.
+        notifications.show({ color: "red", message: t("download.missingKey") });
+        return;
+      }
+
+      const { meta } = await downloadDecrypted(
+        () =>
+          fetch(downloadUrl).then((r) => {
+            if (!r.ok) throw new Error(`fetch ${r.status}`);
+            // r.body is ReadableStream<Uint8Array> at runtime.
+            return r.body as ReadableStream<Uint8Array>;
+          }),
+        secret,
+        async (plaintext, filename) => {
+          if (canStreamDownload()) {
+            await streamToDownload(plaintext, filename, size);
+          } else {
+            // Blob fallback: collect the stream into memory.
+            // Cast to Uint8Array<ArrayBuffer> so TS 5.9 strict variance accepts
+            // the chunks as BlobPart[] (SharedArrayBuffer variant is excluded).
+            const reader = plaintext.getReader();
+            const chunks: Uint8Array<ArrayBuffer>[] = [];
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value as unknown as Uint8Array<ArrayBuffer>);
+            }
+            blobDownload(new Blob(chunks), filename);
+          }
+        },
+      );
+      // Reveal the real filename after a successful decrypt.
+      setRevealedName(meta.name);
+      setRevealedMime(meta.type);
+    } catch {
+      // downloadDecrypted rejects on a wrong key/password.
+      notifications.show({
+        color: "red",
+        message: hasPassword ? t("download.wrongPassword") : t("download.failed"),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Auto-decrypt small v2 link shares on mount: reveals the real filename and
+  // renders an inline image/PDF preview — all client-side (the server never sees
+  // the key or the plaintext). Gated to unlimited, password-less link shares
+  // under the size cap; the decrypted blob is cached so the download button
+  // reuses it without a second fetch. (Spec §5.6.) Runs in an effect, so reading
+  // the #fragment key here can't cause a hydration mismatch.
+  useEffect(() => {
+    if (!isV2 || hasPassword || downloadsLeft !== null) return;
+    if (size > PREVIEW_MAX_BYTES || !linkKey) return;
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    void (async () => {
+      try {
+        const chunks: Uint8Array<ArrayBuffer>[] = [];
+        const { meta } = await downloadDecrypted(
+          () =>
+            fetch(downloadUrl).then((r) => {
+              if (!r.ok) throw new Error(`fetch ${r.status}`);
+              return r.body as ReadableStream<Uint8Array>;
+            }),
+          { keyFromUrl: linkKey },
+          async (plaintext) => {
+            const reader = plaintext.getReader();
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value as unknown as Uint8Array<ArrayBuffer>);
+            }
+          },
+        );
+        if (cancelled) return;
+        const blob = new Blob(chunks, { type: meta.type });
+        setDecrypted({ blob, name: meta.name, type: meta.type });
+        setRevealedName(meta.name);
+        setRevealedMime(meta.type);
+        if (isPreviewableMime(meta.type)) {
+          objectUrl = URL.createObjectURL(blob);
+          setPreviewUrl(objectUrl);
+        }
+      } catch {
+        // Leave the share undecrypted; the download button still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isV2, hasPassword, downloadsLeft, size, linkKey, downloadUrl]);
+
+  // -------------------------------------------------------------------------
+  // v1 helpers (unchanged)
+  // -------------------------------------------------------------------------
 
   // Authorize the download (POST), then trigger the native streaming GET.
   const authorizeThenDownload = async (cred: {
@@ -124,6 +286,8 @@ export function DownloadView({
   // with its master key, so an empty credential is enough). A POST that decrypts
   // just the header, without downloading yet.
   useEffect(() => {
+    // v2 shares reveal the name after decryption — skip this v1-only effect.
+    if (isV2) return;
     const cred = linkMode && linkKey ? { key: linkKey } : serverMode ? {} : null;
     if (!cred) return;
     let cancelled = false;
@@ -149,7 +313,7 @@ export function DownloadView({
     return () => {
       cancelled = true;
     };
-  }, [linkMode, linkKey, serverMode, downloadUrl]);
+  }, [isV2, linkMode, linkKey, serverMode, downloadUrl]);
 
   const missingKey = linkMode && !linkKey;
 
@@ -176,6 +340,10 @@ export function DownloadView({
     !hasPassword &&
     !missingKey &&
     revealedName !== null;
+
+  // v1 previews via the server's ?inline endpoint; v2 has no server inline route
+  // and previews from the in-memory blob: URL decrypted on mount above.
+  const previewSrc = isV2 ? previewUrl : canPreview ? inlineSrc : null;
 
   return (
     <Container size="sm" py={60} style={{ position: "relative", minHeight: "100vh" }}>
@@ -243,7 +411,7 @@ export function DownloadView({
             )}
           </Stack>
 
-          {canPreview && (
+          {previewSrc && (
             <Box
               w="100%"
               style={{
@@ -259,7 +427,7 @@ export function DownloadView({
               {effectiveMime?.startsWith("image/") ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={inlineSrc}
+                  src={previewSrc}
                   alt={revealedName ?? ""}
                   style={{
                     display: "block",
@@ -270,7 +438,7 @@ export function DownloadView({
                 />
               ) : (
                 <embed
-                  src={inlineSrc}
+                  src={previewSrc}
                   type="application/pdf"
                   style={{
                     display: "block",
@@ -283,7 +451,53 @@ export function DownloadView({
             </Box>
           )}
 
-          {missingKey ? (
+          {/* -----------------------------------------------------------
+              v2 zero-knowledge download UI
+              Password mode: password input + Unlock button.
+              Link mode:     a single Download button (key is in the fragment).
+              The branch depends ONLY on hasPassword (a server-known prop), never
+              on the URL #fragment key — the fragment is invisible to the server,
+              so branching on it would render different markup on the server vs.
+              the client and trip a hydration mismatch (React #418/#423). A link
+              that was copied without its #k= fragment is caught at click time by
+              v2Download, which shows the missing-key notification.
+              ----------------------------------------------------------- */}
+          {isV2 ? (
+            hasPassword ? (
+              <Stack w="100%" gap="sm">
+                <PasswordInput
+                  label={t("download.protected")}
+                  placeholder={t("download.passwordPlaceholder")}
+                  leftSection={<IconLock size={16} />}
+                  value={password}
+                  onChange={(e) => setPassword(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void v2Download()}
+                />
+                <Button
+                  fullWidth
+                  size="md"
+                  leftSection={<IconDownload size={18} />}
+                  loading={busy}
+                  onClick={() => void v2Download()}
+                >
+                  {t("download.unlock")}
+                </Button>
+              </Stack>
+            ) : (
+              <Button
+                fullWidth
+                size="md"
+                leftSection={<IconDownload size={18} />}
+                loading={busy}
+                onClick={() => void v2Download()}
+              >
+                {t("download.download")}
+              </Button>
+            )
+          ) : /* -----------------------------------------------------------
+              v1 legacy download UI (unchanged)
+              ----------------------------------------------------------- */
+          missingKey ? (
             <Text c="red" ta="center" size="sm">
               {t("download.missingKey")}
             </Text>

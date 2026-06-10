@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const it: Translation = {
   "app.tagline": "Condividi i tuoi file in modo sicuro e privato",
-  "app.subtitle": "Cifrato, e sparisce alla scadenza.",
-  "app.privacy": "Crittografia · cancellazione automatica · niente tracciamento · senza account · niente cazzate",
+  "app.subtitle": "Crittografia end-to-end — il server non vede mai i tuoi file. Eliminato automaticamente.",
+  "app.privacy": "Crittografia end-to-end · cancellazione automatica · niente tracciamento · senza account · niente cazzate",
   "theme.toggle": "Cambia tema",
   "language.label": "Lingua",
 
@@ -47,6 +47,7 @@ export const it: Translation = {
 
   "upload.failed": "Caricamento non riuscito",
   "upload.finalizeFailed": "Impossibile finalizzare la condivisione",
+  "upload.encrypting": "Cifratura in corso…",
 
   "expiry.1h": "1 ora",
   "expiry.6h": "6 ore",

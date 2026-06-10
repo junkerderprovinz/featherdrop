@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const nl: Translation = {
   "app.tagline": "Deel je bestanden veilig en privé",
-  "app.subtitle": "Versleuteld, en weg zodra het verloopt.",
-  "app.privacy": "Versleuteld · automatisch verwijderd · geen tracking · geen account · geen bullshit",
+  "app.subtitle": "End-to-end versleuteld — de server ziet je bestanden nooit. Wordt automatisch verwijderd.",
+  "app.privacy": "End-to-end versleuteld · automatisch verwijderd · geen tracking · geen account · geen bullshit",
   "theme.toggle": "Thema wisselen",
   "language.label": "Taal",
 
@@ -47,6 +47,7 @@ export const nl: Translation = {
 
   "upload.failed": "Uploaden mislukt",
   "upload.finalizeFailed": "Kon delen niet voltooien",
+  "upload.encrypting": "Versleutelen…",
 
   "expiry.1h": "1 uur",
   "expiry.6h": "6 uur",
