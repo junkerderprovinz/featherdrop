@@ -32,7 +32,7 @@ try {
   // ---- upload ----
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.setInputFiles('input[type="file"]', SRC);
-  await page.getByRole("button", { name: /upload|hochladen|teilen|share/i }).click();
+  await page.getByRole("button", { name: /upload & share|hochladen & teilen/i }).click();
 
   const urlInput = page.locator("input[readonly]");
   await urlInput.waitFor({ state: "visible", timeout: 120_000 });
