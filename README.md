@@ -38,17 +38,16 @@ No accounts, no clouds, no tracking, no nonsense.
 ## Table of Contents
 
 1. [What is this?](#1-what-is-this)
-2. [How it works](#2-how-it-works)
-3. [Security & Privacy](#3-security--privacy)
-4. [Languages](#4-languages)
-5. [Quick Start on Unraid](#5-quick-start-on-unraid)
-6. [Configuration](#6-configuration)
-7. [Reverse Proxy](#7-reverse-proxy)
-8. [Local Development](#8-local-development)
-9. [Screenshots](#9-screenshots)
+2. [Screenshots](#2-screenshots)
+3. [How it works](#3-how-it-works)
+4. [Security & Privacy](#4-security--privacy)
+5. [Languages](#5-languages)
+6. [Quick Start on Unraid](#6-quick-start-on-unraid)
+7. [Configuration](#7-configuration)
+8. [Reverse Proxy](#8-reverse-proxy)
+9. [Local Development](#9-local-development)
 10. [Contributing / License](#10-contributing--license)
 11. [Support this project](#11-support-this-project)
-
 <br>
 
 ## 1. What is this?
@@ -67,7 +66,7 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 - Pasting the link into a chat shows a **clean preview card** — your branding,
   never the file's name.
 - A light/dark toggle and a **flag language picker** sit in the header — the UI
-  speaks [26 languages](#4-languages) and picks yours from the browser.
+  speaks [26 languages](#5-languages) and picks yours from the browser.
 
 **Highlights**
 
@@ -90,7 +89,44 @@ scanning, S3 backends. If you need those, use Pingvin Share — that is the poin
 
 <br>
 
-## 2. How it works
+## 2. Screenshots
+
+<p align="center">
+  <img src=".github/assets/screenshots/home-light.png" alt="featherdrop home — light theme" width="90%">
+  <br><em>The home page — drop a file to share it.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/home-dark.png" alt="featherdrop home — dark theme" width="90%">
+  <br><em>Light and dark themes, with a flag language picker.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/upload.png" alt="Upload with share options" width="90%">
+  <br><em>Set an expiry, an optional password, and a download limit before sharing.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/result.png" alt="Share link ready, with QR code" width="90%">
+  <br><em>Your link is ready — copy it or save the QR code.</em>
+</p>
+
+<br>
+
+<p align="center">
+  <img src=".github/assets/screenshots/download.png" alt="Recipient download page" width="90%">
+  <br><em>What the recipient sees: file info and a download button.</em>
+</p>
+
+<br>
+
+## 3. How it works
 
 ```
 Browser (drop zone, Mantine UI)
@@ -117,7 +153,7 @@ text, and large downloads **stream natively** (no in-browser buffering).
 
 <br>
 
-## 3. Security & Privacy
+## 4. Security & Privacy
 
 featherdrop is built to be **self-hosted**: your files and their metadata live
 only on your server, and the app talks to nobody else.
@@ -139,9 +175,10 @@ only on your server, and the app talks to nobody else.
   file's name.
 
 > Provided under the MIT licence **without warranty** — you run it, you own the
-> data and the responsibility. Put it behind HTTPS (see
-> [Reverse Proxy](#7-reverse-proxy)) — the in-browser crypto and clipboard need a
-> secure context.
+> data and the responsibility. **HTTPS is recommended** (see
+> [Reverse Proxy](#8-reverse-proxy)) — the clipboard, streaming downloads, and
+> large (>500 MB) uploads need a secure context; smaller uploads work over plain
+> HTTP too.
 
 ### Zero-knowledge encryption
 
@@ -165,8 +202,10 @@ expires, and a link copied without its `#k=…` part can't be decrypted — by
 design, since the server never had the key.
 
 Encryption and decryption stream through the Origin Private File System and a
-service worker, so multi-GB files are never buffered in memory. Inline image/PDF
-previews are produced entirely in the browser from the decrypted bytes.
+service worker, so multi-GB files are never buffered in memory. Over plain HTTP
+(not a secure context) OPFS isn't available, so encryption falls back to memory
+with a 500 MB cap — use **HTTPS** for larger files. Inline image/PDF previews are
+produced entirely in the browser from the decrypted bytes.
 
 > **Upgrading from v3 or earlier?** Shares created before v4 used at-rest
 > encryption (age) and stay readable with their original links until they expire.
@@ -175,7 +214,7 @@ previews are produced entirely in the browser from the decrypted bytes.
 
 <br>
 
-## 4. Languages
+## 5. Languages
 
 featherdrop's interface ships in **26 languages**. On a visitor's first load the
 language is taken from their **browser**; a flag picker beside the light/dark
@@ -195,7 +234,7 @@ welcome.
 
 <br>
 
-## 5. Quick Start on Unraid
+## 6. Quick Start on Unraid
 
 Pull the template into Unraid via the console / SSH:
 
@@ -232,7 +271,7 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 
 <br>
 
-## 6. Configuration
+## 7. Configuration
 
 | Variable | Default | Description |
 |---|---|---|
@@ -250,14 +289,16 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 
 <br>
 
-## 7. Reverse Proxy
+## 8. Reverse Proxy
 
 featherdrop speaks plain HTTP on `PORT`; put TLS in front of it (Nginx Proxy
 Manager, Caddy, Traefik). Two things matter:
 
 - Set **`BASE_URL`** to your public URL so generated links are correct. Use
   **HTTPS** — for link shares the decryption key lives in the URL fragment, and
-  TLS keeps the whole link private in transit.
+  TLS keeps the whole link private in transit. HTTPS is also a *secure context*,
+  which the clipboard, streaming downloads, and OPFS (large uploads) require;
+  over plain HTTP, uploads fall back to an in-memory path capped at 500 MB.
 - Allow **large request bodies** and generous timeouts for big uploads. For
   Nginx / NPM advanced config:
 
@@ -270,7 +311,7 @@ proxy_request_buffering off;   # stream uploads straight through
 
 <br>
 
-## 8. Local Development
+## 9. Local Development
 
 ```bash
 npm install
@@ -294,43 +335,6 @@ Stack: Next.js (App Router) + Mantine v7, a small custom Node server
 (`custom-server.ts`) that mounts the tus handler beside Next, `better-sqlite3`
 for metadata, and `react-i18next` for the UI languages. Files live under
 `DATA_DIR` (default `./data` in dev).
-
-<br>
-
-## 9. Screenshots
-
-<p align="center">
-  <img src=".github/assets/screenshots/home-light.png" alt="featherdrop home — light theme" width="90%">
-  <br><em>The home page — drop a file to share it.</em>
-</p>
-
-<br>
-
-<p align="center">
-  <img src=".github/assets/screenshots/home-dark.png" alt="featherdrop home — dark theme" width="90%">
-  <br><em>Light and dark themes, with a flag language picker.</em>
-</p>
-
-<br>
-
-<p align="center">
-  <img src=".github/assets/screenshots/upload.png" alt="Upload with share options" width="90%">
-  <br><em>Set an expiry, an optional password, and a download limit before sharing.</em>
-</p>
-
-<br>
-
-<p align="center">
-  <img src=".github/assets/screenshots/result.png" alt="Share link ready, with QR code" width="90%">
-  <br><em>Your link is ready — copy it or save the QR code.</em>
-</p>
-
-<br>
-
-<p align="center">
-  <img src=".github/assets/screenshots/download.png" alt="Recipient download page" width="90%">
-  <br><em>What the recipient sees: file info and a download button.</em>
-</p>
 
 <br>
 
