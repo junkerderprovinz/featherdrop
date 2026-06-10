@@ -30,7 +30,7 @@ function fail(msg) {
 
 try {
   // ---- upload ----
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await page.setInputFiles('input[type="file"]', SRC);
   await page.getByRole("button", { name: /upload & share|hochladen & teilen/i }).click();
 
@@ -69,7 +69,7 @@ try {
   dlPage.on("console", (m) => {
     if (m.type() === "error") errors.push("dl console: " + m.text());
   });
-  await dlPage.goto(shareUrl, { waitUntil: "domcontentloaded" });
+  await dlPage.goto(shareUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
 
   const [download] = await Promise.all([
     dlPage.waitForEvent("download", { timeout: 120_000 }),
