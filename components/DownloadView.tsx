@@ -379,16 +379,17 @@ export function DownloadView({
 
           {/* -----------------------------------------------------------
               v2 zero-knowledge download UI
-              Link mode:     a single Download button (key is in the fragment).
               Password mode: password input + Unlock button.
-              No key, no password props: show missing-key error.
+              Link mode:     a single Download button (key is in the fragment).
+              The branch depends ONLY on hasPassword (a server-known prop), never
+              on the URL #fragment key — the fragment is invisible to the server,
+              so branching on it would render different markup on the server vs.
+              the client and trip a hydration mismatch (React #418/#423). A link
+              that was copied without its #k= fragment is caught at click time by
+              v2Download, which shows the missing-key notification.
               ----------------------------------------------------------- */}
           {isV2 ? (
-            !linkKey && !hasPassword ? (
-              <Text c="red" ta="center" size="sm">
-                {t("download.missingKey")}
-              </Text>
-            ) : hasPassword && !linkKey ? (
+            hasPassword ? (
               <Stack w="100%" gap="sm">
                 <PasswordInput
                   label={t("download.protected")}
