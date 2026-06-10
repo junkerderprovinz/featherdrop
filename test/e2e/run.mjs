@@ -34,9 +34,31 @@ try {
   await page.setInputFiles('input[type="file"]', SRC);
   await page.getByRole("button", { name: /upload & share|hochladen & teilen/i }).click();
 
-  const urlInput = page.locator("input[readonly]");
-  await urlInput.waitFor({ state: "visible", timeout: 120_000 });
-  const shareUrl = (await urlInput.inputValue()).trim();
+  // Wait for the result panel's share-URL field (the readonly input whose value
+  // is the /d/ link) — NOT the expiry Select's readonly input.
+  try {
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll("input[readonly]")].some((i) =>
+          i.value.includes("/d/"),
+        ),
+      { timeout: 120_000 },
+    );
+  } catch {
+    const notes = await page
+      .locator("[class*=Notification], [role=alert]")
+      .allInnerTexts()
+      .catch(() => []);
+    fail("no share link appeared. notifications=" + JSON.stringify(notes));
+  }
+  const shareUrl = (
+    await page.evaluate(
+      () =>
+        [...document.querySelectorAll("input[readonly]")].find((i) =>
+          i.value.includes("/d/"),
+        )?.value ?? "",
+    )
+  ).trim();
   console.log("share url:", shareUrl);
   if (!shareUrl.includes("/d/")) fail("share url missing /d/: " + shareUrl);
   if (!shareUrl.includes("#k=")) fail("link-mode share url missing #k= fragment");
