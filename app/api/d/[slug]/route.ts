@@ -102,6 +102,33 @@ export async function GET(
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
+  // -------------------------------------------------------------------------
+  // v2 zero-knowledge path: serve the raw ciphertext verbatim.
+  // The server never decrypts, never sees the key, and never uses a cookie.
+  // The real filename and MIME are inside the client-encrypted blob — so
+  // Content-Disposition uses a static "download" name and the client renames
+  // on save after decrypting the embedded metadata.
+  // -------------------------------------------------------------------------
+  if (rec.format === 2) {
+    const dl = registerDownload(rec.slug);
+    if (!dl.allowed) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+    return new Response(fileStream(rec.id, dl.burned), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="download"',
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+        "Content-Length": String(rec.size),
+      },
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // v1 legacy path — unchanged
+  // -------------------------------------------------------------------------
+
   const cookie = req.cookies.get(COOKIE)?.value;
 
   // Preview mode (?inline=1): render the file in the browser without counting a
