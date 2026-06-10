@@ -11,6 +11,11 @@
 // `default`), so the type of the namespace IS the sodium object.
 type Sodium = typeof import("libsodium-wrappers-sumo");
 
+// The opaque secretstream state handle, derived from a method's return type so
+// we don't need a separate (interop-fragile) named type import from the module.
+type StateAddress =
+  ReturnType<Sodium["crypto_secretstream_xchacha20poly1305_init_push"]>["state"];
+
 // Assigned by ready() before any synchronous function below runs. The definite-
 // assignment assertion lets the existing `sodium.xxx` call sites stay unchanged.
 let sodium!: Sodium;
@@ -146,7 +151,7 @@ export async function* decryptChunks(
   const CIPHER_CHUNK = PT_CHUNK + ABYTES;
 
   let buffer: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
-  let state: sodium.StateAddress | null = null;
+  let state: StateAddress | null = null;
 
   for await (const part of source) {
     buffer = concat(buffer, part);
