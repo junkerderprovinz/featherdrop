@@ -2,8 +2,8 @@ import type { Translation } from "./en.ts";
 
 export const de: Translation = {
   "app.tagline": "Teile deine Dateien sicher und ohne Datenschutzbedenken",
-  "app.subtitle": "Verschlüsselt gespeichert und automatisch gelöscht, sobald der Link abläuft.",
-  "app.privacy": "Verschlüsselung · automatische Löschung · kein Tracking · kein Kontozwang · kein Scheiß",
+  "app.subtitle": "Ende-zu-Ende im Browser verschlüsselt — der Server sieht deine Dateien nie. Wird automatisch gelöscht, sobald der Link abläuft.",
+  "app.privacy": "Ende-zu-Ende verschlüsselt · automatische Löschung · kein Tracking · kein Kontozwang · kein Scheiß",
   "theme.toggle": "Design umschalten",
   "language.label": "Sprache",
 
