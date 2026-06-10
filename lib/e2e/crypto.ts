@@ -7,7 +7,9 @@
 // #306) on the download page. Loading sodium lazily via a dynamic import inside
 // ready() keeps the whole graph synchronous, which fixes the reference. It also
 // defers the WASM load until the first encrypt/decrypt actually needs it.
-type Sodium = (typeof import("libsodium-wrappers-sumo"))["default"];
+// @types/libsodium-wrappers-sumo declares the module with `export =` (no
+// `default`), so the type of the namespace IS the sodium object.
+type Sodium = typeof import("libsodium-wrappers-sumo");
 
 // Assigned by ready() before any synchronous function below runs. The definite-
 // assignment assertion lets the existing `sodium.xxx` call sites stay unchanged.
@@ -22,8 +24,14 @@ export async function ready(): Promise<void> {
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
     const mod = await import("libsodium-wrappers-sumo");
-    await mod.default.ready;
-    sodium = mod.default;
+    // Under esModuleInterop / bundler interop a dynamic import of this CJS
+    // module yields { default: <sodium> }; without interop it returns the
+    // object directly. Accept both.
+    const lib =
+      (mod as unknown as { default?: Sodium }).default ??
+      (mod as unknown as Sodium);
+    await lib.ready;
+    sodium = lib;
   })();
   return readyPromise;
 }
