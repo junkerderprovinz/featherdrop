@@ -1,11 +1,31 @@
-import sodium from "libsodium-wrappers-sumo";
+// libsodium-wrappers-sumo's ESM build uses top-level await. A STATIC
+// `import sodium from "..."` would make this module — and everything that
+// imports it, up through pipeline.ts → download-flow.ts → DownloadView — an
+// "async module". Next.js cannot resolve a Client Component that lives in an
+// async-module graph: its client reference resolves to `undefined`, so the
+// server renders `<undefined/>` and throws "Element type is invalid" (React
+// #306) on the download page. Loading sodium lazily via a dynamic import inside
+// ready() keeps the whole graph synchronous, which fixes the reference. It also
+// defers the WASM load until the first encrypt/decrypt actually needs it.
+type Sodium = (typeof import("libsodium-wrappers-sumo"))["default"];
+
+// Assigned by ready() before any synchronous function below runs. The definite-
+// assignment assertion lets the existing `sodium.xxx` call sites stay unchanged.
+let sodium!: Sodium;
+let readyPromise: Promise<void> | null = null;
 
 /** Plaintext chunk size for streaming content encryption (locked, spec §4). */
 export const PT_CHUNK = 65536; // 64 KiB
 
 /** Await once before calling any synchronous function in this module. */
 export async function ready(): Promise<void> {
-  await sodium.ready;
+  if (readyPromise) return readyPromise;
+  readyPromise = (async () => {
+    const mod = await import("libsodium-wrappers-sumo");
+    await mod.default.ready;
+    sodium = mod.default;
+  })();
+  return readyPromise;
 }
 
 /** Fresh random 32-byte content key. Requires `ready()` first. */
