@@ -43,4 +43,21 @@ export function applySchema(db: Database.Database): void {
   // number of downloads, after which the file + row are deleted. Existing rows
   // default to NULL (unlimited), preserving prior behaviour.
   addColumn("max_downloads", "max_downloads INTEGER");
+
+  // Zero-knowledge v2 columns (Phase 7a).
+  //
+  // `format` distinguishes the two on-disk blob layouts:
+  //   1 = legacy at-rest (age-encrypted, server holds the key on download)
+  //   2 = zero-knowledge (browser-encrypted; server is a dumb byte store)
+  // Existing rows default to 1 so the v1 read path continues to work unchanged.
+  //
+  // `wrapped_key` — password mode only: the per-file content key (K) wrapped
+  // with the Argon2id-derived KEK. NULL for link-mode v2 uploads (K lives only
+  // in the URL fragment) and for all v1 rows.
+  //
+  // `kdf_salt` — password mode only: the 16-byte Argon2id salt used to derive
+  // the KEK. NULL when `wrapped_key` is NULL.
+  addColumn("format", "format INTEGER NOT NULL DEFAULT 1");
+  addColumn("wrapped_key", "wrapped_key BLOB");
+  addColumn("kdf_salt", "kdf_salt BLOB");
 }

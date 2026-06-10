@@ -14,9 +14,14 @@ export interface FileRecord {
   created_at: number; // unix ms
   download_count: number;
   max_downloads: number | null; // null = unlimited; delete after this many
+  // v1 at-rest encryption fields (legacy)
   encrypted: number; // 0 = plaintext blob, 1 = age-encrypted
   enc_mode: string | null; // "link" | "password" | null
   enc_key_wrapped: string | null; // password-wrapped per-file key (password mode)
+  // Zero-knowledge v2 fields (Phase 7a)
+  format: number; // 1 = legacy at-rest, 2 = zero-knowledge (client-encrypted)
+  wrapped_key: Buffer | null; // password mode: content key wrapped with Argon2id-derived KEK
+  kdf_salt: Buffer | null; // password mode: 16-byte Argon2id salt
 }
 
 export interface DownloadResult {
@@ -46,10 +51,12 @@ export function createFileRecord(rec: Omit<FileRecord, "download_count">): void 
     .prepare(
       `INSERT INTO files
         (id, slug, original_name, size, mime, password_hash, expires_at,
-         created_at, max_downloads, encrypted, enc_mode, enc_key_wrapped)
+         created_at, max_downloads, encrypted, enc_mode, enc_key_wrapped,
+         format, wrapped_key, kdf_salt)
        VALUES
         (@id, @slug, @original_name, @size, @mime, @password_hash, @expires_at,
-         @created_at, @max_downloads, @encrypted, @enc_mode, @enc_key_wrapped)`,
+         @created_at, @max_downloads, @encrypted, @enc_mode, @enc_key_wrapped,
+         @format, @wrapped_key, @kdf_salt)`,
     )
     .run(rec);
 }

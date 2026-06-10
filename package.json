@@ -1,6 +1,6 @@
 {
   "name": "featherdrop",
-  "version": "3.3.0",
+  "version": "4.0.0",
   "private": true,
   "type": "module",
   "description": "A clean, login-free, self-hosted file sharer — drop a file, set an expiry, share a link.",
@@ -10,7 +10,10 @@
     "build": "next build",
     "start": "tsx custom-server.ts",
     "lint": "next lint",
-    "test": "node --import tsx --test \"test/**/*.test.ts\""
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "test:browser": "node test/browser/run.mjs && node test/browser/stream-download.mjs && node test/browser/upload-download-flow.mjs",
+    "//postinstall": "Workaround for upstream bug: libsodium-wrappers-sumo@0.7.16 ships an ESM wrapper that imports ./libsodium-sumo.mjs by relative path but omits that file from its package 'files' field, so it is missing after install. Copy it from the libsodium-sumo dependency. Remove once the upstream package is fixed.",
+    "postinstall": "node -e \"const{cpSync}=require('fs');cpSync('node_modules/libsodium-sumo/dist/modules-sumo-esm/libsodium-sumo.mjs','node_modules/libsodium-wrappers-sumo/dist/modules-sumo-esm/libsodium-sumo.mjs')\""
   },
   "dependencies": {
     "@fontsource/sansation": "^5.2.2",
@@ -26,6 +29,7 @@
     "canvas-confetti": "^1.9.4",
     "flag-icons": "^7.5.0",
     "i18next": "^26.3.0",
+    "libsodium-wrappers-sumo": "^0.7.16",
     "nanoid": "^5.0.7",
     "next": "^14.2.15",
     "qrcode.react": "^4.0.1",
@@ -38,12 +42,15 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/libsodium-wrappers": "^0.7.14",
+    "@types/libsodium-wrappers-sumo": "^0.7.8",
     "@types/node": "^20.16.10",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "esbuild": "^0.28.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.15",
+    "playwright": "^1.60.0",
     "postcss": "^8.4.47",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",

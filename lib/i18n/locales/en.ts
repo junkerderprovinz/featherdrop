@@ -5,8 +5,8 @@
 // Interpolation uses i18next syntax: {{label}}, {{count}}.
 export const en = {
   "app.tagline": "Share your files securely and privately",
-  "app.subtitle": "Encrypted at rest and automatically deleted when the link expires.",
-  "app.privacy": "Encrypted · auto-deleted · no tracking · no account · no bullshit",
+  "app.subtitle": "End-to-end encrypted — the server never sees your files. Deleted automatically.",
+  "app.privacy": "End-to-end encrypted · auto-deleted · no tracking · no account · no bullshit",
   "theme.toggle": "Toggle theme",
   "language.label": "Language",
 
@@ -47,6 +47,7 @@ export const en = {
 
   "upload.failed": "Upload failed",
   "upload.finalizeFailed": "Could not finalize share",
+  "upload.encrypting": "Encrypting…",
 
   "expiry.1h": "1 hour",
   "expiry.6h": "6 hours",

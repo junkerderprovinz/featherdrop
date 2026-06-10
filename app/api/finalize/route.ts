@@ -30,6 +30,10 @@ interface FinalizeBody {
   expiry?: string;
   password?: string;
   maxDownloads?: number; // optional download limit; null/absent = unlimited
+  // v2 zero-knowledge fields (Phase 7b)
+  format?: number; // 2 = zero-knowledge; absent/1 = v1 legacy
+  wrappedKey?: string; // base64-encoded: content key wrapped with Argon2id-derived KEK (password mode)
+  kdfSalt?: string; // base64-encoded: 16-byte Argon2id salt (password mode)
 }
 
 // Read the tus upload's metadata sidecar (<id>.json, written by @tus/file-store's
@@ -125,6 +129,59 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "upload not complete" }, { status: 409 });
   }
 
+  const storedId = uploadId;
+  const storedPath = join(UPLOADS_DIR, storedId);
+  const slug = uniqueSlug();
+
+  // -------------------------------------------------------------------------
+  // v2 zero-knowledge path (Phase 7b)
+  // The browser already encrypted the blob before uploading via tus. The server
+  // is a dumb byte store: it renames the tmp file to its final location without
+  // any server-side crypto, stores the optional wrapped_key/kdf_salt (password
+  // mode) or neither (link mode), and returns only the slug — the key lives in
+  // the URL fragment or is derived by the browser from the user's password.
+  // -------------------------------------------------------------------------
+  if (body.format === 2) {
+    // Move the already-encrypted blob to its final location (no crypto at all).
+    await rename(tmpPath, storedPath);
+    // Decode base64 → Buffer (null when absent — link mode).
+    const wrapped_key = body.wrappedKey
+      ? Buffer.from(body.wrappedKey, "base64")
+      : null;
+    const kdf_salt = body.kdfSalt
+      ? Buffer.from(body.kdfSalt, "base64")
+      : null;
+    // Sidecar cleanup (same as v1 path).
+    await rm(join(TMP_DIR, `${uploadId}.json`), { force: true });
+
+    createFileRecord({
+      id: storedId,
+      slug,
+      original_name: "", // server does not know the real filename
+      size,
+      mime: null, // server does not know the MIME type
+      password_hash: null, // password never reaches the server in v2
+      expires_at: expiryToTimestamp(expiry || DEFAULT_EXPIRY),
+      created_at: Date.now(),
+      max_downloads: parseMaxDownloads(body.maxDownloads),
+      encrypted: 0, // v1 age-encryption flag unused in v2
+      enc_mode: null,
+      enc_key_wrapped: null,
+      format: 2,
+      wrapped_key,
+      kdf_salt,
+    });
+
+    // The client already holds the key (link: URL fragment it generated;
+    // password: it just sent wrapped_key+kdf_salt and will reconstruct).
+    // No key in the response — zero knowledge.
+    return NextResponse.json({ slug });
+  }
+
+  // -------------------------------------------------------------------------
+  // v1 legacy path — unchanged
+  // -------------------------------------------------------------------------
+
   const meta = sidecar?.metadata ?? {};
   const originalName = (meta.filename ?? "download").slice(0, 255);
   // Trust the browser-supplied type, but fall back to the filename extension
@@ -132,9 +189,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // the preview gate and the inline Content-Type both key off a known MIME.
   const mime = meta.filetype?.trim() || mimeFromName(originalName);
 
-  const storedId = uploadId;
-  const storedPath = join(UPLOADS_DIR, storedId);
-  const slug = uniqueSlug();
   const password = body.password?.trim();
 
   // Encryption (default on). The file is encrypted to a fresh per-file key;
@@ -181,6 +235,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     encrypted,
     enc_mode: encMode,
     enc_key_wrapped: encKeyWrapped,
+    // v2 zero-knowledge fields — not used by the v1 finalize path.
+    format: 1,
+    wrapped_key: null,
+    kdf_salt: null,
   });
 
   // The link key (link mode) goes to the uploader only, in the JSON response —

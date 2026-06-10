@@ -78,3 +78,58 @@ test("migrates a legacy DB that predates the encryption columns", { skip: dbReas
   assert.equal(row.encrypted, 0, "legacy row should default to unencrypted");
   db.close();
 });
+
+// Phase 7a: zero-knowledge v2 columns ----------------------------------------
+
+test("applySchema adds the v2 ZK columns (format, wrapped_key, kdf_salt)", { skip: dbReason }, () => {
+  const db = new Database(freshDbPath());
+  applySchema(db);
+  const cols = (db.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map(
+    (c) => c.name,
+  );
+  for (const c of ["format", "wrapped_key", "kdf_salt"]) {
+    assert.ok(cols.includes(c), `missing column ${c}`);
+  }
+  db.close();
+});
+
+test("migrated legacy rows get format = 1 (legacy at-rest)", { skip: dbReason }, () => {
+  const path = freshDbPath();
+  // Build a pre-v2 DB (only the v1 enc columns, no format column).
+  const legacy = new Database(path);
+  legacy.exec(`
+    CREATE TABLE files (
+      id TEXT PRIMARY KEY, slug TEXT UNIQUE NOT NULL, original_name TEXT NOT NULL,
+      size INTEGER NOT NULL, mime TEXT, password_hash TEXT, expires_at INTEGER,
+      created_at INTEGER NOT NULL, download_count INTEGER NOT NULL DEFAULT 0,
+      encrypted INTEGER NOT NULL DEFAULT 0,
+      enc_mode TEXT,
+      enc_key_wrapped TEXT,
+      max_downloads INTEGER
+    );
+  `);
+  legacy
+    .prepare(
+      `INSERT INTO files (id, slug, original_name, size, created_at, encrypted)
+       VALUES (?,?,?,?,?,?)`,
+    )
+    .run("v1row", "slugv1", "old.txt", 42, Date.now(), 1);
+  legacy.close();
+
+  // Migrate forward.
+  const db = new Database(path);
+  applySchema(db);
+
+  const row = db.prepare("SELECT format FROM files WHERE id = ?").get("v1row") as {
+    format: number;
+  };
+  assert.equal(row.format, 1, "pre-existing rows must default to format = 1");
+  db.close();
+});
+
+test("applySchema with v2 columns is idempotent (running twice does not throw)", { skip: dbReason }, () => {
+  const db = new Database(freshDbPath());
+  applySchema(db);
+  assert.doesNotThrow(() => applySchema(db), "second applySchema must be a no-op");
+  db.close();
+});
