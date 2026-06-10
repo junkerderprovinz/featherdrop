@@ -90,6 +90,56 @@ try {
   if (!bytesOk) fail("decrypted bytes do not match the original");
   if (errors.length) fail("page/console errors occurred");
 
+  // ---- Phase 6: client-side preview of a v2 image ----
+  // Upload a (valid, tiny) PNG; the download page must auto-decrypt it and
+  // render an inline preview from an in-memory blob: URL (no server ?inline).
+  const PNG = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  const upPng = await ctx.newPage();
+  upPng.on("pageerror", (e) => errors.push("png up: " + e));
+  upPng.on("console", (m) => {
+    if (m.type() === "error") errors.push("png up console: " + m.text());
+  });
+  await upPng.goto(BASE, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await upPng.setInputFiles('input[type="file"]', {
+    name: "preview.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await upPng
+    .getByRole("button", { name: /upload & share|hochladen & teilen/i })
+    .click();
+  await upPng.waitForFunction(
+    () =>
+      [...document.querySelectorAll("input[readonly]")].some((i) =>
+        i.value.includes("/d/"),
+      ),
+    { timeout: 120_000 },
+  );
+  const pngUrl = (
+    await upPng.evaluate(
+      () =>
+        [...document.querySelectorAll("input[readonly]")].find((i) =>
+          i.value.includes("/d/"),
+        )?.value ?? "",
+    )
+  ).trim();
+
+  const previewPage = await ctx.newPage();
+  previewPage.on("pageerror", (e) => errors.push("preview: " + e));
+  previewPage.on("console", (m) => {
+    if (m.type() === "error") errors.push("preview console: " + m.text());
+  });
+  await previewPage.goto(pngUrl, {
+    waitUntil: "domcontentloaded",
+    timeout: 120_000,
+  });
+  await previewPage.waitForSelector('img[src^="blob:"]', { timeout: 120_000 });
+  console.log("preview: blob image rendered ✓");
+  if (errors.length) fail("page/console errors occurred (preview)");
+
   console.log("E2E PASSED — zero-knowledge upload→download round trip verified");
 } catch (e) {
   fail(String(e));
