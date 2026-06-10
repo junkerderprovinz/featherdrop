@@ -50,15 +50,16 @@
 <h2>What is this?</h2>
 <p>A feather-light, login-free, self-hosted file sharer. Open the page, drop a file, set an
 expiry (plus an optional password or download limit), and share a short link or QR
-code. Files are <strong>encrypted at rest</strong>, uploads are <strong>resumable</strong>,
-and metadata is a single SQLite file — no accounts, no separate database, no tracking.
+code. Files are <strong>end-to-end encrypted in your browser</strong> before upload,
+uploads are <strong>resumable</strong>, and metadata is a single SQLite file — no
+accounts, no separate database, no tracking.
 Built with Next.js + Mantine, it runs as one small container and is configured entirely
 from the Unraid template — no SSH or config-file editing.</p>
 
 <h2>Highlights</h2>
 <ul>
-  <li><strong>Encrypted at rest</strong> with age — the original filename and type are encrypted <em>inside</em> the file, so a stolen disk or backup reveals neither contents nor names</li>
-  <li>Optional <strong>password</strong> shares are end-to-end; set a <code>MASTER_KEY</code> for <strong>short links</strong></li>
+  <li><strong>Zero-knowledge</strong> — files are end-to-end encrypted in your browser (libsodium XChaCha20-Poly1305); the server only ever stores opaque ciphertext and never sees your files, their names, or the key</li>
+  <li><strong>Link mode</strong> carries the key in the URL <code>#fragment</code>; an optional <strong>password</strong> (Argon2id) keeps it off the link entirely — either way the key never reaches the server</li>
   <li><strong>Self-destructing</strong> — expiry from 1 hour to 30 days (or never), plus optional <strong>burn-after-N-downloads</strong></li>
   <li>Inline <strong>image/PDF preview</strong>, a savable <strong>QR code</strong>, and clean <strong>link previews</strong> that never leak the file's name</li>
   <li><strong>26 UI languages</strong> (right-to-left for Arabic &amp; Hebrew), light/dark, picked from the browser</li>
@@ -83,7 +84,7 @@ from the Unraid template — no SSH or config-file editing.</p>
   <li>Image tag (<code>latest</code> or a pinned <code>vX.Y.Z</code>)</li>
   <li>Output of <code>docker logs --tail 200 featherdrop</code></li>
   <li>Browser + OS you're using</li>
-  <li>Whether you changed <code>BASE_URL</code>, <code>ENCRYPT_UPLOADS</code>, <code>MASTER_KEY</code>, <code>DEFAULT_EXPIRY</code>, the branding vars, or the <code>/data</code> / <code>/config</code> mounts</li>
+  <li>Whether you changed <code>BASE_URL</code>, <code>DEFAULT_EXPIRY</code>, the branding vars, or the <code>/data</code> / <code>/config</code> mounts</li>
 </ul>
 <p>GitHub issues with the same info are also welcome:
 <a href="https://github.com/junkerderprovinz/featherdrop/issues">github.com/junkerderprovinz/featherdrop/issues</a></p>
@@ -91,7 +92,7 @@ from the Unraid template — no SSH or config-file editing.</p>
 <h2>Credits</h2>
 <p>A much simpler take inspired by
 <a href="https://github.com/stonith404/pingvin-share">Pingvin Share</a>. Built on
-<a href="https://age-encryption.org">age</a> (encryption),
+<a href="https://doc.libsodium.org">libsodium</a> (encryption),
 <a href="https://tus.io">tus</a> (resumable uploads), Next.js, Mantine and
 better-sqlite3. If featherdrop saves you a trip to a third-party host, you can
 <a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
