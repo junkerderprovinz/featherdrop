@@ -45,7 +45,9 @@ function ensureSwRegistered(): Promise<ServiceWorkerRegistration> {
  *
  * @param stream  - Decrypted byte stream to save.
  * @param filename - Suggested save-as filename.
- * @param size     - Optional byte-length for Content-Length (improves progress bars).
+ * @param size     - Optional byte-length for Content-Length (improves progress
+ *                   bars). Must be the EXACT plaintext length — a mismatch makes
+ *                   Chromium fail the download — so omit it when unknown.
  */
 export async function streamToDownload(
   stream: ReadableStream<Uint8Array>,

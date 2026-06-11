@@ -51,6 +51,10 @@ self.addEventListener("fetch", (event) => {
     "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
     "X-Content-Type-Options": "nosniff",
   };
+  // `size` must be the exact PLAINTEXT byte length — a mismatched
+  // Content-Length makes Chromium mark the download as failed. Callers that
+  // don't know it (e.g. encrypted shares, where only the ciphertext size is
+  // known) omit it, and we simply send no Content-Length.
   if (Number.isFinite(size) && size >= 0) {
     headers["Content-Length"] = String(size);
   }
