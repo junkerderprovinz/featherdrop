@@ -2,7 +2,8 @@
 // Injected `fetchBlob` and `save` keep this module pure and testable without
 // a real server or browser download API.
 
-import { decryptFromDownload } from "./pipeline";
+import { computeKeyVerifier } from "./crypto";
+import { deriveContentKey, decryptWithKey } from "./pipeline";
 import { streamToAsyncIterable, asyncIterableToStream } from "./stream-adapters";
 
 /**
@@ -17,20 +18,27 @@ export type DownloadSecret =
  * Download, decrypt, and save a file.
  *
  * Steps:
- *  1. Fetch the encrypted blob as a ReadableStream.
- *  2. Decrypt it (wrong key/password causes `decryptFromDownload` to reject —
- *     the rejection propagates directly to the caller).
- *  3. Pass the plaintext stream to `save`; return the recovered metadata.
+ *  1. Derive the content key K from the secret — BEFORE any network I/O, so a
+ *     wrong password rejects here and never reaches the server (nothing is
+ *     fetched, nothing is counted).
+ *  2. Fetch the encrypted blob as a ReadableStream. `fetchBlob` receives
+ *     base64url(SHA-256(K)) so every call site automatically sends it as the
+ *     `x-fd-key-verifier` header — the server requires this proof of key
+ *     knowledge before counting/burning the download.
+ *  3. Decrypt with K (a tampered blob causes `decryptWithKey` to reject — the
+ *     rejection propagates directly to the caller).
+ *  4. Pass the plaintext stream to `save`; return the recovered metadata.
  */
 export async function downloadDecrypted(
-  fetchBlob: () => Promise<ReadableStream<Uint8Array>>,
+  fetchBlob: (keyVerifier: string) => Promise<ReadableStream<Uint8Array>>,
   secret: DownloadSecret,
   save: (plaintext: ReadableStream<Uint8Array>, filename: string) => Promise<void>,
 ): Promise<{ meta: { name: string; type: string } }> {
-  const stream = await fetchBlob();
-  const { meta, plaintext } = await decryptFromDownload(
+  const key = await deriveContentKey(secret);
+  const stream = await fetchBlob(computeKeyVerifier(key));
+  const { meta, plaintext } = await decryptWithKey(
     streamToAsyncIterable(stream),
-    secret,
+    key,
   );
   await save(asyncIterableToStream(plaintext), meta.name);
   return { meta };

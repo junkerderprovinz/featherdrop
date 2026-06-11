@@ -1,7 +1,11 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, PT_CHUNK } from "../lib/e2e/crypto";
-import { encryptForUpload, decryptFromDownload } from "../lib/e2e/pipeline";
+import { ready, PT_CHUNK, computeKeyVerifier, decodeKey } from "../lib/e2e/crypto";
+import {
+  encryptForUpload,
+  decryptFromDownload,
+  deriveContentKey,
+} from "../lib/e2e/pipeline";
 
 before(async () => {
   await ready();
@@ -85,6 +89,44 @@ test("a wrong password fails to decrypt", async () => {
       salt: wrapped!.salt,
     }),
   );
+});
+
+// Key verifier (download authorization) --------------------------------------
+
+test("link mode: keyVerifier is SHA-256 of the key in the URL fragment", async () => {
+  const { keyForUrl, keyVerifier } = await encryptForUpload(one(bytes(100)), META);
+  assert.match(keyVerifier, /^[A-Za-z0-9_-]{43}$/);
+  assert.equal(keyVerifier, computeKeyVerifier(decodeKey(keyForUrl)));
+});
+
+test("password mode: keyVerifier matches the key recovered by unwrap", async () => {
+  const { wrapped, keyVerifier } = await encryptForUpload(one(bytes(100)), META, {
+    password: "pw",
+  });
+  const key = await deriveContentKey({
+    password: "pw",
+    wrapped: wrapped!.wrapped,
+    salt: wrapped!.salt,
+  });
+  assert.equal(keyVerifier, computeKeyVerifier(key));
+});
+
+test("deriveContentKey rejects on a wrong password (before any fetch)", async () => {
+  const { wrapped } = await encryptForUpload(one(bytes(100)), META, {
+    password: "right",
+  });
+  await assert.rejects(() =>
+    deriveContentKey({
+      password: "wrong",
+      wrapped: wrapped!.wrapped,
+      salt: wrapped!.salt,
+    }),
+  );
+});
+
+test("the verifier never equals the URL key (one-way, not an echo)", async () => {
+  const { keyForUrl, keyVerifier } = await encryptForUpload(one(bytes(10)), META);
+  assert.notEqual(keyVerifier, keyForUrl);
 });
 
 test("the server-visible blob leaks neither the filename nor the content", async () => {

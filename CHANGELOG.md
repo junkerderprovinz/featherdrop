@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Zero-knowledge downloads now require proof of key knowledge before
+  counting.** For format=2 shares, `GET /api/d/<slug>` used to count — and, at
+  the limit, burn — a download with no credential at all, so anyone who learned
+  the slug (proxy/access logs) could exhaust a limited share and destroy the
+  file without ever holding the key. The uploader's browser now stores a one-way
+  *key verifier* (`base64url(SHA-256(content key))`, new nullable `key_verifier`
+  column) at finalize, and the download GET requires the same value in the
+  `x-fd-key-verifier` header — compared constant-time — before anything is
+  counted or served; missing/wrong is a `401` with zero side effects. The
+  verifier reveals nothing about the key (the server still can't decrypt), the
+  client derives the key *before* fetching (a wrong password still fails without
+  a request), and both download paths (button + small-file preview prefetch)
+  send the header. Shares uploaded before this change (`key_verifier` NULL) keep
+  downloading exactly as before.
+
 ## [3.3.0] — 2026-06-09
 
 ### Changed

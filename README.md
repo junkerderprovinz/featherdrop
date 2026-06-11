@@ -199,6 +199,13 @@ the whole link as the secret:** anyone who has it can download the file until it
 expires, and a link copied without its `#k=…` part can't be decrypted — by
 design, since the server never had the key.
 
+Downloads also require **proof of key knowledge**: the browser sends a one-way
+SHA-256 *verifier* of the content key (`x-fd-key-verifier` header), so someone
+who only saw the slug in a proxy or access log can't burn through a share's
+download limit — without the verifier (which reveals nothing about the key),
+nothing is counted and nothing is deleted. Shares uploaded before this check
+existed keep working unchanged.
+
 Encryption and decryption stream through the Origin Private File System and a
 service worker, so multi-GB files are never buffered in memory. Over plain HTTP
 (not a secure context) OPFS isn't available, so encryption falls back to memory

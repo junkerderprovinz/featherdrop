@@ -1,7 +1,8 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import sodium from "libsodium-wrappers-sumo";
-import { ready, generateKey, encodeKey, decodeKey, encryptMeta, decryptMeta, encryptChunks, decryptChunks, PT_CHUNK, wrapKey, unwrapKey } from "../lib/e2e/crypto";
+import { ready, generateKey, encodeKey, decodeKey, encryptMeta, decryptMeta, encryptChunks, decryptChunks, PT_CHUNK, wrapKey, unwrapKey, computeKeyVerifier } from "../lib/e2e/crypto";
 
 before(async () => {
   await ready();
@@ -125,4 +126,45 @@ test("wrapped key does not contain the bare key", () => {
   const { wrapped } = wrapKey(key, "pw");
   const hay = new TextDecoder("latin1").decode(wrapped);
   assert.ok(!hay.includes(new TextDecoder("latin1").decode(key)));
+});
+
+// ---------------------------------------------------------------------------
+// computeKeyVerifier — download-authorization proof (base64url(SHA-256(K)))
+// ---------------------------------------------------------------------------
+
+test("computeKeyVerifier: deterministic vector for the all-zero key", () => {
+  // SHA-256 of 32 zero bytes, base64url without padding (43 chars).
+  const v = computeKeyVerifier(new Uint8Array(32));
+  assert.equal(v, "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU");
+  assert.equal(v.length, 43);
+});
+
+test("computeKeyVerifier: deterministic vector for the 0..31 key", () => {
+  const key = new Uint8Array(32).map((_, i) => i);
+  assert.equal(
+    computeKeyVerifier(key),
+    "Yw3NKWbEM2aRElRIu7JbT_QSpJxzLbLIq8G4WBvXEN0",
+  );
+});
+
+test("computeKeyVerifier matches an independent SHA-256 implementation", () => {
+  const key = generateKey();
+  const expected = createHash("sha256").update(key).digest("base64url");
+  assert.equal(computeKeyVerifier(key), expected);
+});
+
+test("computeKeyVerifier is base64url (no '+', '/', '=') and 43 chars", () => {
+  const v = computeKeyVerifier(generateKey());
+  assert.match(v, /^[A-Za-z0-9_-]{43}$/);
+});
+
+test("computeKeyVerifier: different keys give different verifiers", () => {
+  assert.notEqual(computeKeyVerifier(generateKey()), computeKeyVerifier(generateKey()));
+});
+
+test("the verifier does not reveal the key (one-way)", () => {
+  // Trivial sanity: the verifier string must not embed the key bytes.
+  const key = generateKey();
+  const v = computeKeyVerifier(key);
+  assert.ok(!v.includes(encodeKey(key).slice(0, 8)));
 });

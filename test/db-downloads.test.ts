@@ -51,6 +51,7 @@ function makeShare(maxDownloads: number | null): string {
     format: 1,
     wrapped_key: null,
     kdf_salt: null,
+    key_verifier: null,
   });
   return slug;
 }

@@ -192,16 +192,31 @@ const result = await page.evaluate(async () => {
       const slug = shareUrl.slice("https://x/d/".length, hashIdx);
       const body = metaStore.get(slug);
 
+      // finalize body must carry the key verifier (43-char base64url).
+      if (!/^[A-Za-z0-9_-]{43}$/.test(body.keyVerifier || "")) {
+        failures.push("link mode: finalize body missing/invalid keyVerifier: " + body.keyVerifier);
+      }
+
       let recoveredFilename;
       let recoveredBytes;
+      let sentVerifier;
       const { meta } = await downloadDecrypted(
-        () => Promise.resolve(getBlobStream(body.uploadId)),
+        (keyVerifier) => {
+          sentVerifier = keyVerifier;
+          return Promise.resolve(getBlobStream(body.uploadId));
+        },
         { keyFromUrl },
         async (plaintext, filename) => {
           recoveredFilename = filename;
           recoveredBytes = await collectStream(plaintext);
         },
       );
+
+      // The proof sent on download must equal what finalize stored — otherwise
+      // the real server would 401 before counting the download.
+      if (sentVerifier !== body.keyVerifier) {
+        failures.push(`link mode: download verifier ${sentVerifier} != finalize keyVerifier ${body.keyVerifier}`);
+      }
 
       if (recoveredFilename !== "My Photo.png") {
         failures.push(`link mode: filename expected "My Photo.png", got "${recoveredFilename}"`);
@@ -251,25 +266,36 @@ const result = await page.evaluate(async () => {
     const body = metaStore.get(slug);
     passwordUploadId = body.uploadId;
 
-    // finalize body must carry wrappedKey + kdfSalt
+    // finalize body must carry wrappedKey + kdfSalt + keyVerifier
     if (!body.wrappedKey) failures.push("password mode: finalize body missing wrappedKey");
     if (!body.kdfSalt) failures.push("password mode: finalize body missing kdfSalt");
     if (body.format !== 2) failures.push("password mode: format must be 2, got " + body.format);
     if (body.maxDownloads !== 3) failures.push("password mode: maxDownloads expected 3, got " + body.maxDownloads);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(body.keyVerifier || "")) {
+      failures.push("password mode: finalize body missing/invalid keyVerifier: " + body.keyVerifier);
+    }
 
     const wrapped = b64decode(body.wrappedKey);
     const salt = b64decode(body.kdfSalt);
 
     let recoveredFilename;
     let recoveredBytes;
+    let sentVerifier;
     const { meta } = await downloadDecrypted(
-      () => Promise.resolve(getBlobStream(body.uploadId)),
+      (keyVerifier) => {
+        sentVerifier = keyVerifier;
+        return Promise.resolve(getBlobStream(body.uploadId));
+      },
       { password: "pw", wrapped, salt },
       async (plaintext, filename) => {
         recoveredFilename = filename;
         recoveredBytes = await collectStream(plaintext);
       },
     );
+
+    if (sentVerifier !== body.keyVerifier) {
+      failures.push(`password mode: download verifier ${sentVerifier} != finalize keyVerifier ${body.keyVerifier}`);
+    }
 
     if (recoveredFilename !== "Secret.zip") {
       failures.push(`password mode: filename expected "Secret.zip", got "${recoveredFilename}"`);

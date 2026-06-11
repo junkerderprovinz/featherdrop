@@ -19,6 +19,7 @@ import {
   decryptMeta,
   wrapKey,
   unwrapKey,
+  computeKeyVerifier,
   type FileMeta,
 } from "./crypto";
 import { assembleBlob, readBlobMeta } from "./blob-layout";
@@ -36,6 +37,12 @@ export interface EncryptResult {
   keyForUrl: string;
   /** Present only in password mode — server stores this, the link carries no key. */
   wrapped?: WrappedKey;
+  /**
+   * base64url(SHA-256(K)) — sent to finalize so the server can demand the same
+   * proof (header `x-fd-key-verifier`) before counting a download. One-way:
+   * the server learns nothing that helps decryption.
+   */
+  keyVerifier: string;
 }
 
 /** Encrypt a plaintext stream + metadata into the upload blob + share secret. */
@@ -46,12 +53,13 @@ export async function encryptForUpload(
 ): Promise<EncryptResult> {
   await ready();
   const key = generateKey();
+  const keyVerifier = computeKeyVerifier(key);
   const encMeta = encryptMeta(meta, key);
   const blob = assembleBlob(encMeta, encryptChunks(content, key));
   if (opts?.password) {
-    return { blob, keyForUrl: "", wrapped: wrapKey(key, opts.password) };
+    return { blob, keyForUrl: "", wrapped: wrapKey(key, opts.password), keyVerifier };
   }
-  return { blob, keyForUrl: encodeKey(key) };
+  return { blob, keyForUrl: encodeKey(key), keyVerifier };
 }
 
 /** The secret needed to decrypt a download: a link key, or a password + wrap. */
@@ -59,19 +67,36 @@ export type DownloadSecret =
   | { keyFromUrl: string }
   | { password: string; wrapped: Uint8Array; salt: Uint8Array };
 
+/**
+ * Derive the raw content key K from the share secret — URL key (decode) or
+ * password (Argon2id unwrap; throws on a wrong password). Exposed so the
+ * download flow can derive K BEFORE fetching: it needs `computeKeyVerifier(K)`
+ * for the request, and a wrong password must fail before any download is
+ * counted server-side.
+ */
+export async function deriveContentKey(secret: DownloadSecret): Promise<Uint8Array> {
+  await ready();
+  return "keyFromUrl" in secret
+    ? decodeKey(secret.keyFromUrl)
+    : unwrapKey(secret.wrapped, secret.salt, secret.password);
+}
+
 /** Decrypt a downloaded blob stream back into its metadata + plaintext stream. */
 export async function decryptFromDownload(
   ciphertext: AsyncIterable<Uint8Array>,
   secret: DownloadSecret,
 ): Promise<{ meta: FileMeta; plaintext: AsyncIterable<Uint8Array> }> {
-  await ready();
   // The content key is derivable from the secret alone (URL key, or unwrap with
   // the password) — no server data needed beyond the opaque wrapped key/salt.
-  const key =
-    "keyFromUrl" in secret
-      ? decodeKey(secret.keyFromUrl)
-      : unwrapKey(secret.wrapped, secret.salt, secret.password);
+  return decryptWithKey(ciphertext, await deriveContentKey(secret));
+}
 
+/** Decrypt with an already-derived content key (skips the Argon2id re-derive). */
+export async function decryptWithKey(
+  ciphertext: AsyncIterable<Uint8Array>,
+  key: Uint8Array,
+): Promise<{ meta: FileMeta; plaintext: AsyncIterable<Uint8Array> }> {
+  await ready();
   const { encMeta, content } = await readBlobMeta(ciphertext);
   const meta = decryptMeta(encMeta, key);
   const plaintext = decryptChunks(content, key);
