@@ -1,5 +1,3 @@
-<h1 align="center">featherdrop</h1>
-
 <p align="center">
   <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/featherdrop-banner.png" alt="featherdrop" width="100%">
 </p>
