@@ -1,21 +1,60 @@
-// One-off asset renderer (run manually; @resvg/resvg-js is installed --no-save,
-// not a project dependency). Produces:
+// One-off asset renderer (run manually; @resvg/resvg-js + opentype.js come from
+// the GLOBAL npm root, not project dependencies). Produces:
 //   .github/assets/featherdrop-banner.svg  — canonical README banner: a white
-//                                            1600x500 card with the feather
-//                                            centered, no text (house style guide)
+//                                            1600x500 card, feather on the left,
+//                                            "featherdrop" in Bitter Italic (the
+//                                            app wordmark) + a claim below (house
+//                                            banner convention, as on BombVault)
 //   .github/assets/featherdrop-banner.png  — rendered banner
 //   .github/assets/icon.png                — 512x512 square template icon
 //   app/opengraph-image.png                — 1200x630 social/link-preview card
 //   app/twitter-image.png                  — same card, for Twitter/X
 // Placement is derived from the path's real bounding box, so the feather is
-// centered correctly regardless of the glyph's internal offset.
+// positioned correctly regardless of the glyph's internal offset. The banner
+// text is converted to SVG paths (opentype.js) so the SVG is self-contained —
+// the Bitter (OFL) variable fonts are fetched at runtime to the OS temp dir and
+// are NOT committed to the repo.
 //
-// Usage:  npm install --no-save @resvg/resvg-js && node scripts/render-assets.mjs
-import { Resvg } from "@resvg/resvg-js";
-import { readFileSync, writeFileSync } from "node:fs";
+// Usage:  npm i -g @resvg/resvg-js opentype.js && node scripts/render-assets.mjs
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
+import { execSync } from "node:child_process";
+
+const require = createRequire(import.meta.url);
+const gRoot = execSync("npm root -g").toString().trim();
+const { Resvg } = require(`${gRoot}/@resvg/resvg-js`);
+const opentype = require(`${gRoot}/opentype.js`);
 
 const ASSETS = new URL("../.github/assets/", import.meta.url);
 const logoSvg = readFileSync(new URL("featherdrop-logo.svg", ASSETS), "utf8");
+
+// Bitter (OFL) — the app's wordmark font. Italic 500 carries the wordmark
+// (matching the app's fw=500), upright 400 carries the claim.
+// NOTE: the google/fonts repo only ships Bitter as a VARIABLE font, and
+// opentype.js ignores gvar deltas — it would render the thinnest master as
+// hairline outlines. So fetch STATIC single-weight instances via the Google
+// Fonts CSS API instead: a legacy User-Agent makes it return plain TTF URLs.
+async function loadFont(spec, cacheName) {
+  const path = join(tmpdir(), `featherdrop-${cacheName}.ttf`);
+  if (!existsSync(path)) {
+    const cssRes = await fetch(`https://fonts.googleapis.com/css2?family=${spec}`, {
+      headers: { "User-Agent": "curl/8" }, // legacy UA → static TTF, no subsets
+    });
+    if (!cssRes.ok) throw new Error(`font css ${spec}: ${cssRes.status}`);
+    const css = await cssRes.text();
+    const m = css.match(/url\((https:[^)]+\.ttf)\)/);
+    if (!m) throw new Error(`no ttf url in css for ${spec}`);
+    const ttf = await fetch(m[1]);
+    if (!ttf.ok) throw new Error(`font ttf ${spec}: ${ttf.status}`);
+    writeFileSync(path, Buffer.from(await ttf.arrayBuffer()));
+  }
+  const buf = readFileSync(path);
+  return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+}
+const bitterItalic = await loadFont("Bitter:ital,wght@1,500", "Bitter-Italic-500");
+const bitterRegular = await loadFont("Bitter:wght@400", "Bitter-Regular-400");
 
 // Inner content (defs + path) without the outer <svg> wrapper, so we can re-wrap
 // it in arbitrary viewBoxes.
@@ -42,18 +81,73 @@ const bb = probe.getBBox();
 if (!bb) throw new Error("could not compute bbox");
 const { x, y, width: w, height: h } = bb;
 
-// --- Banner: canonical 1600x500 white card, feather centered, no text
-//     (house style guide: white #ffffff background, logo only). ---
+// --- Banner: canonical 1600x500 white card — feather on the left, the
+//     "featherdrop" wordmark (Bitter Italic, the app's wordmark style incl. its
+//     negative letter-spacing, filled with the logo's gold gradient) and a grey
+//     claim below it (house banner convention, as on BombVault). ---
 const BW = 1600;
 const BH = 500;
-const s = (BH * 0.78) / h; // fit the feather to ~78% of the banner height
-const tx = (BW - w * s) / 2 - x * s; // center the bbox horizontally
-const ty = (BH - h * s) / 2 - y * s; // center the bbox vertically
+const NAME = "featherdrop";
+const CLAIM = "Drop it like it's hot.";
+const CLAIM_FILL = "#5a5d5e"; // house claim grey (BombVault banner)
+// The app wordmark uses letterSpacing -1px at 32px → -0.03125 em.
+const NAME_SPACING = -0.031;
+
+const LH = 410; // feather height (by real bbox)
+const s = LH / h;
+const logoW = w * s;
+let nameSize = 140;
+let claimSize = 42;
+const gap = 56;
+const lineGap = 22;
+
+const nameWidth = () =>
+  bitterItalic.getAdvanceWidth(NAME, nameSize, { kerning: true, letterSpacing: NAME_SPACING });
+const claimWidth = () =>
+  bitterRegular.getAdvanceWidth(CLAIM, claimSize, { kerning: true });
+// Keep the whole group inside the card with breathing room; shrink text if needed.
+while (logoW + gap + Math.max(nameWidth(), claimWidth()) > BW - 120 && nameSize > 80) {
+  nameSize -= 4;
+  claimSize = Math.max(30, claimSize - 1);
+}
+
+const groupW = logoW + gap + Math.max(nameWidth(), claimWidth());
+const startX = (BW - groupW) / 2;
+const tx = startX - x * s;
+const ty = (BH - LH) / 2 - y * s;
+const bTextX = startX + logoW + gap;
+
+const em = (f, size) => size / f.unitsPerEm;
+const nameAsc = bitterItalic.ascender * em(bitterItalic, nameSize);
+const nameDesc = -bitterItalic.descender * em(bitterItalic, nameSize);
+const claimAsc = bitterRegular.ascender * em(bitterRegular, claimSize);
+const blockH = nameAsc + nameDesc + lineGap + claimAsc;
+const nameBaseline = BH / 2 - blockH / 2 + nameAsc;
+const claimBaseline = nameBaseline + nameDesc + lineGap + claimAsc;
+
+const namePath = bitterItalic
+  .getPath(NAME, bTextX, nameBaseline, nameSize, { kerning: true, letterSpacing: NAME_SPACING })
+  .toPathData(2);
+const claimPath = bitterRegular
+  .getPath(CLAIM, bTextX, claimBaseline, claimSize, { kerning: true })
+  .toPathData(2);
+
 const bannerSvg =
   `<?xml version="1.0" encoding="UTF-8"?>\n` +
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BW} ${BH}" width="${BW}" height="${BH}" role="img" aria-label="featherdrop">\n` +
+  `  <defs>\n` +
+  // Same gold ramp as the feather (fd-gold), respanned vertically across the
+  // wordmark's em box so the gradient runs top-light → bottom-dark on the text.
+  `    <linearGradient id="fd-gold-name" x1="0" y1="${round(nameBaseline - nameAsc)}" x2="0" y2="${round(nameBaseline + nameDesc)}" gradientUnits="userSpaceOnUse">\n` +
+  `      <stop offset="0" stop-color="#E0B53A"/>\n` +
+  `      <stop offset="0.5" stop-color="#D4AF37"/>\n` +
+  `      <stop offset="1" stop-color="#A97C0A"/>\n` +
+  `    </linearGradient>\n` +
+  `  </defs>\n` +
   `  <rect width="${BW}" height="${BH}" fill="#ffffff"/>\n` +
   `  <g transform="translate(${round(tx)},${round(ty)}) scale(${round(s)})">${inner}</g>\n` +
+  `  <path d="${namePath}" fill="url(#fd-gold-name)"/>\n` +
+  `  <path d="${claimPath}" fill="${CLAIM_FILL}"/>\n` +
   `</svg>\n`;
 writeFileSync(new URL("featherdrop-banner.svg", ASSETS), bannerSvg);
 writeFileSync(new URL("featherdrop-banner.png", ASSETS), renderPng(bannerSvg, BW));
