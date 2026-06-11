@@ -80,6 +80,7 @@ jobs:
           load: true
           tags: featherdrop:smoke-amd64
           cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build arm64 image for smoke test
         uses: docker/build-push-action@v6
@@ -90,6 +91,7 @@ jobs:
           load: true
           tags: featherdrop:smoke-arm64
           cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # Boot BOTH published arches before anything is pushed — :latest is
       # multi-arch, so a green amd64 alone would still let a broken arm64 image

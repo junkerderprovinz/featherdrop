@@ -268,11 +268,21 @@ export async function POST(
     return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
   }
 
+  // Mark the cookie Secure when the request arrived over HTTPS — directly or
+  // via a reverse proxy (x-forwarded-proto; first hop wins in a proxy chain).
+  // Derived from the request, not hardcoded: a Secure cookie set over plain
+  // LAN HTTP would be dropped by the browser and break the download flow.
+  const proto =
+    req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+    req.nextUrl.protocol.replace(/:$/, "");
+  const secure = proto === "https";
+
   const setCookie = (res: NextResponse, value: string) =>
     res.cookies.set(COOKIE, value, {
       path: `/api/d/${rec.slug}`,
       httpOnly: true,
       sameSite: "strict",
+      secure,
       maxAge: 300,
     });
 

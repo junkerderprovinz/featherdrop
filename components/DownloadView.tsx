@@ -161,7 +161,11 @@ export function DownloadView({
         secret,
         async (plaintext, filename) => {
           if (canStreamDownload()) {
-            await streamToDownload(plaintext, filename, size);
+            // No size: `size` is the CIPHERTEXT length (DB column) and the
+            // decrypted metadata carries only {name, type} — a Content-Length
+            // larger than the plaintext makes Chromium mark the download as
+            // failed, so the SW must not set one.
+            await streamToDownload(plaintext, filename);
           } else {
             // Blob fallback: collect the stream into memory.
             // Cast to Uint8Array<ArrayBuffer> so TS 5.9 strict variance accepts

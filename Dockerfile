@@ -73,6 +73,9 @@ LABEL org.opencontainers.image.title="featherdrop" \
 # there). Static assets aren't traced into standalone, so copy them separately.
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# standalone does not include public/ — copy it so /sw-download.js (required for
+# streaming zero-knowledge downloads) and other static files are served.
+COPY --from=build /app/public ./public
 
 # Init-log banner (brand art is a shared asset; container name passed at runtime).
 COPY .github/assets/banner-raw.txt /usr/local/share/banner-raw.txt

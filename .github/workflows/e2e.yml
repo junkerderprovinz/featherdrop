@@ -52,10 +52,10 @@ jobs:
             if ! kill -0 $SERVER_PID 2>/dev/null; then echo "server died early"; cat /tmp/server.log; exit 1; fi
             sleep 1
           done
+          # Fail fast if the loop timed out without the server ever coming up.
+          curl -sf http://localhost:3000/ >/dev/null || { echo 'server never came up'; cat /tmp/server.log; exit 1; }
           node test/e2e/run.mjs
-          STATUS=$?
           kill $SERVER_PID 2>/dev/null || true
-          exit $STATUS
 
       - name: Server log (on failure)
         if: failure()
