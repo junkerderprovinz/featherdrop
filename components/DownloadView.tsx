@@ -152,8 +152,13 @@ export function DownloadView({
       }
 
       const { meta } = await downloadDecrypted(
-        () =>
-          fetch(downloadUrl).then((r) => {
+        // The flow derives the content key first (a wrong password rejects
+        // before any fetch) and hands us its SHA-256 verifier: the server
+        // requires this proof of key knowledge before counting the download.
+        (keyVerifier) =>
+          fetch(downloadUrl, {
+            headers: { "x-fd-key-verifier": keyVerifier },
+          }).then((r) => {
             if (!r.ok) throw new Error(`fetch ${r.status}`);
             // r.body is ReadableStream<Uint8Array> at runtime.
             return r.body as ReadableStream<Uint8Array>;
@@ -210,8 +215,12 @@ export function DownloadView({
       try {
         const chunks: Uint8Array<ArrayBuffer>[] = [];
         const { meta } = await downloadDecrypted(
-          () =>
-            fetch(downloadUrl).then((r) => {
+          // Same key-verifier header as the download button — the prefetch is a
+          // real, counted-eligible GET and must carry the same proof.
+          (keyVerifier) =>
+            fetch(downloadUrl, {
+              headers: { "x-fd-key-verifier": keyVerifier },
+            }).then((r) => {
               if (!r.ok) throw new Error(`fetch ${r.status}`);
               return r.body as ReadableStream<Uint8Array>;
             }),

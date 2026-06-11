@@ -22,6 +22,9 @@ export interface FileRecord {
   format: number; // 1 = legacy at-rest, 2 = zero-knowledge (client-encrypted)
   wrapped_key: Buffer | null; // password mode: content key wrapped with Argon2id-derived KEK
   kdf_salt: Buffer | null; // password mode: 16-byte Argon2id salt
+  // format=2 download authorization: base64url(SHA-256(content key)), computed
+  // client-side. NULL = legacy v2 upload without a verifier (served as before).
+  key_verifier: string | null;
 }
 
 export interface DownloadResult {
@@ -52,11 +55,11 @@ export function createFileRecord(rec: Omit<FileRecord, "download_count">): void 
       `INSERT INTO files
         (id, slug, original_name, size, mime, password_hash, expires_at,
          created_at, max_downloads, encrypted, enc_mode, enc_key_wrapped,
-         format, wrapped_key, kdf_salt)
+         format, wrapped_key, kdf_salt, key_verifier)
        VALUES
         (@id, @slug, @original_name, @size, @mime, @password_hash, @expires_at,
          @created_at, @max_downloads, @encrypted, @enc_mode, @enc_key_wrapped,
-         @format, @wrapped_key, @kdf_salt)`,
+         @format, @wrapped_key, @kdf_salt, @key_verifier)`,
     )
     .run(rec);
 }

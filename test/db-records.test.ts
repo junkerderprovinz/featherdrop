@@ -60,6 +60,7 @@ test("v1 record: createFileRecord + getFileBySlug round-trips all v1 fields", { 
     format: 1,
     wrapped_key: null,
     kdf_salt: null,
+    key_verifier: null,
   });
 
   const row = db!.getFileBySlug(slug);
@@ -102,6 +103,7 @@ test("v2 link-mode record: format = 2, wrapped_key/kdf_salt = null", { skip: dbR
     format: 2,
     wrapped_key: null,
     kdf_salt: null,
+    key_verifier: null,
   });
 
   const row = db!.getFileBySlug(slug);
@@ -109,6 +111,7 @@ test("v2 link-mode record: format = 2, wrapped_key/kdf_salt = null", { skip: dbR
   assert.equal(row.format, 2, "format must be 2");
   assert.equal(row.wrapped_key, null, "link mode: wrapped_key must be null");
   assert.equal(row.kdf_salt, null, "link mode: kdf_salt must be null");
+  assert.equal(row.key_verifier, null, "no verifier sent: key_verifier must be null");
 });
 
 // ---------------------------------------------------------------------------
@@ -141,11 +144,17 @@ test("v2 password-mode record: wrapped_key + kdf_salt survive the round-trip as 
     format: 2,
     wrapped_key: wrappedKey,
     kdf_salt: kdfSalt,
+    key_verifier: "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU",
   });
 
   const row = db!.getFileBySlug(slug);
   assert.ok(row, "v2 password-mode row must be retrievable");
   assert.equal(row.format, 2, "format must be 2");
+  assert.equal(
+    row.key_verifier,
+    "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU",
+    "key_verifier must round-trip verbatim",
+  );
 
   // better-sqlite3 returns BLOBs as Buffer; compare byte-for-byte.
   assert.ok(row.wrapped_key instanceof Buffer, "wrapped_key must come back as Buffer");

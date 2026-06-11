@@ -133,3 +133,52 @@ test("applySchema with v2 columns is idempotent (running twice does not throw)",
   assert.doesNotThrow(() => applySchema(db), "second applySchema must be a no-op");
   db.close();
 });
+
+// Key verifier (download authorization for format=2) -------------------------
+
+test("applySchema adds the key_verifier column", { skip: dbReason }, () => {
+  const db = new Database(freshDbPath());
+  applySchema(db);
+  const cols = (db.prepare("PRAGMA table_info(files)").all() as { name: string }[]).map(
+    (c) => c.name,
+  );
+  assert.ok(cols.includes("key_verifier"), "missing column key_verifier");
+  db.close();
+});
+
+test("migrates a pre-verifier v2 DB: key_verifier added, existing rows NULL", { skip: dbReason }, () => {
+  const path = freshDbPath();
+  // The exact schema as of the first zero-knowledge release (no key_verifier).
+  const legacy = new Database(path);
+  legacy.exec(`
+    CREATE TABLE files (
+      id TEXT PRIMARY KEY, slug TEXT UNIQUE NOT NULL, original_name TEXT NOT NULL,
+      size INTEGER NOT NULL, mime TEXT, password_hash TEXT, expires_at INTEGER,
+      created_at INTEGER NOT NULL, download_count INTEGER NOT NULL DEFAULT 0,
+      encrypted INTEGER NOT NULL DEFAULT 0,
+      enc_mode TEXT,
+      enc_key_wrapped TEXT,
+      max_downloads INTEGER,
+      format INTEGER NOT NULL DEFAULT 1,
+      wrapped_key BLOB,
+      kdf_salt BLOB
+    );
+  `);
+  legacy
+    .prepare(
+      `INSERT INTO files (id, slug, original_name, size, created_at, format)
+       VALUES (?,?,?,?,?,?)`,
+    )
+    .run("zk1", "slugzk", "", 99, Date.now(), 2);
+  legacy.close();
+
+  const db = new Database(path);
+  applySchema(db);
+  const row = db
+    .prepare("SELECT key_verifier FROM files WHERE id = ?")
+    .get("zk1") as { key_verifier: string | null };
+  // NULL = legacy zero-knowledge upload without a verifier: the download route
+  // must keep serving it without proof (backward compatibility).
+  assert.equal(row.key_verifier, null, "pre-verifier rows must migrate to NULL");
+  db.close();
+});

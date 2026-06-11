@@ -18,6 +18,7 @@ import { isUploadComplete } from "@/lib/upload";
 import { parseMaxDownloads } from "@/lib/downloads";
 import { chooseEncMode } from "@/lib/encmode";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
+import { isValidKeyVerifier } from "@/lib/key-verifier";
 import { mimeFromName } from "@/lib/mime";
 import { hashPassword } from "@/lib/password";
 import { createFileRecord, getFileBySlug } from "@/server/db";
@@ -34,6 +35,10 @@ interface FinalizeBody {
   format?: number; // 2 = zero-knowledge; absent/1 = v1 legacy
   wrappedKey?: string; // base64-encoded: content key wrapped with Argon2id-derived KEK (password mode)
   kdfSalt?: string; // base64-encoded: 16-byte Argon2id salt (password mode)
+  // base64url(SHA-256(content key)) — download authorization (one-way; the
+  // server can never recover the key from it). Optional for backward
+  // compatibility, but our client always sends it for format=2 uploads.
+  keyVerifier?: string;
 }
 
 // Read the tus upload's metadata sidecar (<id>.json, written by @tus/file-store's
@@ -111,6 +116,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "invalid expiry" }, { status: 400 });
   }
 
+  // Key verifier (format=2 download authorization): optional, but when present
+  // it must be exactly base64url(SHA-256(K)) shaped — 43 unpadded base64url
+  // chars. Validated here, BEFORE any file is moved, so a 400 has no side
+  // effects and the tus upload survives for a corrected retry.
+  if (body.keyVerifier !== undefined && !isValidKeyVerifier(body.keyVerifier)) {
+    return NextResponse.json({ error: "invalid keyVerifier" }, { status: 400 });
+  }
+
   const tmpPath = join(TMP_DIR, uploadId);
   let size: number;
   try {
@@ -170,6 +183,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       format: 2,
       wrapped_key,
       kdf_salt,
+      // NULL when an (older) client sent none — such shares download without
+      // proof, exactly like pre-verifier uploads.
+      key_verifier: body.keyVerifier ?? null,
     });
 
     // The client already holds the key (link: URL fragment it generated;
@@ -239,6 +255,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     format: 1,
     wrapped_key: null,
     kdf_salt: null,
+    key_verifier: null,
   });
 
   // The link key (link mode) goes to the uploader only, in the JSON response —

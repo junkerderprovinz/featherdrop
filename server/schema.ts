@@ -60,4 +60,12 @@ export function applySchema(db: Database.Database): void {
   addColumn("format", "format INTEGER NOT NULL DEFAULT 1");
   addColumn("wrapped_key", "wrapped_key BLOB");
   addColumn("kdf_salt", "kdf_salt BLOB");
+
+  // `key_verifier` — format=2 download authorization: base64url(SHA-256(K)) of
+  // the raw content key, computed client-side at upload. The download GET
+  // requires a matching `x-fd-key-verifier` header before counting/burning a
+  // download, so a leaked slug alone can't exhaust a limited share. One-way:
+  // it never reveals K. NULL = pre-verifier v2 uploads (and all v1 rows) —
+  // those keep downloading without proof, exactly as before.
+  addColumn("key_verifier", "key_verifier TEXT");
 }

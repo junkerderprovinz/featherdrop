@@ -56,6 +56,19 @@ export function decodeKey(s: string): Uint8Array {
   return sodium.from_base64(s, sodium.base64_variants.URLSAFE_NO_PADDING);
 }
 
+/**
+ * Download-authorization proof: base64url(SHA-256(K)) of the raw content key —
+ * 43 chars, unpadded. One-way: the server stores it at finalize and requires it
+ * (header `x-fd-key-verifier`) before counting/burning a format=2 download, but
+ * can never recover K from it. Requires `ready()` first.
+ */
+export function computeKeyVerifier(key: Uint8Array): string {
+  return sodium.to_base64(
+    sodium.crypto_hash_sha256(key),
+    sodium.base64_variants.URLSAFE_NO_PADDING,
+  );
+}
+
 export interface FileMeta {
   name: string;
   type: string;

@@ -11,6 +11,7 @@ import {
   registerDownload,
   type FileRecord,
 } from "@/server/db";
+import { verifierMatches } from "@/lib/key-verifier";
 import { verifyPassword } from "@/lib/password";
 import { downloadToken, tokenMatches } from "@/lib/token";
 import { decryptStream, unwrapKey } from "@/server/crypto";
@@ -110,6 +111,19 @@ export async function GET(
   // on save after decrypting the embedded metadata.
   // -------------------------------------------------------------------------
   if (rec.format === 2) {
+    // Key-verifier gate: when the upload stored base64url(SHA-256(K)), the GET
+    // must present the same value — proving it knows the content key — BEFORE
+    // anything is counted or burned. Without this, anyone who learned the slug
+    // (proxy/access logs) could exhaust a limited share and destroy the file
+    // without ever being able to decrypt it. The check is constant-time and
+    // one-way: the header never helps decryption. NULL = pre-verifier upload —
+    // served exactly as before (backward compatibility).
+    if (rec.key_verifier) {
+      const provided = req.headers.get("x-fd-key-verifier");
+      if (!provided || !verifierMatches(provided, rec.key_verifier)) {
+        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+      }
+    }
     const dl = registerDownload(rec.slug);
     if (!dl.allowed) {
       return NextResponse.json({ error: "not found" }, { status: 404 });

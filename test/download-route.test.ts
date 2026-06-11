@@ -60,6 +60,7 @@ function seedV2Record(
     expiresAt?: number | null;
     wrappedKey?: Buffer | null;
     kdfSalt?: Buffer | null;
+    keyVerifier?: string | null;
   } = {},
 ): { slug: string; id: string } {
   const id = uid();
@@ -81,6 +82,7 @@ function seedV2Record(
     format: 2,
     wrapped_key: opts.wrappedKey ?? null,
     kdf_salt: opts.kdfSalt ?? null,
+    key_verifier: opts.keyVerifier ?? null,
   });
   return { slug, id };
 }
@@ -106,12 +108,13 @@ function seedV1Record(content: Buffer): { slug: string; id: string } {
     format: 1,
     wrapped_key: null,
     kdf_salt: null,
+    key_verifier: null,
   });
   return { slug, id };
 }
 
-function makeGetRequest(slug: string): NextRequest {
-  return new NextRequest(`http://localhost/api/d/${slug}`);
+function makeGetRequest(slug: string, headers?: Record<string, string>): NextRequest {
+  return new NextRequest(`http://localhost/api/d/${slug}`, { headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +237,148 @@ test(
     assert.equal(res.headers.get("Content-Type"), "application/octet-stream");
     const body = Buffer.from(await res.arrayBuffer());
     assert.deepEqual(body, content);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// v2 key verifier: a stored verifier gates counting + serving
+// ---------------------------------------------------------------------------
+
+// Two well-formed 43-char base64url verifiers (the route compares strings; it
+// never recomputes a hash, so any base64url(SHA-256) shaped value works here).
+const VERIFIER = "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU";
+const WRONG_VERIFIER = "Yw3NKWbEM2aRElRIu7JbT_QSpJxzLbLIq8G4WBvXEN0";
+const HEADER = "x-fd-key-verifier";
+
+test(
+  "download v2 verifier: missing header is 401 and nothing is counted or burned",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("protected blob");
+    const { slug, id } = seedV2Record(content, {
+      maxDownloads: 1,
+      keyVerifier: VERIFIER,
+    });
+
+    const res = await routeMod!.GET(makeGetRequest(slug), { params: { slug } });
+    assert.equal(res.status, 401, "no header must be 401");
+
+    // The share must be completely untouched: count 0, row present, blob present.
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row, "row must survive an unauthorized GET");
+    assert.equal(row.download_count, 0, "nothing may be counted");
+    assert.ok(existsSync(join(testUploadsDir, id)), "blob must survive");
+  },
+);
+
+test(
+  "download v2 verifier: wrong header is 401 and nothing is counted",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("protected blob 2");
+    const { slug } = seedV2Record(content, {
+      maxDownloads: 1,
+      keyVerifier: VERIFIER,
+    });
+
+    const res = await routeMod!.GET(
+      makeGetRequest(slug, { [HEADER]: WRONG_VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 401, "wrong verifier must be 401");
+
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row, "row must survive");
+    assert.equal(row.download_count, 0, "nothing may be counted");
+  },
+);
+
+test(
+  "download v2 verifier: wrong-LENGTH header is 401 (no throw, no count)",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("protected blob 3");
+    const { slug } = seedV2Record(content, { keyVerifier: VERIFIER });
+
+    const res = await routeMod!.GET(
+      makeGetRequest(slug, { [HEADER]: "short" }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 401);
+
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row);
+    assert.equal(row.download_count, 0);
+  },
+);
+
+test(
+  "download v2 verifier: correct header is 200, counted, bytes verbatim",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("protected blob served with proof");
+    const { slug } = seedV2Record(content, { keyVerifier: VERIFIER });
+
+    const res = await routeMod!.GET(
+      makeGetRequest(slug, { [HEADER]: VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 200, "correct verifier must be 200");
+    assert.equal(res.headers.get("Content-Type"), "application/octet-stream");
+    const body = Buffer.from(await res.arrayBuffer());
+    assert.deepEqual(body, content, "bytes must be served verbatim");
+
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row, "unlimited share row must remain");
+    assert.equal(row.download_count, 1, "download must be counted exactly once");
+  },
+);
+
+test(
+  "download v2 verifier: burn-after-download still works with the header",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("burnable protected blob");
+    const { slug, id } = seedV2Record(content, {
+      maxDownloads: 1,
+      keyVerifier: VERIFIER,
+    });
+    const blobPath = join(testUploadsDir, id);
+
+    const res1 = await routeMod!.GET(
+      makeGetRequest(slug, { [HEADER]: VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res1.status, 200);
+    await res1.arrayBuffer();
+    await new Promise((r) => setTimeout(r, 50));
+
+    const res2 = await routeMod!.GET(
+      makeGetRequest(slug, { [HEADER]: VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res2.status, 404, "burned share must be gone");
+    assert.equal(existsSync(blobPath), false, "blob must be removed after burn");
+  },
+);
+
+test(
+  "download v2 backward compat: NULL key_verifier serves without any header",
+  { skip: dbReason },
+  async () => {
+    // A pre-verifier v2 upload (key_verifier NULL) must download exactly as
+    // before — no header required, download counted.
+    const content = Buffer.from("legacy v2 share without verifier");
+    const { slug } = seedV2Record(content, { keyVerifier: null });
+
+    const res = await routeMod!.GET(makeGetRequest(slug), { params: { slug } });
+    assert.equal(res.status, 200, "legacy v2 share must stay downloadable");
+    const body = Buffer.from(await res.arrayBuffer());
+    assert.deepEqual(body, content);
+
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row);
+    assert.equal(row.download_count, 1, "legacy share download is still counted");
   },
 );
 

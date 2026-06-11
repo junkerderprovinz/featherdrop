@@ -145,6 +145,30 @@ The server keeps tus + Next API but **loses all crypto**:
 - Removed: `server/crypto.ts` server-side use, the `fd_key` cookie + authorize
   POST, master-key/`MASTER_KEY`, `ENCRYPT_UPLOADS`, server-side inline preview.
 
+### 6.1 Key verifier (download authorization)
+
+v1 implicitly gated the download count on a valid credential (decrypt-before-
+count); v2 streams raw ciphertext, so without a countermeasure **anyone who
+learns the slug** (proxy/access logs) could exhaust a limited share and burn the
+file without ever holding the key. The fix is a one-way proof of key knowledge:
+
+- **Verifier** = `base64url(SHA-256(K))` of the raw 32-byte content key —
+  43 unpadded chars. Computed client-side (`computeKeyVerifier` in
+  `lib/e2e/crypto.ts`); the server never sees K, and the verifier cannot
+  decrypt anything — it only authorizes.
+- **Upload**: the client sends `keyVerifier` in the finalize body (optional
+  field, validated as 43-char base64url); stored in the nullable
+  `key_verifier` column.
+- **Download**: when `key_verifier` is set, `GET /api/d/<slug>` requires the
+  header **`x-fd-key-verifier`** and compares it constant-time
+  (`verifierMatches` in `lib/key-verifier.ts`). Missing/wrong → `401` and
+  **nothing is counted or burned**. The client derives K *before* the fetch
+  (link: URL fragment; password: Argon2id unwrap — a wrong password fails
+  client-side, no request) and sends the header on every ciphertext GET,
+  including the small-file preview prefetch.
+- **Backward compatibility**: rows with `key_verifier = NULL` (uploads from
+  before this change) are served exactly as before — no header required.
+
 ## 7. Data model changes
 
 `files` table (v2 columns):

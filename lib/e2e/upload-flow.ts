@@ -20,6 +20,12 @@ export interface FinalizeRequest {
   wrappedKey?: string;
   /** base64-encoded KDF salt (password mode only). */
   kdfSalt?: string;
+  /**
+   * base64url(SHA-256(content key)) — the server stores it and requires the
+   * same value (header `x-fd-key-verifier`) before counting a download, so a
+   * leaked slug alone can't burn the share. One-way; reveals nothing about K.
+   */
+  keyVerifier: string;
 }
 
 export interface UploadDeps {
@@ -49,7 +55,7 @@ export async function uploadEncrypted(
 ): Promise<{ shareUrl: string }> {
   // Phase 1: encrypt.
   onPhase?.("encrypting", 0);
-  const { blob, keyForUrl, wrapped } = await encryptForUpload(
+  const { blob, keyForUrl, wrapped, keyVerifier } = await encryptForUpload(
     streamToAsyncIterable(file.stream()),
     { name: file.name, type: file.type },
     opts.password ? { password: opts.password } : undefined,
@@ -83,12 +89,15 @@ export async function uploadEncrypted(
     onPhase?.("uploading", 1);
 
     // Build the finalize body.  In password mode the server stores the wrapped
-    // key + salt (base64); in link mode they are omitted.
+    // key + salt (base64); in link mode they are omitted. The key verifier is
+    // always sent — it lets the server demand proof of key knowledge before
+    // counting a download (see FinalizeRequest.keyVerifier).
     const body: FinalizeRequest = {
       uploadId,
       expiry: opts.expiry,
       maxDownloads: opts.maxDownloads,
       format: 2,
+      keyVerifier,
     };
     if (wrapped) {
       // Standard base64 (btoa) matches what the server expects for binary blobs.

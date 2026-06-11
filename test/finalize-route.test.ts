@@ -151,6 +151,80 @@ test(
 );
 
 // ---------------------------------------------------------------------------
+// v2 key verifier (download authorization)
+// ---------------------------------------------------------------------------
+
+// A well-formed verifier: 43 base64url chars (SHA-256, unpadded).
+const GOOD_VERIFIER = "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU";
+
+test(
+  "finalize v2: stores a valid keyVerifier in the row",
+  { skip: dbReason },
+  async () => {
+    const uploadId = makeFakeTusUpload(Buffer.from("blob with verifier"));
+
+    const req = makeRequest({ uploadId, format: 2, keyVerifier: GOOD_VERIFIER });
+    const res = await routeMod!.POST(req);
+    assert.equal(res.status, 200);
+
+    const json = (await res.json()) as Record<string, unknown>;
+    const row = db!.getFileBySlug(json.slug as string);
+    assert.ok(row, "DB row must exist");
+    assert.equal(row.key_verifier, GOOD_VERIFIER, "key_verifier must be stored verbatim");
+  },
+);
+
+test(
+  "finalize v2: keyVerifier is optional — absent stores NULL (legacy clients)",
+  { skip: dbReason },
+  async () => {
+    const uploadId = makeFakeTusUpload(Buffer.from("blob without verifier"));
+
+    const req = makeRequest({ uploadId, format: 2 });
+    const res = await routeMod!.POST(req);
+    assert.equal(res.status, 200);
+
+    const json = (await res.json()) as Record<string, unknown>;
+    const row = db!.getFileBySlug(json.slug as string);
+    assert.ok(row, "DB row must exist");
+    assert.equal(row.key_verifier, null, "absent keyVerifier must store NULL");
+  },
+);
+
+test(
+  "finalize v2: invalid keyVerifier is 400 and the upload is NOT consumed",
+  { skip: dbReason },
+  async () => {
+    const invalid = [
+      GOOD_VERIFIER.slice(0, 42), // too short
+      GOOD_VERIFIER + "A", // too long
+      GOOD_VERIFIER.slice(0, 42) + "+", // standard-base64 charset
+      GOOD_VERIFIER.slice(0, 42) + "=", // padding
+      42, // not a string
+    ];
+    for (const keyVerifier of invalid) {
+      const uploadId = makeFakeTusUpload(Buffer.from("blob, bad verifier"));
+
+      const req = makeRequest({ uploadId, format: 2, keyVerifier });
+      const res = await routeMod!.POST(req);
+      assert.equal(res.status, 400, `must 400 for ${JSON.stringify(keyVerifier)}`);
+
+      // The 400 must fire BEFORE any side effect: tmp blob still in place,
+      // nothing published to UPLOADS_DIR.
+      assert.ok(
+        existsSync(join(testTmpDir, uploadId)),
+        "tmp upload must survive a rejected finalize",
+      );
+      assert.equal(
+        existsSync(join(testUploadsDir, uploadId)),
+        false,
+        "nothing may be published on a rejected finalize",
+      );
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
 // v2 sidecar cleanup
 // ---------------------------------------------------------------------------
 
@@ -196,6 +270,7 @@ test(
     assert.equal(row.format, 1, "v1 finalize must produce format=1");
     assert.equal(row.wrapped_key, null, "v1 row must have null wrapped_key");
     assert.equal(row.kdf_salt, null, "v1 row must have null kdf_salt");
+    assert.equal(row.key_verifier, null, "v1 row must have null key_verifier");
     // v1 does store the filename (ENCRYPT_UPLOADS=false path → plaintext rename)
     assert.equal(row.original_name, "readme.txt");
   },
