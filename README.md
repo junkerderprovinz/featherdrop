@@ -246,7 +246,7 @@ Pull the template into Unraid via the console / SSH:
 ```bash
 mkdir -p /boot/config/plugins/dockerMan/templates-user && \
 curl -fsSL -o /boot/config/plugins/dockerMan/templates-user/my-featherdrop.xml \
-  https://raw.githubusercontent.com/junkerderprovinz/unraid-docker-templates/main/featherdrop/featherdrop.xml
+  https://raw.githubusercontent.com/junkerderprovinz/unraid-apps/main/featherdrop/featherdrop.xml
 ```
 
 Then **Docker → Add Container → featherdrop** under *User templates*. Map the
