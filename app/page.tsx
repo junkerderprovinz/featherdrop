@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActionIcon,
+  Alert,
   Box,
   Center,
   Container,
@@ -20,7 +21,7 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconMoon, IconSun } from "@tabler/icons-react";
+import { IconAlertTriangle, IconMoon, IconSun } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import * as tus from "tus-js-client";
 import { Logo } from "@/components/Logo";
@@ -54,6 +55,15 @@ export default function HomePage() {
   const [password, setPassword] = useState("");
   const [maxDownloads, setMaxDownloads] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string>("");
+
+  // Over a plain-HTTP origin (e.g. opened by IP), the browser treats the page as
+  // an insecure context: OPFS and the download service worker are unavailable,
+  // so large uploads fall back to memory (capped) and streamed downloads are off.
+  // Surface this instead of letting features silently degrade.
+  const [insecure, setInsecure] = useState(false);
+  useEffect(() => {
+    setInsecure(typeof window !== "undefined" && !window.isSecureContext);
+  }, []);
 
   const onDrop = (f: File) => {
     setFile(f);
@@ -196,6 +206,20 @@ export default function HomePage() {
           </Group>
         </UnstyledButton>
       </Center>
+
+      {insecure && (
+        <Center mb={24}>
+          <Alert
+            variant="light"
+            color="yellow"
+            icon={<IconAlertTriangle size={18} />}
+            maw={860}
+            w="100%"
+          >
+            {t("insecure.warning")}
+          </Alert>
+        </Center>
+      )}
 
       {status === "done" ? (
         <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />

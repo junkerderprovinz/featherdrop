@@ -7,6 +7,8 @@ export const zh: Translation = {
   "theme.toggle": "切换主题",
   "language.label": "语言",
 
+
+  "insecure.warning": "连接不安全（HTTP）。大文件上传和流式下载受限。请通过 HTTPS 打开本页面以使用全部功能。",
   "drop.drag": "将文件拖到此处",
   "drop.browse": "或点击浏览",
   "drop.replace": "拖入另一个以替换",

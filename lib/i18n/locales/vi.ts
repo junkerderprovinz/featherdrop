@@ -7,6 +7,8 @@ export const vi: Translation = {
   "theme.toggle": "Đổi giao diện",
   "language.label": "Ngôn ngữ",
 
+
+  "insecure.warning": "Kết nối không an toàn (HTTP). Tải lên tệp lớn và tải xuống dạng luồng bị giới hạn. Hãy mở trang này qua HTTPS để có đầy đủ tính năng.",
   "drop.drag": "Kéo một tệp vào đây",
   "drop.browse": "hoặc nhấp để duyệt",
   "drop.replace": "thả tệp khác để thay thế",

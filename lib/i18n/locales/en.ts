@@ -10,6 +10,8 @@ export const en = {
   "theme.toggle": "Toggle theme",
   "language.label": "Language",
 
+
+  "insecure.warning": "Insecure connection (HTTP). Large uploads and streamed downloads are limited. Open this page over HTTPS for full functionality.",
   "drop.drag": "Drag a file here to upload",
   "drop.browse": "or click to choose one",
   "drop.replace": "drop another file to replace it",

@@ -7,6 +7,8 @@ export const no: Translation = {
   "theme.toggle": "Bytt tema",
   "language.label": "Språk",
 
+
+  "insecure.warning": "Usikker tilkobling (HTTP). Store opplastinger og strømmede nedlastinger er begrenset. Åpne denne siden over HTTPS for full funksjonalitet.",
   "drop.drag": "Dra en fil hit",
   "drop.browse": "eller klikk for å bla gjennom",
   "drop.replace": "slipp en annen for å erstatte",

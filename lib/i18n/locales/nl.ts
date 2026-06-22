@@ -7,6 +7,8 @@ export const nl: Translation = {
   "theme.toggle": "Thema wisselen",
   "language.label": "Taal",
 
+
+  "insecure.warning": "Onveilige verbinding (HTTP). Grote uploads en streaming-downloads zijn beperkt. Open deze pagina via HTTPS voor alle functies.",
   "drop.drag": "Sleep hier een bestand",
   "drop.browse": "of klik om te bladeren",
   "drop.replace": "zet een ander neer om te vervangen",

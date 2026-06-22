@@ -7,6 +7,8 @@ export const sv: Translation = {
   "theme.toggle": "Växla tema",
   "language.label": "Språk",
 
+
+  "insecure.warning": "Osäker anslutning (HTTP). Stora uppladdningar och strömmade nedladdningar är begränsade. Öppna sidan via HTTPS för full funktionalitet.",
   "drop.drag": "Dra en fil hit",
   "drop.browse": "eller klicka för att bläddra",
   "drop.replace": "släpp en annan för att ersätta",

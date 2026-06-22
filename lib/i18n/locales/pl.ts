@@ -7,6 +7,8 @@ export const pl: Translation = {
   "theme.toggle": "Przełącz motyw",
   "language.label": "Język",
 
+
+  "insecure.warning": "Niezabezpieczone połączenie (HTTP). Duże przesyłanie i pobieranie strumieniowe są ograniczone. Otwórz tę stronę przez HTTPS, aby uzyskać pełną funkcjonalność.",
   "drop.drag": "Przeciągnij plik tutaj",
   "drop.browse": "lub kliknij, aby wybrać",
   "drop.replace": "upuść inny, aby zastąpić",

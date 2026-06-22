@@ -7,6 +7,8 @@ export const da: Translation = {
   "theme.toggle": "Skift tema",
   "language.label": "Sprog",
 
+
+  "insecure.warning": "Usikker forbindelse (HTTP). Store uploads og streamede downloads er begrænsede. Åbn denne side over HTTPS for fuld funktionalitet.",
   "drop.drag": "Træk en fil hertil",
   "drop.browse": "eller klik for at gennemse",
   "drop.replace": "slip en anden for at erstatte",

@@ -7,6 +7,8 @@ export const tr: Translation = {
   "theme.toggle": "Temayı değiştir",
   "language.label": "Dil",
 
+
+  "insecure.warning": "Güvenli olmayan bağlantı (HTTP). Büyük yüklemeler ve akışlı indirmeler sınırlıdır. Tüm işlevler için bu sayfayı HTTPS üzerinden açın.",
   "drop.drag": "Bir dosyayı buraya sürükle",
   "drop.browse": "ya da göz atmak için tıkla",
   "drop.replace": "değiştirmek için başka birini bırak",

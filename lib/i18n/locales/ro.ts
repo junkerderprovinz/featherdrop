@@ -7,6 +7,8 @@ export const ro: Translation = {
   "theme.toggle": "Comută tema",
   "language.label": "Limbă",
 
+
+  "insecure.warning": "Conexiune nesecurizată (HTTP). Încărcările mari și descărcările în flux sunt limitate. Deschide această pagină prin HTTPS pentru funcționalitate completă.",
   "drop.drag": "Trage un fișier aici",
   "drop.browse": "sau dă clic pentru a răsfoi",
   "drop.replace": "lasă altul pentru a înlocui",
