@@ -7,6 +7,8 @@ export const hu: Translation = {
   "theme.toggle": "Téma váltása",
   "language.label": "Nyelv",
 
+
+  "insecure.warning": "Nem biztonságos kapcsolat (HTTP). A nagy feltöltések és a streamelt letöltések korlátozottak. Nyisd meg ezt az oldalt HTTPS-en a teljes funkcionalitásért.",
   "drop.drag": "Húzz ide egy fájlt",
   "drop.browse": "vagy kattints a tallózáshoz",
   "drop.replace": "dobj be másikat a cseréhez",

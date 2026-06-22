@@ -7,6 +7,8 @@ export const he: Translation = {
   "theme.toggle": "החלפת ערכת נושא",
   "language.label": "שפה",
 
+
+  "insecure.warning": "חיבור לא מאובטח (HTTP). העלאות גדולות והורדות בזרימה מוגבלות. פתחו דף זה דרך HTTPS לקבלת כל התכונות.",
   "drop.drag": "גררו קובץ לכאן",
   "drop.browse": "או לחצו לעיון",
   "drop.replace": "שחררו אחר כדי להחליף",

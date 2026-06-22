@@ -7,6 +7,8 @@ export const cs: Translation = {
   "theme.toggle": "Přepnout motiv",
   "language.label": "Jazyk",
 
+
+  "insecure.warning": "Nezabezpečené připojení (HTTP). Velká nahrávání a streamované stahování jsou omezené. Otevřete tuto stránku přes HTTPS pro plnou funkčnost.",
   "drop.drag": "Přetáhněte sem soubor",
   "drop.browse": "nebo klikněte pro procházení",
   "drop.replace": "přetáhněte jiný pro nahrazení",

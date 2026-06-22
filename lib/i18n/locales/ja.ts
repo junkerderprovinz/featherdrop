@@ -7,6 +7,8 @@ export const ja: Translation = {
   "theme.toggle": "テーマを切り替え",
   "language.label": "言語",
 
+
+  "insecure.warning": "安全でない接続（HTTP）です。大きなアップロードとストリーミングダウンロードは制限されます。すべての機能を使うには HTTPS でこのページを開いてください。",
   "drop.drag": "ここにファイルをドラッグ",
   "drop.browse": "またはクリックして選択",
   "drop.replace": "別のファイルをドロップして置き換え",

@@ -7,6 +7,8 @@ export const ko: Translation = {
   "theme.toggle": "테마 전환",
   "language.label": "언어",
 
+
+  "insecure.warning": "안전하지 않은 연결(HTTP)입니다. 대용량 업로드와 스트리밍 다운로드가 제한됩니다. 모든 기능을 사용하려면 이 페이지를 HTTPS로 여세요.",
   "drop.drag": "여기에 파일을 끌어다 놓으세요",
   "drop.browse": "또는 클릭하여 찾아보기",
   "drop.replace": "교체하려면 다른 파일을 놓으세요",

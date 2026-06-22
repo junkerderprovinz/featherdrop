@@ -7,6 +7,8 @@ export const ar: Translation = {
   "theme.toggle": "تبديل السمة",
   "language.label": "اللغة",
 
+
+  "insecure.warning": "اتصال غير آمن (HTTP). عمليات الرفع الكبيرة والتنزيلات المتدفقة محدودة. افتح هذه الصفحة عبر HTTPS للحصول على كامل الميزات.",
   "drop.drag": "اسحب ملفًا إلى هنا",
   "drop.browse": "أو انقر للتصفح",
   "drop.replace": "أفلِت ملفًا آخر للاستبدال",

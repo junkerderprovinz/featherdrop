@@ -7,6 +7,8 @@ export const de: Translation = {
   "theme.toggle": "Design umschalten",
   "language.label": "Sprache",
 
+
+  "insecure.warning": "Unsichere Verbindung (HTTP). Große Uploads und Stream-Downloads sind eingeschränkt. Öffne diese Seite über HTTPS für den vollen Funktionsumfang.",
   "drop.drag": "Datei zum Hochladen hierher ziehen",
   "drop.browse": "oder klicken zum Auswählen",
   "drop.replace": "andere Datei ablegen zum Ersetzen",

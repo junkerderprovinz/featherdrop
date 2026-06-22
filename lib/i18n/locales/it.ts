@@ -7,6 +7,8 @@ export const it: Translation = {
   "theme.toggle": "Cambia tema",
   "language.label": "Lingua",
 
+
+  "insecure.warning": "Connessione non sicura (HTTP). I caricamenti di grandi dimensioni e i download in streaming sono limitati. Apri questa pagina tramite HTTPS per tutte le funzioni.",
   "drop.drag": "Trascina qui un file",
   "drop.browse": "o clicca per sfogliare",
   "drop.replace": "rilasciane un altro per sostituire",

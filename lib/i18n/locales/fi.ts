@@ -7,6 +7,8 @@ export const fi: Translation = {
   "theme.toggle": "Vaihda teemaa",
   "language.label": "Kieli",
 
+
+  "insecure.warning": "Suojaamaton yhteys (HTTP). Suuret lähetykset ja suoratoistolataukset ovat rajoitettuja. Avaa tämä sivu HTTPS:n kautta saadaksesi kaikki ominaisuudet.",
   "drop.drag": "Raahaa tiedosto tähän",
   "drop.browse": "tai klikkaa selataksesi",
   "drop.replace": "pudota toinen korvataksesi",
