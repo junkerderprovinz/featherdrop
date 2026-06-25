@@ -12,6 +12,9 @@ export const tr: Translation = {
   "drop.drag": "Bir dosyayı buraya sürükle",
   "drop.browse": "ya da göz atmak için tıkla",
   "drop.replace": "değiştirmek için başka birini bırak",
+  "drop.replaceMulti": "değiştirmek için tekrar bırakın",
+  "drop.fileCount": "Dosyalar: {{count}}",
+  "drop.total": "Toplam: {{size}}",
 
   "settings.title": "İndirme seçenekleri",
   "settings.expiresAfter": "Şu süre sonra sona erer",
@@ -42,6 +45,11 @@ export const tr: Translation = {
   "download.downloadsLeft": "Kalan indirme: {{count}}",
 
   "download.missingKey": "Bu bağlantının şifre çözme anahtarı eksik — eksik kopyalanmış olabilir.",
+  "download.multiFile": "Şifreli dosyalar",
+  "download.fileCount": "Dosyalar: {{count}}",
+  "download.total": "Toplam: {{size}}",
+  "download.downloadAll": "Tümünü indir",
+  "download.saveToFolder": "Klasöre kaydet",
 
   "notfound.title": "Burada bir şey yok",
   "notfound.body": "Bu bağlantı geçersiz veya dosya sona erip kaldırılmış.",

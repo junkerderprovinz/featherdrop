@@ -12,6 +12,9 @@ export const he: Translation = {
   "drop.drag": "גררו קובץ לכאן",
   "drop.browse": "או לחצו לעיון",
   "drop.replace": "שחררו אחר כדי להחליף",
+  "drop.replaceMulti": "גרור שוב כדי להחליף",
+  "drop.fileCount": "קבצים: {{count}}",
+  "drop.total": "סה\"כ: {{size}}",
 
   "settings.title": "אפשרויות הורדה",
   "settings.expiresAfter": "פג אחרי",
@@ -42,6 +45,11 @@ export const he: Translation = {
   "download.downloadsLeft": "הורדות שנותרו: {{count}}",
 
   "download.missingKey": "לקישור הזה חסר מפתח הפענוח — ייתכן שהועתק באופן חלקי.",
+  "download.multiFile": "קבצים מוצפנים",
+  "download.fileCount": "קבצים: {{count}}",
+  "download.total": "סך הכול: {{size}}",
+  "download.downloadAll": "הורדת הכול",
+  "download.saveToFolder": "שמירה לתיקייה",
 
   "notfound.title": "אין כאן כלום",
   "notfound.body": "הקישור הזה אינו תקין, או שהקובץ פג ונמחק.",

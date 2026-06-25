@@ -12,6 +12,9 @@ export const sv: Translation = {
   "drop.drag": "Dra en fil hit",
   "drop.browse": "eller klicka för att bläddra",
   "drop.replace": "släpp en annan för att ersätta",
+  "drop.replaceMulti": "släpp igen för att ersätta",
+  "drop.fileCount": "Filer: {{count}}",
+  "drop.total": "Totalt: {{size}}",
 
   "settings.title": "Nedladdningsalternativ",
   "settings.expiresAfter": "Går ut efter",
@@ -42,6 +45,11 @@ export const sv: Translation = {
   "download.downloadsLeft": "Återstående nedladdningar: {{count}}",
 
   "download.missingKey": "Den här länken saknar sin dekrypteringsnyckel — den kan ha kopierats ofullständigt.",
+  "download.multiFile": "Krypterade filer",
+  "download.fileCount": "Filer: {{count}}",
+  "download.total": "Totalt: {{size}}",
+  "download.downloadAll": "Ladda ner alla",
+  "download.saveToFolder": "Spara till mapp",
 
   "notfound.title": "Inget här",
   "notfound.body": "Den här länken är ogiltig, eller så har filen gått ut och tagits bort.",

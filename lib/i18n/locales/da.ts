@@ -12,6 +12,9 @@ export const da: Translation = {
   "drop.drag": "Træk en fil hertil",
   "drop.browse": "eller klik for at gennemse",
   "drop.replace": "slip en anden for at erstatte",
+  "drop.replaceMulti": "slip igen for at erstatte",
+  "drop.fileCount": "Filer: {{count}}",
+  "drop.total": "I alt: {{size}}",
 
   "settings.title": "Downloadindstillinger",
   "settings.expiresAfter": "Udløber efter",
@@ -42,6 +45,11 @@ export const da: Translation = {
   "download.downloadsLeft": "Resterende downloads: {{count}}",
 
   "download.missingKey": "Dette link mangler sin dekrypteringsnøgle — det er måske kopieret ufuldstændigt.",
+  "download.multiFile": "Krypterede filer",
+  "download.fileCount": "Filer: {{count}}",
+  "download.total": "I alt: {{size}}",
+  "download.downloadAll": "Download alle",
+  "download.saveToFolder": "Gem i mappe",
 
   "notfound.title": "Intet her",
   "notfound.body": "Dette link er ugyldigt, eller filen er udløbet og fjernet.",

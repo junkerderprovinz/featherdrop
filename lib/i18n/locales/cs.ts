@@ -12,6 +12,9 @@ export const cs: Translation = {
   "drop.drag": "Přetáhněte sem soubor",
   "drop.browse": "nebo klikněte pro procházení",
   "drop.replace": "přetáhněte jiný pro nahrazení",
+  "drop.replaceMulti": "přetáhněte znovu pro nahrazení",
+  "drop.fileCount": "Soubory: {{count}}",
+  "drop.total": "Celkem: {{size}}",
 
   "settings.title": "Možnosti stažení",
   "settings.expiresAfter": "Vyprší za",
@@ -42,6 +45,11 @@ export const cs: Translation = {
   "download.downloadsLeft": "Zbývající stažení: {{count}}",
 
   "download.missingKey": "Tomuto odkazu chybí dešifrovací klíč — možná byl zkopírován neúplně.",
+  "download.multiFile": "Šifrované soubory",
+  "download.fileCount": "Soubory: {{count}}",
+  "download.total": "Celkem: {{size}}",
+  "download.downloadAll": "Stáhnout vše",
+  "download.saveToFolder": "Uložit do složky",
 
   "notfound.title": "Tady nic není",
   "notfound.body": "Tento odkaz je neplatný, nebo soubor vypršel a byl odstraněn.",

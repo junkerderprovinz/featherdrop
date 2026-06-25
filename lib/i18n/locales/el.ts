@@ -12,6 +12,9 @@ export const el: Translation = {
   "drop.drag": "Σύρε ένα αρχείο εδώ",
   "drop.browse": "ή κάνε κλικ για περιήγηση",
   "drop.replace": "ρίξε άλλο για αντικατάσταση",
+  "drop.replaceMulti": "αφήστε ξανά για αντικατάσταση",
+  "drop.fileCount": "Αρχεία: {{count}}",
+  "drop.total": "Σύνολο: {{size}}",
 
   "settings.title": "Επιλογές λήψης",
   "settings.expiresAfter": "Λήγει μετά από",
@@ -42,6 +45,11 @@ export const el: Translation = {
   "download.downloadsLeft": "Υπολειπόμενες λήψεις: {{count}}",
 
   "download.missingKey": "Από αυτόν τον σύνδεσμο λείπει το κλειδί αποκρυπτογράφησης — ίσως αντιγράφηκε ελλιπώς.",
+  "download.multiFile": "Κρυπτογραφημένα αρχεία",
+  "download.fileCount": "Αρχεία: {{count}}",
+  "download.total": "Σύνολο: {{size}}",
+  "download.downloadAll": "Λήψη όλων",
+  "download.saveToFolder": "Αποθήκευση σε φάκελο",
 
   "notfound.title": "Δεν υπάρχει τίποτα εδώ",
   "notfound.body": "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή το αρχείο έληξε και αφαιρέθηκε.",

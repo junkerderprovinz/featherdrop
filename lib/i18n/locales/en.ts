@@ -15,6 +15,9 @@ export const en = {
   "drop.drag": "Drag a file here to upload",
   "drop.browse": "or click to choose one",
   "drop.replace": "drop another file to replace it",
+  "drop.replaceMulti": "drop again to replace",
+  "drop.fileCount": "Files: {{count}}",
+  "drop.total": "Total: {{size}}",
 
   "settings.title": "Download options",
   "settings.expiresAfter": "Expires after",
@@ -42,6 +45,11 @@ export const en = {
   "download.encryptedFile": "Encrypted file",
   "download.downloadsLeft": "Downloads left: {{count}}",
   "download.missingKey": "This link is missing its decryption key — it may have been copied incompletely.",
+  "download.multiFile": "Encrypted files",
+  "download.fileCount": "Files: {{count}}",
+  "download.total": "Total: {{size}}",
+  "download.downloadAll": "Download all",
+  "download.saveToFolder": "Save to folder",
 
   "notfound.title": "Nothing here",
   "notfound.body": "This link is invalid, or the file has expired and been removed.",

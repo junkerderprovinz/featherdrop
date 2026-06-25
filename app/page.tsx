@@ -49,7 +49,7 @@ export default function HomePage() {
     getInitialValueInEffect: true,
   });
   const [status, setStatus] = useState<Status>("idle");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
   const [expiry, setExpiry] = useState("7d");
   const [password, setPassword] = useState("");
@@ -65,13 +65,14 @@ export default function HomePage() {
     setInsecure(typeof window !== "undefined" && !window.isSecureContext);
   }, []);
 
-  const onDrop = (f: File) => {
-    setFile(f);
+  const onDrop = (dropped: File[]) => {
+    if (dropped.length === 0) return;
+    setFiles(dropped);
     setStatus("ready");
   };
 
   const reset = () => {
-    setFile(null);
+    setFiles([]);
     setShareUrl("");
     setProgress(0);
     setPassword("");
@@ -81,7 +82,7 @@ export default function HomePage() {
   };
 
   const startUpload = () => {
-    if (!file) return;
+    if (files.length === 0) return;
     setStatus("encrypting");
     setProgress(0);
 
@@ -121,7 +122,7 @@ export default function HomePage() {
     };
 
     uploadEncrypted(
-      file,
+      files,
       { expiry, maxDownloads, password: password || undefined },
       deps,
       (phase, fraction) => {
@@ -245,8 +246,7 @@ export default function HomePage() {
                 onDrop={onDrop}
                 uploading={uploading}
                 progress={progress}
-                fileName={file?.name}
-                fileSize={file?.size}
+                files={files}
                 phaseLabel={status === "encrypting" ? t("upload.encrypting") : undefined}
               />
               <Transition mounted={showPanel} transition="slide-left" duration={200}>

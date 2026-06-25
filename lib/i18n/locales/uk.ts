@@ -12,6 +12,9 @@ export const uk: Translation = {
   "drop.drag": "Перетягніть файл сюди",
   "drop.browse": "або натисніть для вибору",
   "drop.replace": "перетягніть інший для заміни",
+  "drop.replaceMulti": "перетягніть знову, щоб замінити",
+  "drop.fileCount": "Файлів: {{count}}",
+  "drop.total": "Усього: {{size}}",
 
   "settings.title": "Параметри завантаження",
   "settings.expiresAfter": "Спливає через",
@@ -42,6 +45,11 @@ export const uk: Translation = {
   "download.downloadsLeft": "Залишилося завантажень: {{count}}",
 
   "download.missingKey": "У цьому посиланні немає ключа розшифрування — можливо, його скопійовано не повністю.",
+  "download.multiFile": "Зашифровані файли",
+  "download.fileCount": "Файли: {{count}}",
+  "download.total": "Усього: {{size}}",
+  "download.downloadAll": "Завантажити все",
+  "download.saveToFolder": "Зберегти в теку",
 
   "notfound.title": "Тут нічого немає",
   "notfound.body": "Це посилання недійсне, або файл сплив і його видалено.",

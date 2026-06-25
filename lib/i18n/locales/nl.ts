@@ -12,6 +12,9 @@ export const nl: Translation = {
   "drop.drag": "Sleep hier een bestand",
   "drop.browse": "of klik om te bladeren",
   "drop.replace": "zet een ander neer om te vervangen",
+  "drop.replaceMulti": "sleep opnieuw om te vervangen",
+  "drop.fileCount": "Bestanden: {{count}}",
+  "drop.total": "Totaal: {{size}}",
 
   "settings.title": "Downloadopties",
   "settings.expiresAfter": "Verloopt na",
@@ -42,6 +45,11 @@ export const nl: Translation = {
   "download.downloadsLeft": "Resterende downloads: {{count}}",
 
   "download.missingKey": "Deze link mist zijn ontsleutelsleutel — mogelijk is hij onvolledig gekopieerd.",
+  "download.multiFile": "Versleutelde bestanden",
+  "download.fileCount": "Bestanden: {{count}}",
+  "download.total": "Totaal: {{size}}",
+  "download.downloadAll": "Alles downloaden",
+  "download.saveToFolder": "Opslaan in map",
 
   "notfound.title": "Hier is niets",
   "notfound.body": "Deze link is ongeldig, of het bestand is verlopen en verwijderd.",

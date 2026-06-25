@@ -12,6 +12,9 @@ export const ja: Translation = {
   "drop.drag": "ここにファイルをドラッグ",
   "drop.browse": "またはクリックして選択",
   "drop.replace": "別のファイルをドロップして置き換え",
+  "drop.replaceMulti": "もう一度ドロップして置き換え",
+  "drop.fileCount": "ファイル数: {{count}}",
+  "drop.total": "合計: {{size}}",
 
   "settings.title": "ダウンロードオプション",
   "settings.expiresAfter": "有効期限",
@@ -42,6 +45,11 @@ export const ja: Translation = {
   "download.downloadsLeft": "残りダウンロード回数: {{count}}",
 
   "download.missingKey": "このリンクには復号鍵がありません。途中までしかコピーされていない可能性があります。",
+  "download.multiFile": "暗号化されたファイル",
+  "download.fileCount": "ファイル数: {{count}}",
+  "download.total": "合計: {{size}}",
+  "download.downloadAll": "すべてダウンロード",
+  "download.saveToFolder": "フォルダーに保存",
 
   "notfound.title": "ここには何もありません",
   "notfound.body": "このリンクは無効か、ファイルが期限切れで削除されています。",

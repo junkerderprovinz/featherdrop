@@ -12,6 +12,9 @@ export const pl: Translation = {
   "drop.drag": "Przeciągnij plik tutaj",
   "drop.browse": "lub kliknij, aby wybrać",
   "drop.replace": "upuść inny, aby zastąpić",
+  "drop.replaceMulti": "upuść ponownie, aby zastąpić",
+  "drop.fileCount": "Pliki: {{count}}",
+  "drop.total": "Łącznie: {{size}}",
 
   "settings.title": "Opcje pobierania",
   "settings.expiresAfter": "Wygasa po",
@@ -42,6 +45,11 @@ export const pl: Translation = {
   "download.downloadsLeft": "Pozostałe pobrania: {{count}}",
 
   "download.missingKey": "Temu linkowi brakuje klucza deszyfrującego — mógł zostać skopiowany niekompletnie.",
+  "download.multiFile": "Zaszyfrowane pliki",
+  "download.fileCount": "Pliki: {{count}}",
+  "download.total": "Razem: {{size}}",
+  "download.downloadAll": "Pobierz wszystko",
+  "download.saveToFolder": "Zapisz do folderu",
 
   "notfound.title": "Tu nic nie ma",
   "notfound.body": "Ten link jest nieprawidłowy lub plik wygasł i został usunięty.",

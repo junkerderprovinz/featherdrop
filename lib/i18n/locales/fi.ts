@@ -12,6 +12,9 @@ export const fi: Translation = {
   "drop.drag": "Raahaa tiedosto tähän",
   "drop.browse": "tai klikkaa selataksesi",
   "drop.replace": "pudota toinen korvataksesi",
+  "drop.replaceMulti": "pudota uudelleen korvataksesi",
+  "drop.fileCount": "Tiedostoja: {{count}}",
+  "drop.total": "Yhteensä: {{size}}",
 
   "settings.title": "Latausasetukset",
   "settings.expiresAfter": "Vanhenee",
@@ -42,6 +45,11 @@ export const fi: Translation = {
   "download.downloadsLeft": "Latauksia jäljellä: {{count}}",
 
   "download.missingKey": "Tästä linkistä puuttuu salauksenpurkuavain — se on voitu kopioida vaillinaisesti.",
+  "download.multiFile": "Salatut tiedostot",
+  "download.fileCount": "Tiedostot: {{count}}",
+  "download.total": "Yhteensä: {{size}}",
+  "download.downloadAll": "Lataa kaikki",
+  "download.saveToFolder": "Tallenna kansioon",
 
   "notfound.title": "Täällä ei ole mitään",
   "notfound.body": "Tämä linkki on virheellinen tai tiedosto on vanhentunut ja poistettu.",

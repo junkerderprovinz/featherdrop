@@ -12,6 +12,9 @@ export const vi: Translation = {
   "drop.drag": "Kéo một tệp vào đây",
   "drop.browse": "hoặc nhấp để duyệt",
   "drop.replace": "thả tệp khác để thay thế",
+  "drop.replaceMulti": "thả lại để thay thế",
+  "drop.fileCount": "Tệp: {{count}}",
+  "drop.total": "Tổng: {{size}}",
 
   "settings.title": "Tùy chọn tải xuống",
   "settings.expiresAfter": "Hết hạn sau",
@@ -42,6 +45,11 @@ export const vi: Translation = {
   "download.downloadsLeft": "Lượt tải còn lại: {{count}}",
 
   "download.missingKey": "Liên kết này thiếu khóa giải mã — có thể đã được sao chép không đầy đủ.",
+  "download.multiFile": "Tệp đã mã hóa",
+  "download.fileCount": "Tệp: {{count}}",
+  "download.total": "Tổng: {{size}}",
+  "download.downloadAll": "Tải xuống tất cả",
+  "download.saveToFolder": "Lưu vào thư mục",
 
   "notfound.title": "Không có gì ở đây",
   "notfound.body": "Liên kết này không hợp lệ, hoặc tệp đã hết hạn và bị xóa.",

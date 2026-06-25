@@ -12,6 +12,9 @@ export const es: Translation = {
   "drop.drag": "Arrastra un archivo aquí",
   "drop.browse": "o haz clic para explorar",
   "drop.replace": "suelta otro para reemplazar",
+  "drop.replaceMulti": "suelta de nuevo para reemplazar",
+  "drop.fileCount": "Archivos: {{count}}",
+  "drop.total": "Total: {{size}}",
 
   "settings.title": "Opciones de descarga",
   "settings.expiresAfter": "Caduca tras",
@@ -42,6 +45,11 @@ export const es: Translation = {
   "download.downloadsLeft": "Descargas restantes: {{count}}",
 
   "download.missingKey": "A este enlace le falta su clave de descifrado; puede que se haya copiado de forma incompleta.",
+  "download.multiFile": "Archivos cifrados",
+  "download.fileCount": "Archivos: {{count}}",
+  "download.total": "Total: {{size}}",
+  "download.downloadAll": "Descargar todo",
+  "download.saveToFolder": "Guardar en una carpeta",
 
   "notfound.title": "Aquí no hay nada",
   "notfound.body": "Este enlace no es válido, o el archivo ha caducado y se ha eliminado.",
