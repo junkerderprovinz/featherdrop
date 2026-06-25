@@ -5,6 +5,7 @@ import { Dropzone } from "@mantine/dropzone";
 import { IconCloudUpload, IconFile, IconX } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@/lib/format";
+import { filesFromDropEvent } from "@/lib/dropped-files";
 import { Logo } from "@/components/Logo";
 
 interface DropAreaProps {
@@ -33,6 +34,10 @@ export function DropArea({
     <Box pos="relative" style={{ flex: 1, minWidth: rem(280) }}>
       <Dropzone
         onDrop={(files) => files[0] && onDrop(files[0])}
+        // Bypass react-dropzone's webkitGetAsEntry() directory walk, which
+        // crashes Chromium/Edge renderers on some setups (issue #4). Read the
+        // flat FileList straight from the event; we only take one file anyway.
+        getFilesFromEvent={(event) => Promise.resolve(filesFromDropEvent(event))}
         disabled={uploading}
         multiple={false}
         radius="lg"
