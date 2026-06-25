@@ -12,6 +12,9 @@ export const th: Translation = {
   "drop.drag": "ลากไฟล์มาที่นี่",
   "drop.browse": "หรือคลิกเพื่อเลือก",
   "drop.replace": "วางไฟล์อื่นเพื่อแทนที่",
+  "drop.replaceMulti": "วางอีกครั้งเพื่อแทนที่",
+  "drop.fileCount": "ไฟล์: {{count}}",
+  "drop.total": "รวม: {{size}}",
 
   "settings.title": "ตัวเลือกการดาวน์โหลด",
   "settings.expiresAfter": "หมดอายุหลังจาก",
@@ -42,6 +45,11 @@ export const th: Translation = {
   "download.downloadsLeft": "ดาวน์โหลดที่เหลือ: {{count}}",
 
   "download.missingKey": "ลิงก์นี้ไม่มีคีย์ถอดรหัส — อาจถูกคัดลอกมาไม่ครบ",
+  "download.multiFile": "ไฟล์ที่เข้ารหัส",
+  "download.fileCount": "ไฟล์: {{count}}",
+  "download.total": "รวม: {{size}}",
+  "download.downloadAll": "ดาวน์โหลดทั้งหมด",
+  "download.saveToFolder": "บันทึกลงโฟลเดอร์",
 
   "notfound.title": "ไม่มีอะไรที่นี่",
   "notfound.body": "ลิงก์นี้ไม่ถูกต้อง หรือไฟล์หมดอายุและถูกลบไปแล้ว",

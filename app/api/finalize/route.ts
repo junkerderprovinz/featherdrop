@@ -32,7 +32,10 @@ interface FinalizeBody {
   password?: string;
   maxDownloads?: number; // optional download limit; null/absent = unlimited
   // v2 zero-knowledge fields (Phase 7b)
-  format?: number; // 2 = zero-knowledge; absent/1 = v1 legacy
+  // 2 = zero-knowledge single file; 3 = zero-knowledge multi-file (manifest
+  // blob); absent/1 = v1 legacy. Formats 2 and 3 are byte-store-identical here —
+  // the server just records which client-side blob layout it holds.
+  format?: number;
   wrappedKey?: string; // base64-encoded: content key wrapped with Argon2id-derived KEK (password mode)
   kdfSalt?: string; // base64-encoded: 16-byte Argon2id salt (password mode)
   // base64url(SHA-256(content key)) — download authorization (one-way; the
@@ -147,14 +150,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const slug = uniqueSlug();
 
   // -------------------------------------------------------------------------
-  // v2 zero-knowledge path (Phase 7b)
+  // v2 zero-knowledge path (Phase 7b) — formats 2 (single file) and 3 (multi-
+  // file manifest blob).
   // The browser already encrypted the blob before uploading via tus. The server
   // is a dumb byte store: it renames the tmp file to its final location without
   // any server-side crypto, stores the optional wrapped_key/kdf_salt (password
   // mode) or neither (link mode), and returns only the slug — the key lives in
-  // the URL fragment or is derived by the browser from the user's password.
+  // the URL fragment or is derived by the browser from the user's password. The
+  // file COUNT is invisible to the server: format 3 is handled identically to 2,
+  // only the recorded `format` differs (the download page reads it to unpack).
   // -------------------------------------------------------------------------
-  if (body.format === 2) {
+  if (body.format === 2 || body.format === 3) {
     // Move the already-encrypted blob to its final location (no crypto at all).
     await rename(tmpPath, storedPath);
     // Decode base64 → Buffer (null when absent — link mode).
@@ -180,7 +186,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       encrypted: 0, // v1 age-encryption flag unused in v2
       enc_mode: null,
       enc_key_wrapped: null,
-      format: 2,
+      format: body.format, // 2 (single file) or 3 (multi-file manifest)
       wrapped_key,
       kdf_salt,
       // NULL when an (older) client sent none — such shares download without

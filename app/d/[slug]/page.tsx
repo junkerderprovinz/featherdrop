@@ -20,10 +20,14 @@ export default function DownloadPage({
   }
 
   // -------------------------------------------------------------------------
-  // v2 zero-knowledge path: name and MIME are inside the client-encrypted blob
-  // and are invisible to the server. The client decrypts them in the browser.
+  // Zero-knowledge paths (format >= 2): name and MIME are inside the client-
+  // encrypted blob and are invisible to the server. The client decrypts them in
+  // the browser. format 2 = single file (inline preview), format 3 = multi-file
+  // (manifest unpacked client-side into a file list). Both are served as one
+  // opaque blob and carry the same password/link, key-verifier and limit
+  // semantics — only `format` tells the client which UI to render.
   // -------------------------------------------------------------------------
-  if (rec.format === 2) {
+  if (rec.format >= 2) {
     return (
       <DownloadView
         slug={rec.slug}
@@ -35,7 +39,7 @@ export default function DownloadPage({
         linkMode={false}
         serverMode={false}
         downloadsLeft={downloadsLeft(rec.download_count, rec.max_downloads)}
-        format={2}
+        format={rec.format}
         wrappedKey={
           rec.wrapped_key ? Buffer.from(rec.wrapped_key).toString("base64") : null
         }

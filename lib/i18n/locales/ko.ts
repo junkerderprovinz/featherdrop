@@ -12,6 +12,9 @@ export const ko: Translation = {
   "drop.drag": "여기에 파일을 끌어다 놓으세요",
   "drop.browse": "또는 클릭하여 찾아보기",
   "drop.replace": "교체하려면 다른 파일을 놓으세요",
+  "drop.replaceMulti": "다시 놓아서 교체",
+  "drop.fileCount": "파일: {{count}}",
+  "drop.total": "합계: {{size}}",
 
   "settings.title": "다운로드 옵션",
   "settings.expiresAfter": "만료 시점",
@@ -42,6 +45,11 @@ export const ko: Translation = {
   "download.downloadsLeft": "남은 다운로드 횟수: {{count}}",
 
   "download.missingKey": "이 링크에 복호화 키가 없습니다. 불완전하게 복사되었을 수 있습니다.",
+  "download.multiFile": "암호화된 파일",
+  "download.fileCount": "파일: {{count}}",
+  "download.total": "합계: {{size}}",
+  "download.downloadAll": "모두 다운로드",
+  "download.saveToFolder": "폴더에 저장",
 
   "notfound.title": "여기에 아무것도 없습니다",
   "notfound.body": "이 링크가 유효하지 않거나 파일이 만료되어 삭제되었습니다.",

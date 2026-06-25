@@ -12,6 +12,9 @@ export const ro: Translation = {
   "drop.drag": "Trage un fișier aici",
   "drop.browse": "sau dă clic pentru a răsfoi",
   "drop.replace": "lasă altul pentru a înlocui",
+  "drop.replaceMulti": "plasează din nou pentru a înlocui",
+  "drop.fileCount": "Fișiere: {{count}}",
+  "drop.total": "Total: {{size}}",
 
   "settings.title": "Opțiuni de descărcare",
   "settings.expiresAfter": "Expiră după",
@@ -42,6 +45,11 @@ export const ro: Translation = {
   "download.downloadsLeft": "Descărcări rămase: {{count}}",
 
   "download.missingKey": "Acestui link îi lipsește cheia de decriptare — poate a fost copiat incomplet.",
+  "download.multiFile": "Fișiere criptate",
+  "download.fileCount": "Fișiere: {{count}}",
+  "download.total": "Total: {{size}}",
+  "download.downloadAll": "Descarcă tot",
+  "download.saveToFolder": "Salvează în folder",
 
   "notfound.title": "Nimic aici",
   "notfound.body": "Acest link este invalid sau fișierul a expirat și a fost eliminat.",

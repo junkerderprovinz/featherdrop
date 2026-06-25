@@ -12,6 +12,9 @@ export const ar: Translation = {
   "drop.drag": "اسحب ملفًا إلى هنا",
   "drop.browse": "أو انقر للتصفح",
   "drop.replace": "أفلِت ملفًا آخر للاستبدال",
+  "drop.replaceMulti": "أفلت مرة أخرى للاستبدال",
+  "drop.fileCount": "الملفات: {{count}}",
+  "drop.total": "الإجمالي: {{size}}",
 
   "settings.title": "خيارات التنزيل",
   "settings.expiresAfter": "تنتهي الصلاحية بعد",
@@ -42,6 +45,11 @@ export const ar: Translation = {
   "download.downloadsLeft": "التنزيلات المتبقية: {{count}}",
 
   "download.missingKey": "هذا الرابط ينقصه مفتاح فك التشفير — ربما نُسخ بشكل غير كامل.",
+  "download.multiFile": "ملفات مشفّرة",
+  "download.fileCount": "الملفات: {{count}}",
+  "download.total": "الإجمالي: {{size}}",
+  "download.downloadAll": "تنزيل الكل",
+  "download.saveToFolder": "حفظ في مجلد",
 
   "notfound.title": "لا شيء هنا",
   "notfound.body": "هذا الرابط غير صالح، أو انتهت صلاحية الملف وتمت إزالته.",

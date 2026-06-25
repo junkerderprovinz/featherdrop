@@ -108,9 +108,11 @@ export async function GET(
   // The server never decrypts, never sees the key, and never uses a cookie.
   // The real filename and MIME are inside the client-encrypted blob — so
   // Content-Disposition uses a static "download" name and the client renames
-  // on save after decrypting the embedded metadata.
+  // on save after decrypting the embedded metadata. Format 3 (multi-file) is a
+  // byte-identical opaque blob and is served exactly the same way; the client
+  // unpacks the manifest after decrypting.
   // -------------------------------------------------------------------------
-  if (rec.format === 2) {
+  if (rec.format >= 2) {
     // Key-verifier gate: when the upload stored base64url(SHA-256(K)), the GET
     // must present the same value — proving it knows the content key — BEFORE
     // anything is counted or burned. Without this, anyone who learned the slug

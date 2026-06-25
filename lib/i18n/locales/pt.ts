@@ -12,6 +12,9 @@ export const pt: Translation = {
   "drop.drag": "Arraste um ficheiro para aqui",
   "drop.browse": "ou clique para procurar",
   "drop.replace": "solte outro para substituir",
+  "drop.replaceMulti": "solte novamente para substituir",
+  "drop.fileCount": "Arquivos: {{count}}",
+  "drop.total": "Total: {{size}}",
 
   "settings.title": "Opções de transferência",
   "settings.expiresAfter": "Expira após",
@@ -42,6 +45,11 @@ export const pt: Translation = {
   "download.downloadsLeft": "Transferências restantes: {{count}}",
 
   "download.missingKey": "Falta a chave de desencriptação a este link — pode ter sido copiado de forma incompleta.",
+  "download.multiFile": "Ficheiros encriptados",
+  "download.fileCount": "Ficheiros: {{count}}",
+  "download.total": "Total: {{size}}",
+  "download.downloadAll": "Transferir tudo",
+  "download.saveToFolder": "Guardar numa pasta",
 
   "notfound.title": "Não há nada aqui",
   "notfound.body": "Este link é inválido, ou o ficheiro expirou e foi removido.",

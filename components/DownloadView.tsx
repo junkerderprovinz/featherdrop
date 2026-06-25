@@ -8,6 +8,7 @@ import {
   Button,
   Center,
   Container,
+  Divider,
   Group,
   Paper,
   PasswordInput,
@@ -20,7 +21,15 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconDownload, IconLock, IconMoon, IconSun } from "@tabler/icons-react";
+import {
+  IconDownload,
+  IconFile,
+  IconFiles,
+  IconFolder,
+  IconLock,
+  IconMoon,
+  IconSun,
+} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
 import { isPreviewableMime } from "@/lib/preview";
@@ -29,6 +38,11 @@ import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { downloadDecrypted, type DownloadSecret } from "@/lib/e2e/download-flow";
+import { decryptFilesWithKey, type MultiDownload } from "@/lib/e2e/multi-pipeline";
+import { deriveContentKey } from "@/lib/e2e/pipeline";
+import { computeKeyVerifier } from "@/lib/e2e/crypto";
+import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
+import type { Manifest } from "@/lib/e2e/multi-file";
 import {
   canStreamDownload,
   streamToDownload,
@@ -40,6 +54,34 @@ import {
 // both render a blob: preview and serve the eventual download without a second
 // fetch; larger files skip the prefetch and stream straight to disk. (Spec §5.6)
 const PREVIEW_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
+
+// Format-3 (multi-file) bundles up to this combined plaintext size are decrypted
+// ONCE and buffered in memory, so the file list, "Download all" and every
+// per-file button serve from that single decrypt — exactly ONE counted GET for
+// the whole share (download-limit semantics: the share is one unit). Larger
+// bundles skip buffering and stream per save (a per-file button re-fetches), so
+// memory stays bounded. (Spec "Download flow".)
+const MULTI_BUFFER_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
+
+// One buffered file from a format-3 bundle: its name/type and complete bytes.
+interface BufferedFile {
+  name: string;
+  type: string;
+  blob: Blob;
+}
+
+// File System Access API — not yet in lib.dom; declared minimally for the
+// "Save to folder" path. Probed at runtime before use (Chromium + secure ctx).
+interface FsFileHandle {
+  createWritable(): Promise<{
+    write(data: BufferSource | Blob): Promise<void>;
+    close(): Promise<void>;
+  }>;
+}
+interface FsDirHandle {
+  getFileHandle(name: string, opts: { create: true }): Promise<FsFileHandle>;
+}
+type ShowDirectoryPicker = () => Promise<FsDirHandle>;
 
 interface DownloadViewProps {
   slug: string;
@@ -95,6 +137,12 @@ export function DownloadView({
     type: string;
   } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Format-3 (multi-file) state: the decrypted manifest backs the file list, and
+  // (for bundles within the buffer cap) the buffered files back per-file saving.
+  const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [buffered, setBuffered] = useState<BufferedFile[] | null>(null);
+  // Index of the file currently being saved (per-file spinner), or "all".
+  const [savingFile, setSavingFile] = useState<number | "all" | null>(null);
   const downloadUrl = `/api/d/${slug}`;
 
   const exp = describeExpiry(expiresAt);
@@ -115,6 +163,8 @@ export function DownloadView({
   // The server streams back the raw ciphertext; the browser decrypts in-place.
   // -------------------------------------------------------------------------
   const isV2 = format === 2;
+  // format 3 = zero-knowledge MULTI-file (manifest unpacked client-side).
+  const isV3 = format === 3;
 
   const v2Download = async () => {
     if (busy) return;
@@ -199,6 +249,297 @@ export function DownloadView({
       setBusy(false);
     }
   };
+
+  // -------------------------------------------------------------------------
+  // format-3 (multi-file) download handlers
+  //
+  // The share is ONE unit: a single counted GET decrypts the whole opaque blob
+  // and unpacks the manifest into the original files. For bundles within the
+  // buffer cap we decrypt once into memory (buffered) so the list, "Download
+  // all" and every per-file button reuse that single GET — never double-counting
+  // a limited share, mirroring how format 2 caches its decrypted blob. Larger
+  // bundles skip buffering: "Download all" streams the one GET to disk file by
+  // file, and a per-file button re-fetches + re-decrypts and skips to that file
+  // (acceptable — keeps memory bounded).
+  // -------------------------------------------------------------------------
+
+  // Build the format-3 decryption secret from the link key or password material.
+  // Returns null (and notifies) when neither is available.
+  const buildSecret = (): DownloadSecret | null => {
+    if (linkKey) return { keyFromUrl: linkKey };
+    if (hasPassword && wrappedKey && kdfSalt) {
+      const wrapped = Uint8Array.from(
+        atob(wrappedKey),
+        (c) => c.charCodeAt(0),
+      ) as unknown as Uint8Array<ArrayBuffer>;
+      const salt = Uint8Array.from(
+        atob(kdfSalt),
+        (c) => c.charCodeAt(0),
+      ) as unknown as Uint8Array<ArrayBuffer>;
+      return { password, wrapped, salt };
+    }
+    notifications.show({ color: "red", message: t("download.missingKey") });
+    return null;
+  };
+
+  // Fetch + decrypt the one blob with the key-verifier header — exactly like the
+  // format-2 download (one counted-eligible GET). The content key is derived
+  // first (a wrong password rejects BEFORE any fetch, so nothing is counted),
+  // then base64url(SHA-256(K)) is sent as the proof the server requires before
+  // counting/burning. Returns the MultiDownload whose per-file `bytes` generators
+  // share one stream and MUST be drained IN ORDER.
+  const fetchMultiDownload = async (
+    secret: DownloadSecret,
+  ): Promise<MultiDownload> => {
+    const key = await deriveContentKey(secret);
+    const res = await fetch(downloadUrl, {
+      headers: { "x-fd-key-verifier": computeKeyVerifier(key) },
+    });
+    if (!res.ok) throw new Error(`fetch ${res.status}`);
+    return decryptFilesWithKey(
+      streamToAsyncIterable(res.body as ReadableStream<Uint8Array>),
+      key,
+    );
+  };
+
+  // Drain one per-file generator fully into a single Blob (preserves order).
+  // ONLY used for the buffered (<= MULTI_BUFFER_MAX_BYTES) path; the unbuffered
+  // path streams each file instead so a single huge file never lands in RAM.
+  const drainToBlob = async (
+    file: { entry: { type: string }; bytes: AsyncGenerator<Uint8Array> },
+  ): Promise<Blob> => {
+    const chunks: Uint8Array<ArrayBuffer>[] = [];
+    for await (const chunk of file.bytes) {
+      chunks.push(chunk as unknown as Uint8Array<ArrayBuffer>);
+    }
+    return new Blob(chunks, { type: file.entry.type });
+  };
+
+  // Decrypt the bundle once and buffer every file in memory (manifest order).
+  // Used ONLY for bundles within MULTI_BUFFER_MAX_BYTES: a single counted GET
+  // serves all later saves (and per-file buttons). Sets `manifest` + `buffered`.
+  const ensureBuffered = async (): Promise<BufferedFile[] | null> => {
+    if (buffered) return buffered;
+    const secret = buildSecret();
+    if (!secret) return null;
+    const dl = await fetchMultiDownload(secret);
+    setManifest(dl.manifest);
+    const out: BufferedFile[] = [];
+    // Drain each file fully before the next — the generators share one stream.
+    for await (const file of dl.files) {
+      const blob = await drainToBlob(file);
+      out.push({ name: file.entry.name, type: file.entry.type, blob });
+    }
+    setBuffered(out);
+    return out;
+  };
+
+  // Save one buffered file via the SW stream where available, else a blob anchor.
+  const saveBuffered = async (f: BufferedFile): Promise<void> => {
+    if (canStreamDownload()) {
+      await streamToDownload(f.blob.stream(), f.name);
+    } else {
+      blobDownload(f.blob, f.name);
+    }
+  };
+
+  // Stream one UNBUFFERED file's bytes straight to disk via the SW download —
+  // no whole-file Blob, so a single huge file can't OOM the tab.
+  //
+  // The per-file generators share ONE underlying decrypted stream and must be
+  // drained strictly in order, but the SW reads its transferred stream on its
+  // own schedule. So we DON'T hand the SW a live generator-backed stream (it
+  // would interleave reads across files and corrupt the split). Instead we pass
+  // the SW the readable half of a TransformStream and pump THIS file's bytes
+  // into the writable half ourselves, awaiting completion: when the pump
+  // resolves, this file's slice of the source has been fully consumed, so the
+  // next file's generator can safely advance. The writer's backpressure keeps
+  // the in-flight bytes bounded (no whole-file buffer). When the SW is
+  // unavailable we fall back to collecting into a Blob — the same inherent
+  // limitation as the single-file format-2 fallback.
+  const saveStream = async (
+    name: string,
+    type: string,
+    iter: AsyncIterable<Uint8Array>,
+    size: number,
+  ): Promise<void> => {
+    if (canStreamDownload()) {
+      const ts = new TransformStream<Uint8Array<ArrayBuffer>, Uint8Array<ArrayBuffer>>();
+      // Hand the readable side to the SW (it sets up the save dialog and starts
+      // reading); the exact plaintext size lets it send a correct Content-Length.
+      await streamToDownload(
+        ts.readable as ReadableStream<Uint8Array>,
+        name,
+        size,
+      );
+      const writer = ts.writable.getWriter();
+      try {
+        for await (const chunk of iter) {
+          await writer.write(chunk as unknown as Uint8Array<ArrayBuffer>);
+        }
+        await writer.close();
+      } catch (e) {
+        await writer.abort(e).catch(() => {});
+        throw e;
+      }
+    } else {
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      for await (const chunk of iter) {
+        chunks.push(chunk as unknown as Uint8Array<ArrayBuffer>);
+      }
+      blobDownload(new Blob(chunks, { type }), name);
+    }
+  };
+
+  // "Download all": save every file in manifest order (sequential). Buffers the
+  // bundle once for small shares (later saves reuse it); streams the single GET
+  // file-by-file for large ones, materializing no whole file in RAM.
+  const multiDownloadAll = async () => {
+    if (savingFile !== null) return;
+    setSavingFile("all");
+    try {
+      if (size <= MULTI_BUFFER_MAX_BYTES) {
+        const files = await ensureBuffered();
+        if (!files) return;
+        for (const f of files) await saveBuffered(f);
+      } else {
+        // Large bundle: one counted GET, stream each file to disk in order.
+        const secret = buildSecret();
+        if (!secret) return;
+        const dl = await fetchMultiDownload(secret);
+        setManifest(dl.manifest);
+        for await (const file of dl.files) {
+          await saveStream(
+            file.entry.name,
+            file.entry.type,
+            file.bytes,
+            file.entry.size,
+          );
+        }
+      }
+    } catch {
+      notifications.show({
+        color: "red",
+        message: hasPassword ? t("download.wrongPassword") : t("download.failed"),
+      });
+    } finally {
+      setSavingFile(null);
+    }
+  };
+
+  // Per-file "Download": ONLY for buffered bundles — serves the file from the
+  // in-memory buffer, so it never triggers a second counted GET. The per-file
+  // buttons are rendered only when `buffered` is set (see the file list below),
+  // so large/unbuffered bundles never reach this and can't double-count.
+  const multiDownloadOne = async (index: number) => {
+    if (savingFile !== null || !buffered) return;
+    setSavingFile(index);
+    try {
+      await saveBuffered(buffered[index]);
+    } catch {
+      notifications.show({
+        color: "red",
+        message: hasPassword ? t("download.wrongPassword") : t("download.failed"),
+      });
+    } finally {
+      setSavingFile(null);
+    }
+  };
+
+  // "Save to folder" (Chromium + secure context only): pick a directory and write
+  // every file into it via the File System Access API. Small bundles write from
+  // the in-memory buffer; large bundles stream each file's bytes straight into
+  // the writable chunk by chunk, so no whole file is materialized in RAM.
+  const multiSaveToFolder = async () => {
+    if (savingFile !== null) return;
+    const picker = (window as unknown as { showDirectoryPicker?: ShowDirectoryPicker })
+      .showDirectoryPicker;
+    if (!picker) return;
+    let dir: FsDirHandle;
+    try {
+      dir = await picker();
+    } catch {
+      // User cancelled the picker — not an error.
+      return;
+    }
+    setSavingFile("all");
+    try {
+      if (size <= MULTI_BUFFER_MAX_BYTES) {
+        const files = await ensureBuffered();
+        if (!files) return;
+        for (const f of files) {
+          const handle = await dir.getFileHandle(f.name, { create: true });
+          const writable = await handle.createWritable();
+          await writable.write(f.blob);
+          await writable.close();
+        }
+      } else {
+        const secret = buildSecret();
+        if (!secret) return;
+        const dl = await fetchMultiDownload(secret);
+        setManifest(dl.manifest);
+        for await (const file of dl.files) {
+          const handle = await dir.getFileHandle(file.entry.name, {
+            create: true,
+          });
+          const writable = await handle.createWritable();
+          // Stream the file's chunks into the writable — bounded memory.
+          // Cast to Uint8Array<ArrayBuffer> for TS 5.9 strict BufferSource
+          // variance (the SharedArrayBuffer variant is excluded at runtime).
+          for await (const chunk of file.bytes) {
+            await writable.write(chunk as unknown as Uint8Array<ArrayBuffer>);
+          }
+          await writable.close();
+        }
+      }
+    } catch {
+      notifications.show({
+        color: "red",
+        message: hasPassword ? t("download.wrongPassword") : t("download.failed"),
+      });
+    } finally {
+      setSavingFile(null);
+    }
+  };
+
+  // Reveal the manifest (file list) on mount for password-less, in-cap format-3
+  // link shares — one counted GET that also buffers the files for instant saving,
+  // mirroring the format-2 preview prefetch. Password / over-cap shares stay
+  // collapsed until the user acts.
+  useEffect(() => {
+    if (!isV3 || hasPassword || downloadsLeft !== null) return;
+    if (size > MULTI_BUFFER_MAX_BYTES || !linkKey) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const dl = await fetchMultiDownload({ keyFromUrl: linkKey });
+        if (cancelled) return;
+        setManifest(dl.manifest);
+        const out: BufferedFile[] = [];
+        for await (const file of dl.files) {
+          const blob = await drainToBlob(file);
+          out.push({ name: file.entry.name, type: file.entry.type, blob });
+        }
+        if (!cancelled) setBuffered(out);
+      } catch {
+        // Leave it collapsed; the action buttons still work.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isV3, hasPassword, downloadsLeft, size, linkKey]);
+
+  // Whether the "Save to folder" button can be offered (Chromium + secure ctx).
+  const [canSaveToFolder, setCanSaveToFolder] = useState(false);
+  useEffect(() => {
+    setCanSaveToFolder(
+      typeof window !== "undefined" &&
+        "showDirectoryPicker" in window &&
+        window.isSecureContext,
+    );
+  }, []);
 
   // Auto-decrypt small v2 link shares on mount: reveals the real filename and
   // renders an inline image/PDF preview — all client-side (the server never sees
@@ -412,10 +753,20 @@ export function DownloadView({
 
           <Stack align="center" gap={2}>
             <Text fw={700} size="xl" ta="center" lineClamp={2}>
-              {revealedName ?? t("download.encryptedFile")}
+              {isV3
+                ? manifest
+                  ? t("download.fileCount", { count: manifest.files.length })
+                  : t("download.multiFile")
+                : (revealedName ?? t("download.encryptedFile"))}
             </Text>
             <Text c="dimmed" size="sm">
-              {formatBytes(size)} · {expiryText}
+              {isV3 && manifest
+                ? `${t("download.total", {
+                    size: formatBytes(
+                      manifest.files.reduce((s, f) => s + f.size, 0),
+                    ),
+                  })} · ${expiryText}`
+                : `${formatBytes(size)} · ${expiryText}`}
             </Text>
             {downloadsLeft !== null && (
               <Text c="dimmed" size="xs">
@@ -465,6 +816,104 @@ export function DownloadView({
           )}
 
           {/* -----------------------------------------------------------
+              format-3 zero-knowledge MULTI-file download UI
+              Renders the manifest as a file list (name + size) with a per-file
+              Download button, a "Download all" (sequential, original names) and
+              — only on Chromium + a secure context — a "Save to folder" button.
+              No inline preview (a later feature). Password shares show the
+              password input first; the list appears after a successful unlock.
+              ----------------------------------------------------------- */}
+          {isV3 ? (
+            <Stack w="100%" gap="md">
+              {hasPassword && !buffered && (
+                <Stack w="100%" gap="sm">
+                  <PasswordInput
+                    label={t("download.protected")}
+                    placeholder={t("download.passwordPlaceholder")}
+                    leftSection={<IconLock size={16} />}
+                    value={password}
+                    onChange={(e) => setPassword(e.currentTarget.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && void multiDownloadAll()
+                    }
+                  />
+                </Stack>
+              )}
+
+              {manifest && manifest.files.length > 0 && (
+                <Stack w="100%" gap={4}>
+                  {manifest.files.map((f, i) => (
+                    <Group
+                      key={`${f.name}-${i}`}
+                      justify="space-between"
+                      wrap="nowrap"
+                      gap="sm"
+                    >
+                      <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+                        <IconFile
+                          size={16}
+                          style={{ flexShrink: 0, opacity: 0.6 }}
+                        />
+                        <Box style={{ minWidth: 0 }}>
+                          <Text size="sm" truncate>
+                            {f.name}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {formatBytes(f.size)}
+                          </Text>
+                        </Box>
+                      </Group>
+                      {/* Per-file Download is offered ONLY for buffered bundles
+                          (<= MULTI_BUFFER_MAX_BYTES): it serves the file from the
+                          in-memory buffer, so it never triggers a second counted
+                          GET. For large/unbuffered bundles the list is read-only;
+                          "Download all" / "Save to folder" do the single GET. */}
+                      {buffered && (
+                        <Tooltip label={t("download.download")} withArrow>
+                          <ActionIcon
+                            variant="subtle"
+                            aria-label={t("download.download")}
+                            loading={savingFile === i}
+                            disabled={savingFile !== null && savingFile !== i}
+                            onClick={() => void multiDownloadOne(i)}
+                          >
+                            <IconDownload size={18} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
+                    </Group>
+                  ))}
+                  <Divider my={4} />
+                </Stack>
+              )}
+
+              <Button
+                fullWidth
+                size="md"
+                leftSection={<IconFiles size={18} />}
+                loading={savingFile === "all"}
+                disabled={savingFile !== null && savingFile !== "all"}
+                onClick={() => void multiDownloadAll()}
+              >
+                {hasPassword && !buffered
+                  ? t("download.unlock")
+                  : t("download.downloadAll")}
+              </Button>
+
+              {canSaveToFolder && (
+                <Button
+                  fullWidth
+                  size="md"
+                  variant="default"
+                  leftSection={<IconFolder size={18} />}
+                  disabled={savingFile !== null}
+                  onClick={() => void multiSaveToFolder()}
+                >
+                  {t("download.saveToFolder")}
+                </Button>
+              )}
+            </Stack>
+          ) : /* -----------------------------------------------------------
               v2 zero-knowledge download UI
               Password mode: password input + Unlock button.
               Link mode:     a single Download button (key is in the fragment).
@@ -474,8 +923,8 @@ export function DownloadView({
               the client and trip a hydration mismatch (React #418/#423). A link
               that was copied without its #k= fragment is caught at click time by
               v2Download, which shows the missing-key notification.
-              ----------------------------------------------------------- */}
-          {isV2 ? (
+              ----------------------------------------------------------- */
+          isV2 ? (
             hasPassword ? (
               <Stack w="100%" gap="sm">
                 <PasswordInput

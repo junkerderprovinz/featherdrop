@@ -12,6 +12,9 @@ export const ru: Translation = {
   "drop.drag": "Перетащите файл сюда",
   "drop.browse": "или нажмите для выбора",
   "drop.replace": "перетащите другой для замены",
+  "drop.replaceMulti": "перетащите снова, чтобы заменить",
+  "drop.fileCount": "Файлов: {{count}}",
+  "drop.total": "Всего: {{size}}",
 
   "settings.title": "Параметры загрузки",
   "settings.expiresAfter": "Истекает через",
@@ -42,6 +45,11 @@ export const ru: Translation = {
   "download.downloadsLeft": "Осталось скачиваний: {{count}}",
 
   "download.missingKey": "В этой ссылке нет ключа расшифровки — возможно, она скопирована не полностью.",
+  "download.multiFile": "Зашифрованные файлы",
+  "download.fileCount": "Файлы: {{count}}",
+  "download.total": "Всего: {{size}}",
+  "download.downloadAll": "Скачать все",
+  "download.saveToFolder": "Сохранить в папку",
 
   "notfound.title": "Здесь ничего нет",
   "notfound.body": "Эта ссылка недействительна, или файл истёк и был удалён.",

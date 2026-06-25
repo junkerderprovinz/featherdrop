@@ -12,6 +12,9 @@ export const fr: Translation = {
   "drop.drag": "Glissez un fichier ici",
   "drop.browse": "ou cliquez pour parcourir",
   "drop.replace": "déposez-en un autre pour remplacer",
+  "drop.replaceMulti": "déposez à nouveau pour remplacer",
+  "drop.fileCount": "Fichiers : {{count}}",
+  "drop.total": "Total : {{size}}",
 
   "settings.title": "Options de téléchargement",
   "settings.expiresAfter": "Expire après",
@@ -42,6 +45,11 @@ export const fr: Translation = {
   "download.downloadsLeft": "Téléchargements restants : {{count}}",
 
   "download.missingKey": "Ce lien n'a pas sa clé de déchiffrement — il a peut-être été copié de façon incomplète.",
+  "download.multiFile": "Fichiers chiffrés",
+  "download.fileCount": "Fichiers : {{count}}",
+  "download.total": "Total : {{size}}",
+  "download.downloadAll": "Tout télécharger",
+  "download.saveToFolder": "Enregistrer dans un dossier",
 
   "notfound.title": "Rien ici",
   "notfound.body": "Ce lien est invalide, ou le fichier a expiré et a été supprimé.",

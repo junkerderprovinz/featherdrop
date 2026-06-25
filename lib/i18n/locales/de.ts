@@ -12,6 +12,9 @@ export const de: Translation = {
   "drop.drag": "Datei zum Hochladen hierher ziehen",
   "drop.browse": "oder klicken zum Auswählen",
   "drop.replace": "andere Datei ablegen zum Ersetzen",
+  "drop.replaceMulti": "erneut ablegen zum Ersetzen",
+  "drop.fileCount": "Dateien: {{count}}",
+  "drop.total": "Gesamt: {{size}}",
 
   "settings.title": "Download-Optionen",
   "settings.expiresAfter": "Läuft ab nach",
@@ -43,6 +46,11 @@ export const de: Translation = {
   "download.downloadsLeft": "Verbleibende Downloads: {{count}}",
 
   "download.missingKey": "Diesem Link fehlt der Entschlüsselungs-Schlüssel — er wurde vielleicht unvollständig kopiert.",
+  "download.multiFile": "Verschlüsselte Dateien",
+  "download.fileCount": "Dateien: {{count}}",
+  "download.total": "Gesamt: {{size}}",
+  "download.downloadAll": "Alle herunterladen",
+  "download.saveToFolder": "In Ordner speichern",
 
   "notfound.title": "Hier ist nichts",
   "notfound.body": "Dieser Link ist ungültig oder die Datei ist abgelaufen und wurde entfernt.",

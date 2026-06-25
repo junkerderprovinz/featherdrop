@@ -3,8 +3,8 @@
 // directory-traversal path crashes Chromium/Edge renderers on some setups with
 // RESULT_CODE_KILLED_BAD_MESSAGE (featherdrop #4; also uppy#4133 and the
 // Nextcloud 30 regression). The file picker and Firefox never take that path,
-// which is exactly why they were unaffected. We only ever accept a single file,
-// so the flat FileList is all we need; no directory traversal.
+// which is exactly why they were unaffected. We return the whole flat FileList
+// (one or many files); no directory traversal — folders are never expanded.
 export function filesFromDropEvent(event: unknown): File[] {
   const e = event as {
     dataTransfer?: { files?: ArrayLike<File> | null } | null;

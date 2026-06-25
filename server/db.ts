@@ -19,7 +19,7 @@ export interface FileRecord {
   enc_mode: string | null; // "link" | "password" | null
   enc_key_wrapped: string | null; // password-wrapped per-file key (password mode)
   // Zero-knowledge v2 fields (Phase 7a)
-  format: number; // 1 = legacy at-rest, 2 = zero-knowledge (client-encrypted)
+  format: number; // 1 = legacy at-rest, 2 = zero-knowledge single file, 3 = zero-knowledge multi-file
   wrapped_key: Buffer | null; // password mode: content key wrapped with Argon2id-derived KEK
   kdf_salt: Buffer | null; // password mode: 16-byte Argon2id salt
   // format=2 download authorization: base64url(SHA-256(content key)), computed

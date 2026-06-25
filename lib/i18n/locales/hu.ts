@@ -12,6 +12,9 @@ export const hu: Translation = {
   "drop.drag": "Húzz ide egy fájlt",
   "drop.browse": "vagy kattints a tallózáshoz",
   "drop.replace": "dobj be másikat a cseréhez",
+  "drop.replaceMulti": "húzd ide újra a cseréhez",
+  "drop.fileCount": "Fájlok: {{count}}",
+  "drop.total": "Összesen: {{size}}",
 
   "settings.title": "Letöltési beállítások",
   "settings.expiresAfter": "Lejár ennyi után",
@@ -42,6 +45,11 @@ export const hu: Translation = {
   "download.downloadsLeft": "Hátralévő letöltések: {{count}}",
 
   "download.missingKey": "Erről a linkről hiányzik a visszafejtő kulcs — lehet, hogy hiányosan másolták.",
+  "download.multiFile": "Titkosított fájlok",
+  "download.fileCount": "Fájlok: {{count}}",
+  "download.total": "Összesen: {{size}}",
+  "download.downloadAll": "Összes letöltése",
+  "download.saveToFolder": "Mentés mappába",
 
   "notfound.title": "Itt nincs semmi",
   "notfound.body": "Ez a link érvénytelen, vagy a fájl lejárt és eltávolításra került.",

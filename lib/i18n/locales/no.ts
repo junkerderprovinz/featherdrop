@@ -12,6 +12,9 @@ export const no: Translation = {
   "drop.drag": "Dra en fil hit",
   "drop.browse": "eller klikk for å bla gjennom",
   "drop.replace": "slipp en annen for å erstatte",
+  "drop.replaceMulti": "slipp igjen for å erstatte",
+  "drop.fileCount": "Filer: {{count}}",
+  "drop.total": "Totalt: {{size}}",
 
   "settings.title": "Nedlastingsalternativer",
   "settings.expiresAfter": "Utløper etter",
@@ -42,6 +45,11 @@ export const no: Translation = {
   "download.downloadsLeft": "Gjenværende nedlastinger: {{count}}",
 
   "download.missingKey": "Denne lenken mangler dekrypteringsnøkkelen — den kan ha blitt kopiert ufullstendig.",
+  "download.multiFile": "Krypterte filer",
+  "download.fileCount": "Filer: {{count}}",
+  "download.total": "Totalt: {{size}}",
+  "download.downloadAll": "Last ned alle",
+  "download.saveToFolder": "Lagre i mappe",
 
   "notfound.title": "Ingenting her",
   "notfound.body": "Denne lenken er ugyldig, eller filen har utløpt og blitt fjernet.",

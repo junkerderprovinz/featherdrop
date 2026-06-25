@@ -12,6 +12,9 @@ export const zh: Translation = {
   "drop.drag": "将文件拖到此处",
   "drop.browse": "或点击浏览",
   "drop.replace": "拖入另一个以替换",
+  "drop.replaceMulti": "再次拖放以替换",
+  "drop.fileCount": "文件数：{{count}}",
+  "drop.total": "总计：{{size}}",
 
   "settings.title": "下载选项",
   "settings.expiresAfter": "过期时间",
@@ -42,6 +45,11 @@ export const zh: Translation = {
   "download.downloadsLeft": "剩余下载次数：{{count}}",
 
   "download.missingKey": "此链接缺少解密密钥 — 可能复制不完整。",
+  "download.multiFile": "已加密的文件",
+  "download.fileCount": "文件数：{{count}}",
+  "download.total": "总计：{{size}}",
+  "download.downloadAll": "全部下载",
+  "download.saveToFolder": "保存到文件夹",
 
   "notfound.title": "这里什么都没有",
   "notfound.body": "此链接无效，或文件已过期并被删除。",

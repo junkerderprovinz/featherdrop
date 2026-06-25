@@ -74,11 +74,16 @@ export interface FileMeta {
   type: string;
 }
 
-/** Encrypt {name,type} with the content key (secretbox; nonce prefixed). */
-export function encryptMeta(meta: FileMeta, key: Uint8Array): Uint8Array {
+/**
+ * JSON-serialize `value` and encrypt it with the content key (secretbox; nonce
+ * prefixed). The byte layout is unchanged from the inlined version, so existing
+ * format-2 enc_meta blobs stay byte-identical — encryptMeta delegates here, and
+ * the multi-file manifest crypto reuses it (no duplicated secretbox logic).
+ */
+function encryptJson(value: unknown, key: Uint8Array): Uint8Array {
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
   const cipher = sodium.crypto_secretbox_easy(
-    sodium.from_string(JSON.stringify(meta)),
+    sodium.from_string(JSON.stringify(value)),
     nonce,
     key,
   );
@@ -88,13 +93,42 @@ export function encryptMeta(meta: FileMeta, key: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Reverse of encryptMeta. Throws if the key is wrong or the blob is tampered. */
-export function decryptMeta(blob: Uint8Array, key: Uint8Array): FileMeta {
+/** Reverse of encryptJson. Throws if the key is wrong or the blob is tampered. */
+function decryptJson<T>(blob: Uint8Array, key: Uint8Array): T {
   const n = sodium.crypto_secretbox_NONCEBYTES;
   const nonce = blob.subarray(0, n);
   const cipher = blob.subarray(n);
   const msg = sodium.crypto_secretbox_open_easy(cipher, nonce, key);
-  return JSON.parse(sodium.to_string(msg)) as FileMeta;
+  return JSON.parse(sodium.to_string(msg)) as T;
+}
+
+/** Encrypt {name,type} with the content key (secretbox; nonce prefixed). */
+export function encryptMeta(meta: FileMeta, key: Uint8Array): Uint8Array {
+  return encryptJson(meta, key);
+}
+
+/** Reverse of encryptMeta. Throws if the key is wrong or the blob is tampered. */
+export function decryptMeta(blob: Uint8Array, key: Uint8Array): FileMeta {
+  return decryptJson<FileMeta>(blob, key);
+}
+
+/**
+ * Encrypt a multi-file manifest (format 3) with the content key — same secretbox
+ * envelope as encryptMeta, just a richer object. Kept here so it shares the one
+ * encryptJson helper. The Manifest type lives in ./multi-file to avoid a cycle.
+ */
+export function encryptManifest(
+  manifest: { files: { name: string; type: string; size: number }[] },
+  key: Uint8Array,
+): Uint8Array {
+  return encryptJson(manifest, key);
+}
+
+/** Reverse of encryptManifest. Throws if the key is wrong or the blob is tampered. */
+export function decryptManifest<
+  T extends { files: { name: string; type: string; size: number }[] },
+>(blob: Uint8Array, key: Uint8Array): T {
+  return decryptJson<T>(blob, key);
 }
 
 function concat(
