@@ -51,6 +51,10 @@ export const cs: Translation = {
   "download.downloadAll": "Stáhnout vše",
   "download.saveToFolder": "Uložit do složky",
 
+  "preview.show": "Náhled",
+  "preview.hide": "Skrýt náhled",
+  "preview.tooLarge": "Příliš velké pro náhled — stáhněte si to k zobrazení",
+
   "notfound.title": "Tady nic není",
   "notfound.body": "Tento odkaz je neplatný, nebo soubor vypršel a byl odstraněn.",
   "notfound.share": "Sdílet soubor",

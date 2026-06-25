@@ -51,6 +51,10 @@ export const th: Translation = {
   "download.downloadAll": "ดาวน์โหลดทั้งหมด",
   "download.saveToFolder": "บันทึกลงโฟลเดอร์",
 
+  "preview.show": "แสดงตัวอย่าง",
+  "preview.hide": "ซ่อนตัวอย่าง",
+  "preview.tooLarge": "ใหญ่เกินกว่าจะแสดงตัวอย่าง — ดาวน์โหลดเพื่อดู",
+
   "notfound.title": "ไม่มีอะไรที่นี่",
   "notfound.body": "ลิงก์นี้ไม่ถูกต้อง หรือไฟล์หมดอายุและถูกลบไปแล้ว",
   "notfound.share": "แชร์ไฟล์",

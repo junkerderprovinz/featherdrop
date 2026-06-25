@@ -51,6 +51,10 @@ export const ja: Translation = {
   "download.downloadAll": "すべてダウンロード",
   "download.saveToFolder": "フォルダーに保存",
 
+  "preview.show": "プレビュー",
+  "preview.hide": "プレビューを非表示",
+  "preview.tooLarge": "プレビューするには大きすぎます — ダウンロードして表示してください",
+
   "notfound.title": "ここには何もありません",
   "notfound.body": "このリンクは無効か、ファイルが期限切れで削除されています。",
   "notfound.share": "ファイルを共有",

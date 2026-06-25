@@ -51,6 +51,10 @@ export const da: Translation = {
   "download.downloadAll": "Download alle",
   "download.saveToFolder": "Gem i mappe",
 
+  "preview.show": "Forhåndsvisning",
+  "preview.hide": "Skjul forhåndsvisning",
+  "preview.tooLarge": "For stor til forhåndsvisning — download for at se den",
+
   "notfound.title": "Intet her",
   "notfound.body": "Dette link er ugyldigt, eller filen er udløbet og fjernet.",
   "notfound.share": "Del en fil",

@@ -51,6 +51,10 @@ export const sv: Translation = {
   "download.downloadAll": "Ladda ner alla",
   "download.saveToFolder": "Spara till mapp",
 
+  "preview.show": "Förhandsvisning",
+  "preview.hide": "Dölj förhandsvisning",
+  "preview.tooLarge": "För stor för förhandsvisning — ladda ner för att visa den",
+
   "notfound.title": "Inget här",
   "notfound.body": "Den här länken är ogiltig, eller så har filen gått ut och tagits bort.",
   "notfound.share": "Dela en fil",

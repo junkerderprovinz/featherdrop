@@ -51,6 +51,10 @@ export const zh: Translation = {
   "download.downloadAll": "全部下载",
   "download.saveToFolder": "保存到文件夹",
 
+  "preview.show": "预览",
+  "preview.hide": "隐藏预览",
+  "preview.tooLarge": "太大无法预览 — 下载后查看",
+
   "notfound.title": "这里什么都没有",
   "notfound.body": "此链接无效，或文件已过期并被删除。",
   "notfound.share": "分享文件",

@@ -51,6 +51,10 @@ export const nl: Translation = {
   "download.downloadAll": "Alles downloaden",
   "download.saveToFolder": "Opslaan in map",
 
+  "preview.show": "Voorbeeld",
+  "preview.hide": "Voorbeeld verbergen",
+  "preview.tooLarge": "Te groot voor een voorbeeld — download om het te bekijken",
+
   "notfound.title": "Hier is niets",
   "notfound.body": "Deze link is ongeldig, of het bestand is verlopen en verwijderd.",
   "notfound.share": "Een bestand delen",

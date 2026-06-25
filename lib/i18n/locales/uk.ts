@@ -51,6 +51,10 @@ export const uk: Translation = {
   "download.downloadAll": "Завантажити все",
   "download.saveToFolder": "Зберегти в теку",
 
+  "preview.show": "Перегляд",
+  "preview.hide": "Сховати перегляд",
+  "preview.tooLarge": "Завеликий для перегляду — завантажте, щоб переглянути",
+
   "notfound.title": "Тут нічого немає",
   "notfound.body": "Це посилання недійсне, або файл сплив і його видалено.",
   "notfound.share": "Поділитися файлом",

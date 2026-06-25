@@ -51,6 +51,10 @@ export const fr: Translation = {
   "download.downloadAll": "Tout télécharger",
   "download.saveToFolder": "Enregistrer dans un dossier",
 
+  "preview.show": "Aperçu",
+  "preview.hide": "Masquer l’aperçu",
+  "preview.tooLarge": "Trop volumineux pour un aperçu — télécharger pour le voir",
+
   "notfound.title": "Rien ici",
   "notfound.body": "Ce lien est invalide, ou le fichier a expiré et a été supprimé.",
   "notfound.share": "Partager un fichier",
