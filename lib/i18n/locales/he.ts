@@ -51,6 +51,10 @@ export const he: Translation = {
   "download.downloadAll": "הורדת הכול",
   "download.saveToFolder": "שמירה לתיקייה",
 
+  "preview.show": "תצוגה מקדימה",
+  "preview.hide": "הסתרת תצוגה מקדימה",
+  "preview.tooLarge": "גדול מדי לתצוגה מקדימה — הורד כדי לצפות בו",
+
   "notfound.title": "אין כאן כלום",
   "notfound.body": "הקישור הזה אינו תקין, או שהקובץ פג ונמחק.",
   "notfound.share": "שיתוף קובץ",

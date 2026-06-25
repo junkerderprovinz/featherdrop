@@ -51,6 +51,10 @@ export const ar: Translation = {
   "download.downloadAll": "تنزيل الكل",
   "download.saveToFolder": "حفظ في مجلد",
 
+  "preview.show": "معاينة",
+  "preview.hide": "إخفاء المعاينة",
+  "preview.tooLarge": "كبير جدًا للمعاينة — نزّله لعرضه",
+
   "notfound.title": "لا شيء هنا",
   "notfound.body": "هذا الرابط غير صالح، أو انتهت صلاحية الملف وتمت إزالته.",
   "notfound.share": "مشاركة ملف",

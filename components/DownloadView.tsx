@@ -23,6 +23,8 @@ import {
 import { notifications } from "@mantine/notifications";
 import {
   IconDownload,
+  IconEye,
+  IconEyeOff,
   IconFile,
   IconFiles,
   IconFolder,
@@ -32,7 +34,7 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
-import { isPreviewableMime } from "@/lib/preview";
+import { isPreviewableMime, previewKind, type PreviewKind } from "@/lib/preview";
 import { mimeFromName } from "@/lib/mime";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
@@ -143,6 +145,10 @@ export function DownloadView({
   const [buffered, setBuffered] = useState<BufferedFile[] | null>(null);
   // Index of the file currently being saved (per-file spinner), or "all".
   const [savingFile, setSavingFile] = useState<number | "all" | null>(null);
+  // Index of the buffered file currently previewed inline (format 3), or null.
+  // The blob: URL is built from the in-memory buffer only — no extra GET.
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [multiPreviewUrl, setMultiPreviewUrl] = useState<string | null>(null);
   const downloadUrl = `/api/d/${slug}`;
 
   const exp = describeExpiry(expiresAt);
@@ -446,6 +452,13 @@ export function DownloadView({
     }
   };
 
+  // Per-file inline "Preview" toggle (format 3): show/hide the previewed file.
+  // Previews ONLY from the in-memory buffer (zero extra counted GETs); the
+  // blob: URL is (re)built by the effect below when `previewIndex` changes.
+  const toggleMultiPreview = (index: number) => {
+    setPreviewIndex((cur) => (cur === index ? null : index));
+  };
+
   // "Save to folder" (Chromium + secure context only): pick a directory and write
   // every file into it via the File System Access API. Small bundles write from
   // the in-memory buffer; large bundles stream each file's bytes straight into
@@ -530,6 +543,29 @@ export function DownloadView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isV3, hasPassword, downloadsLeft, size, linkKey]);
+
+  // Format-3 inline preview: (re)build a blob: URL for the selected buffered file
+  // and revoke it whenever the selection changes or the component unmounts, so a
+  // previewed video/image never leaks an object URL. Built ONLY from the in-memory
+  // buffer (no fetch), so previewing never costs a counted GET.
+  useEffect(() => {
+    if (previewIndex === null || !buffered) {
+      setMultiPreviewUrl(null);
+      return;
+    }
+    const file = buffered[previewIndex];
+    // Skip building the object URL for non-previewable types and for files over
+    // the cap (the render shows a "too large" note instead) — no wasted URL.
+    if (!file || !isPreviewableMime(file.type) || file.blob.size > PREVIEW_MAX_BYTES) {
+      setMultiPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file.blob);
+    setMultiPreviewUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [previewIndex, buffered]);
 
   // Whether the "Save to folder" button can be offered (Chromium + secure ctx).
   const [canSaveToFolder, setCanSaveToFolder] = useState(false);
@@ -695,6 +731,12 @@ export function DownloadView({
     !missingKey &&
     revealedName !== null;
 
+  // v1 previews via the server's ?inline endpoint, which only serves an inline
+  // response for the inert allowlist (with nosniff). The render kind comes from
+  // the same effectiveMime the gate checked; previewKind maps image/video/PDF
+  // uniformly — including a v1 share whose decrypted header MIME is video/*.
+  const v1PreviewKind = previewKind(effectiveMime);
+
   // v1 previews via the server's ?inline endpoint; v2 has no server inline route
   // and previews from the in-memory blob: URL decrypted on mount above.
   const previewSrc = isV2 ? previewUrl : canPreview ? inlineSrc : null;
@@ -776,52 +818,22 @@ export function DownloadView({
           </Stack>
 
           {previewSrc && (
-            <Box
-              w="100%"
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: rem(160),
-                borderRadius: "var(--mantine-radius-md)",
-                overflow: "hidden",
-                background: "var(--mantine-color-default-hover)",
-              }}
-            >
-              {effectiveMime?.startsWith("image/") ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewSrc}
-                  alt={revealedName ?? ""}
-                  style={{
-                    display: "block",
-                    maxWidth: "100%",
-                    maxHeight: 360,
-                    objectFit: "contain",
-                  }}
-                />
-              ) : (
-                <embed
-                  src={previewSrc}
-                  type="application/pdf"
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    height: 360,
-                    border: "none",
-                  }}
-                />
-              )}
-            </Box>
+            <PreviewArea
+              src={previewSrc}
+              kind={isV2 ? previewKind(effectiveMime) : v1PreviewKind}
+              name={revealedName}
+            />
           )}
 
           {/* -----------------------------------------------------------
               format-3 zero-knowledge MULTI-file download UI
               Renders the manifest as a file list (name + size) with a per-file
-              Download button, a "Download all" (sequential, original names) and
-              — only on Chromium + a secure context — a "Save to folder" button.
-              No inline preview (a later feature). Password shares show the
-              password input first; the list appears after a successful unlock.
+              Download button, a per-file inline Preview toggle (previewable,
+              buffered files only — rendered from the in-memory buffer, no extra
+              GET), a "Download all" (sequential, original names) and — only on
+              Chromium + a secure context — a "Save to folder" button. Password
+              shares show the password input first; the list appears after a
+              successful unlock.
               ----------------------------------------------------------- */}
           {isV3 ? (
             <Stack w="100%" gap="md">
@@ -840,49 +852,110 @@ export function DownloadView({
                 </Stack>
               )}
 
+              {/* Inline preview of the selected buffered file, rendered above the
+                  list. Built ONLY from the in-memory buffer (no extra GET). Files
+                  over the per-file preview cap show a "too large" note instead. */}
+              {previewIndex !== null &&
+                buffered &&
+                buffered[previewIndex] &&
+                (buffered[previewIndex].blob.size > PREVIEW_MAX_BYTES ? (
+                  <Text c="dimmed" size="sm" ta="center">
+                    {t("preview.tooLarge")}
+                  </Text>
+                ) : (
+                  multiPreviewUrl && (
+                    <PreviewArea
+                      src={multiPreviewUrl}
+                      kind={previewKind(buffered[previewIndex].type)}
+                      name={buffered[previewIndex].name}
+                    />
+                  )
+                ))}
+
               {manifest && manifest.files.length > 0 && (
                 <Stack w="100%" gap={4}>
-                  {manifest.files.map((f, i) => (
-                    <Group
-                      key={`${f.name}-${i}`}
-                      justify="space-between"
-                      wrap="nowrap"
-                      gap="sm"
-                    >
-                      <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
-                        <IconFile
-                          size={16}
-                          style={{ flexShrink: 0, opacity: 0.6 }}
-                        />
-                        <Box style={{ minWidth: 0 }}>
-                          <Text size="sm" truncate>
-                            {f.name}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            {formatBytes(f.size)}
-                          </Text>
-                        </Box>
+                  {manifest.files.map((f, i) => {
+                    // Preview is offered only for buffered, previewable files —
+                    // the toggle renders from the in-memory buffer (no extra GET).
+                    const canPreviewFile =
+                      !!buffered && isPreviewableMime(f.type);
+                    const isPreviewing = previewIndex === i;
+                    return (
+                      <Group
+                        key={`${f.name}-${i}`}
+                        justify="space-between"
+                        wrap="nowrap"
+                        gap="sm"
+                      >
+                        <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }}>
+                          <IconFile
+                            size={16}
+                            style={{ flexShrink: 0, opacity: 0.6 }}
+                          />
+                          <Box style={{ minWidth: 0 }}>
+                            <Text size="sm" truncate>
+                              {f.name}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {formatBytes(f.size)}
+                            </Text>
+                          </Box>
+                        </Group>
+                        <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
+                          {/* Per-file Preview toggle: only for buffered,
+                              previewable files. It shows the inline preview from
+                              the in-memory buffer — never a counted GET. */}
+                          {canPreviewFile && (
+                            <Tooltip
+                              label={
+                                isPreviewing
+                                  ? t("preview.hide")
+                                  : t("preview.show")
+                              }
+                              withArrow
+                            >
+                              <ActionIcon
+                                variant="subtle"
+                                aria-label={
+                                  isPreviewing
+                                    ? t("preview.hide")
+                                    : t("preview.show")
+                                }
+                                onClick={() => toggleMultiPreview(i)}
+                              >
+                                {isPreviewing ? (
+                                  <IconEyeOff size={18} />
+                                ) : (
+                                  <IconEye size={18} />
+                                )}
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {/* Per-file Download is offered ONLY for buffered
+                              bundles (<= MULTI_BUFFER_MAX_BYTES): it serves the
+                              file from the in-memory buffer, so it never triggers
+                              a second counted GET. For large/unbuffered bundles the
+                              list is read-only; "Download all" / "Save to folder"
+                              do the single GET. */}
+                          {buffered && (
+                            <Tooltip label={t("download.download")} withArrow>
+                              <ActionIcon
+                                variant="subtle"
+                                aria-label={t("download.download")}
+                                loading={savingFile === i}
+                                disabled={
+                                  savingFile !== null && savingFile !== i
+                                }
+                                onClick={() => void multiDownloadOne(i)}
+                              >
+                                <IconDownload size={18} />
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                        </Group>
                       </Group>
-                      {/* Per-file Download is offered ONLY for buffered bundles
-                          (<= MULTI_BUFFER_MAX_BYTES): it serves the file from the
-                          in-memory buffer, so it never triggers a second counted
-                          GET. For large/unbuffered bundles the list is read-only;
-                          "Download all" / "Save to folder" do the single GET. */}
-                      {buffered && (
-                        <Tooltip label={t("download.download")} withArrow>
-                          <ActionIcon
-                            variant="subtle"
-                            aria-label={t("download.download")}
-                            loading={savingFile === i}
-                            disabled={savingFile !== null && savingFile !== i}
-                            onClick={() => void multiDownloadOne(i)}
-                          >
-                            <IconDownload size={18} />
-                          </ActionIcon>
-                        </Tooltip>
-                      )}
-                    </Group>
-                  ))}
+                    );
+                  })}
                   <Divider my={4} />
                 </Stack>
               )}
@@ -1001,5 +1074,74 @@ export function DownloadView({
         </Stack>
       </Paper>
     </Container>
+  );
+}
+
+// Inline preview frame shared by the format-2 single-file preview and the
+// format-3 per-file preview. Renders from an already-prepared blob:/inline URL —
+// it never fetches or decrypts. `kind` decides the element: an inert <img> for
+// images, <video controls> (no autoplay) for video, <embed> for PDF. Anything
+// else (kind === null) renders nothing, so a non-allowlisted type can never be
+// embedded. Object-URL lifecycle is owned by the caller (created/revoked in an
+// effect), so this component stays purely presentational.
+function PreviewArea({
+  src,
+  kind,
+  name,
+}: {
+  src: string;
+  kind: PreviewKind | null;
+  name: string | null;
+}) {
+  if (!kind) return null;
+  return (
+    <Box
+      w="100%"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: rem(160),
+        borderRadius: "var(--mantine-radius-md)",
+        overflow: "hidden",
+        background: "var(--mantine-color-default-hover)",
+      }}
+    >
+      {kind === "image" ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={name ?? ""}
+          style={{
+            display: "block",
+            maxWidth: "100%",
+            maxHeight: 360,
+            objectFit: "contain",
+          }}
+        />
+      ) : kind === "video" ? (
+        <video
+          src={src}
+          controls
+          // No autoplay: previewing must not start playback or sound on its own.
+          style={{
+            display: "block",
+            maxWidth: "100%",
+            maxHeight: 360,
+          }}
+        />
+      ) : (
+        <embed
+          src={src}
+          type="application/pdf"
+          style={{
+            display: "block",
+            width: "100%",
+            height: 360,
+            border: "none",
+          }}
+        />
+      )}
+    </Box>
   );
 }

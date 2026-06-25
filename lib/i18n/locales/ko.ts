@@ -51,6 +51,10 @@ export const ko: Translation = {
   "download.downloadAll": "모두 다운로드",
   "download.saveToFolder": "폴더에 저장",
 
+  "preview.show": "미리보기",
+  "preview.hide": "미리보기 숨기기",
+  "preview.tooLarge": "미리보기에는 너무 큽니다 — 보려면 다운로드하세요",
+
   "notfound.title": "여기에 아무것도 없습니다",
   "notfound.body": "이 링크가 유효하지 않거나 파일이 만료되어 삭제되었습니다.",
   "notfound.share": "파일 공유",

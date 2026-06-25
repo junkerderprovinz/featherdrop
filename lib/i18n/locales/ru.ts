@@ -51,6 +51,10 @@ export const ru: Translation = {
   "download.downloadAll": "Скачать все",
   "download.saveToFolder": "Сохранить в папку",
 
+  "preview.show": "Предпросмотр",
+  "preview.hide": "Скрыть предпросмотр",
+  "preview.tooLarge": "Слишком большой для предпросмотра — скачайте, чтобы посмотреть",
+
   "notfound.title": "Здесь ничего нет",
   "notfound.body": "Эта ссылка недействительна, или файл истёк и был удалён.",
   "notfound.share": "Поделиться файлом",

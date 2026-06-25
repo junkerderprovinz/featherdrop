@@ -51,6 +51,10 @@ export const hu: Translation = {
   "download.downloadAll": "Összes letöltése",
   "download.saveToFolder": "Mentés mappába",
 
+  "preview.show": "Előnézet",
+  "preview.hide": "Előnézet elrejtése",
+  "preview.tooLarge": "Túl nagy az előnézethez — töltsd le a megtekintéshez",
+
   "notfound.title": "Itt nincs semmi",
   "notfound.body": "Ez a link érvénytelen, vagy a fájl lejárt és eltávolításra került.",
   "notfound.share": "Fájl megosztása",

@@ -51,6 +51,10 @@ export const el: Translation = {
   "download.downloadAll": "Λήψη όλων",
   "download.saveToFolder": "Αποθήκευση σε φάκελο",
 
+  "preview.show": "Προεπισκόπηση",
+  "preview.hide": "Απόκρυψη προεπισκόπησης",
+  "preview.tooLarge": "Πολύ μεγάλο για προεπισκόπηση — κατεβάστε το για να το δείτε",
+
   "notfound.title": "Δεν υπάρχει τίποτα εδώ",
   "notfound.body": "Αυτός ο σύνδεσμος δεν είναι έγκυρος ή το αρχείο έληξε και αφαιρέθηκε.",
   "notfound.share": "Μοιράσου ένα αρχείο",

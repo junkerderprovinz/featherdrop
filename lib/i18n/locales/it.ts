@@ -51,6 +51,10 @@ export const it: Translation = {
   "download.downloadAll": "Scarica tutto",
   "download.saveToFolder": "Salva in una cartella",
 
+  "preview.show": "Anteprima",
+  "preview.hide": "Nascondi anteprima",
+  "preview.tooLarge": "Troppo grande per l’anteprima — scaricalo per visualizzarlo",
+
   "notfound.title": "Qui non c'è niente",
   "notfound.body": "Questo link non è valido, oppure il file è scaduto ed è stato rimosso.",
   "notfound.share": "Condividi un file",

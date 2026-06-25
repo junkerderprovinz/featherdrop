@@ -51,6 +51,10 @@ export const ro: Translation = {
   "download.downloadAll": "Descarcă tot",
   "download.saveToFolder": "Salvează în folder",
 
+  "preview.show": "Previzualizare",
+  "preview.hide": "Ascunde previzualizarea",
+  "preview.tooLarge": "Prea mare pentru previzualizare — descarcă-l pentru a-l vedea",
+
   "notfound.title": "Nimic aici",
   "notfound.body": "Acest link este invalid sau fișierul a expirat și a fost eliminat.",
   "notfound.share": "Partajează un fișier",

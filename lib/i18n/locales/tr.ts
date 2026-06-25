@@ -51,6 +51,10 @@ export const tr: Translation = {
   "download.downloadAll": "Tümünü indir",
   "download.saveToFolder": "Klasöre kaydet",
 
+  "preview.show": "Önizleme",
+  "preview.hide": "Önizlemeyi gizle",
+  "preview.tooLarge": "Önizleme için çok büyük — görüntülemek için indirin",
+
   "notfound.title": "Burada bir şey yok",
   "notfound.body": "Bu bağlantı geçersiz veya dosya sona erip kaldırılmış.",
   "notfound.share": "Bir dosya paylaş",

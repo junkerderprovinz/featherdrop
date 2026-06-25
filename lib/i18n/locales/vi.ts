@@ -51,6 +51,10 @@ export const vi: Translation = {
   "download.downloadAll": "Tải xuống tất cả",
   "download.saveToFolder": "Lưu vào thư mục",
 
+  "preview.show": "Xem trước",
+  "preview.hide": "Ẩn xem trước",
+  "preview.tooLarge": "Quá lớn để xem trước — tải xuống để xem",
+
   "notfound.title": "Không có gì ở đây",
   "notfound.body": "Liên kết này không hợp lệ, hoặc tệp đã hết hạn và bị xóa.",
   "notfound.share": "Chia sẻ một tệp",

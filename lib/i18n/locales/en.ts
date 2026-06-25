@@ -51,6 +51,10 @@ export const en = {
   "download.downloadAll": "Download all",
   "download.saveToFolder": "Save to folder",
 
+  "preview.show": "Preview",
+  "preview.hide": "Hide preview",
+  "preview.tooLarge": "Too large to preview — download to view it",
+
   "notfound.title": "Nothing here",
   "notfound.body": "This link is invalid, or the file has expired and been removed.",
   "notfound.share": "Share a file",

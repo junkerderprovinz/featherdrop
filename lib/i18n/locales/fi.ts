@@ -51,6 +51,10 @@ export const fi: Translation = {
   "download.downloadAll": "Lataa kaikki",
   "download.saveToFolder": "Tallenna kansioon",
 
+  "preview.show": "Esikatselu",
+  "preview.hide": "Piilota esikatselu",
+  "preview.tooLarge": "Liian suuri esikatseltavaksi — lataa nähdäksesi sen",
+
   "notfound.title": "Täällä ei ole mitään",
   "notfound.body": "Tämä linkki on virheellinen tai tiedosto on vanhentunut ja poistettu.",
   "notfound.share": "Jaa tiedosto",
