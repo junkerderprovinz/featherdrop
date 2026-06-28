@@ -7,11 +7,13 @@ import {
   Box,
   Button,
   Center,
+  Code,
   Container,
   Divider,
   Group,
   Paper,
   PasswordInput,
+  ScrollArea,
   Stack,
   Text,
   Title,
@@ -34,7 +36,12 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
-import { isPreviewableMime, previewKind, type PreviewKind } from "@/lib/preview";
+import {
+  isPreviewableMime,
+  isServerInlineMime,
+  previewKind,
+  type PreviewKind,
+} from "@/lib/preview";
 import { mimeFromName } from "@/lib/mime";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
@@ -57,6 +64,12 @@ import {
 // fetch; larger files skip the prefetch and stream straight to disk. (Spec §5.6)
 const PREVIEW_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
+// Text/code previews get a SEPARATE, much smaller cap: a giant log decoded into
+// a single <pre> would freeze the tab, so over this size we show the same
+// "too large" note as other kinds and offer the download instead. (The bytes are
+// already in memory either way — this only bounds how much we DECODE + render.)
+const TEXT_PREVIEW_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+
 // Format-3 (multi-file) bundles up to this combined plaintext size are decrypted
 // ONCE and buffered in memory, so the file list, "Download all" and every
 // per-file button serve from that single decrypt — exactly ONE counted GET for
@@ -70,6 +83,18 @@ interface BufferedFile {
   name: string;
   type: string;
   blob: Blob;
+}
+
+// Decode an already-in-memory blob to UTF-8 text for a text/code preview, but
+// only up to TEXT_PREVIEW_MAX_BYTES so a huge log can't freeze the tab. Returns
+// null when the blob is over the cap (the caller shows the "too large" note).
+// Reads from the in-memory blob only — never a fetch, so it costs no counted GET.
+async function decodeTextPreview(blob: Blob): Promise<string | null> {
+  if (blob.size > TEXT_PREVIEW_MAX_BYTES) return null;
+  const buf = await blob.arrayBuffer();
+  // "fatal: false" so undecodable bytes become U+FFFD instead of throwing — a
+  // mislabeled binary still renders as (garbled) text rather than breaking.
+  return new TextDecoder("utf-8", { fatal: false }).decode(buf);
 }
 
 // File System Access API — not yet in lib.dom; declared minimally for the
@@ -139,6 +164,9 @@ export function DownloadView({
     type: string;
   } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Decoded text for the format-2 text/code preview (UTF-8, capped). Rendered as
+  // ESCAPED React children in a <pre> — never as HTML. null = not a text preview.
+  const [previewText, setPreviewText] = useState<string | null>(null);
   // Format-3 (multi-file) state: the decrypted manifest backs the file list, and
   // (for bundles within the buffer cap) the buffered files back per-file saving.
   const [manifest, setManifest] = useState<Manifest | null>(null);
@@ -149,6 +177,9 @@ export function DownloadView({
   // The blob: URL is built from the in-memory buffer only — no extra GET.
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [multiPreviewUrl, setMultiPreviewUrl] = useState<string | null>(null);
+  // Decoded text for the format-3 per-file text/code preview (UTF-8, capped),
+  // mirroring previewText. Rendered ESCAPED in a <pre>, never as HTML.
+  const [multiPreviewText, setMultiPreviewText] = useState<string | null>(null);
   const downloadUrl = `/api/d/${slug}`;
 
   const exp = describeExpiry(expiresAt);
@@ -549,14 +580,32 @@ export function DownloadView({
   // previewed video/image never leaks an object URL. Built ONLY from the in-memory
   // buffer (no fetch), so previewing never costs a counted GET.
   useEffect(() => {
+    setMultiPreviewText(null);
     if (previewIndex === null || !buffered) {
       setMultiPreviewUrl(null);
       return;
     }
     const file = buffered[previewIndex];
-    // Skip building the object URL for non-previewable types and for files over
-    // the cap (the render shows a "too large" note instead) — no wasted URL.
-    if (!file || !isPreviewableMime(file.type) || file.blob.size > PREVIEW_MAX_BYTES) {
+    if (!file || !isPreviewableMime(file.type)) {
+      setMultiPreviewUrl(null);
+      return;
+    }
+    // Text/code: decode the in-memory bytes (capped) and render them ESCAPED in a
+    // <pre> — no object URL. decodeTextPreview returns null over the text cap, so
+    // the render falls through to the "too large" note. Reuses the buffer (no GET).
+    if (previewKind(file.type) === "text") {
+      setMultiPreviewUrl(null);
+      let cancelled = false;
+      void decodeTextPreview(file.blob).then((text) => {
+        if (!cancelled) setMultiPreviewText(text);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+    // Other kinds: build a blob: URL. Skip files over the cap (the render shows a
+    // "too large" note instead) — no wasted URL.
+    if (file.blob.size > PREVIEW_MAX_BYTES) {
       setMultiPreviewUrl(null);
       return;
     }
@@ -616,7 +665,13 @@ export function DownloadView({
         setDecrypted({ blob, name: meta.name, type: meta.type });
         setRevealedName(meta.name);
         setRevealedMime(meta.type);
-        if (isPreviewableMime(meta.type)) {
+        // Text/code previews from the decoded bytes (capped); every other
+        // previewable kind renders from a blob: URL. Both reuse the in-memory
+        // blob only — no second, counted fetch.
+        if (previewKind(meta.type) === "text") {
+          const text = await decodeTextPreview(blob);
+          if (!cancelled) setPreviewText(text); // null over the cap → "too large"
+        } else if (isPreviewableMime(meta.type)) {
           objectUrl = URL.createObjectURL(blob);
           setPreviewUrl(objectUrl);
         }
@@ -723,23 +778,34 @@ export function DownloadView({
   // written before the filename-extension fallback was added to finalize.
   const effectiveMime =
     revealedMime || mime || mimeFromName(revealedName ?? name ?? "");
-  const previewable = isPreviewableMime(effectiveMime);
+  const v1PreviewKind = previewKind(effectiveMime);
+  // v1 previews load the file's bytes from a URL (the server's ?inline route), so
+  // they're limited to what that URL flow supports:
+  //   - the STRICT server-inline allowlist (isServerInlineMime), which excludes
+  //     image/svg+xml — SVG must never be served inline by the server (top-level
+  //     document = scriptable). SVG is previewable only as a CLIENT blob: <img>,
+  //     i.e. format 2/3, never here.
+  //   - NOT the "text" kind: a text preview needs decoded text children, which
+  //     the URL flow can't provide (PreviewArea gets a src URL, not bytes). Text
+  //     previews are client-blob only (format 2/3).
+  const v1Previewable =
+    isServerInlineMime(effectiveMime) && v1PreviewKind !== "text";
   const canPreview =
-    previewable &&
+    v1Previewable &&
     downloadsLeft === null &&
     !hasPassword &&
     !missingKey &&
     revealedName !== null;
 
-  // v1 previews via the server's ?inline endpoint, which only serves an inline
-  // response for the inert allowlist (with nosniff). The render kind comes from
-  // the same effectiveMime the gate checked; previewKind maps image/video/PDF
-  // uniformly — including a v1 share whose decrypted header MIME is video/*.
-  const v1PreviewKind = previewKind(effectiveMime);
-
   // v1 previews via the server's ?inline endpoint; v2 has no server inline route
-  // and previews from the in-memory blob: URL decrypted on mount above.
+  // and previews from the in-memory blob: URL decoded on mount above.
   const previewSrc = isV2 ? previewUrl : canPreview ? inlineSrc : null;
+  // For v2 the render kind comes from the decrypted header MIME; for v1 from the
+  // same effectiveMime the server-inline gate checked.
+  const renderKind = isV2 ? previewKind(effectiveMime) : v1PreviewKind;
+  // v2 text/code preview: show the decoded text (or a "too large" note if it was
+  // over the text cap, signalled by a null previewText while the kind is "text").
+  const isV2TextPreview = isV2 && renderKind === "text";
 
   return (
     <Container size="sm" py={60} style={{ position: "relative", minHeight: "100vh" }}>
@@ -817,13 +883,20 @@ export function DownloadView({
             )}
           </Stack>
 
-          {previewSrc && (
-            <PreviewArea
-              src={previewSrc}
-              kind={isV2 ? previewKind(effectiveMime) : v1PreviewKind}
-              name={revealedName}
-            />
-          )}
+          {/* format-2 / v1 single-file inline preview. Text/code (format 2 only)
+              renders the decoded text; a text file over the text cap shows the
+              "too large" note instead. Every other kind renders from the URL. */}
+          {isV2TextPreview ? (
+            previewText !== null ? (
+              <PreviewArea kind="text" text={previewText} name={revealedName} />
+            ) : decrypted ? (
+              <Text c="dimmed" size="sm" ta="center">
+                {t("preview.tooLarge")}
+              </Text>
+            ) : null
+          ) : previewSrc ? (
+            <PreviewArea src={previewSrc} kind={renderKind} name={revealedName} />
+          ) : null}
 
           {/* -----------------------------------------------------------
               format-3 zero-knowledge MULTI-file download UI
@@ -853,24 +926,41 @@ export function DownloadView({
               )}
 
               {/* Inline preview of the selected buffered file, rendered above the
-                  list. Built ONLY from the in-memory buffer (no extra GET). Files
-                  over the per-file preview cap show a "too large" note instead. */}
+                  list. Built ONLY from the in-memory buffer (no extra GET). Text/
+                  code renders the decoded text (text cap); every other kind from a
+                  blob: URL (media cap). Over either cap → a "too large" note. */}
               {previewIndex !== null &&
                 buffered &&
                 buffered[previewIndex] &&
-                (buffered[previewIndex].blob.size > PREVIEW_MAX_BYTES ? (
-                  <Text c="dimmed" size="sm" ta="center">
-                    {t("preview.tooLarge")}
-                  </Text>
-                ) : (
-                  multiPreviewUrl && (
-                    <PreviewArea
-                      src={multiPreviewUrl}
-                      kind={previewKind(buffered[previewIndex].type)}
-                      name={buffered[previewIndex].name}
-                    />
-                  )
-                ))}
+                (() => {
+                  const f = buffered[previewIndex];
+                  const k = previewKind(f.type);
+                  if (k === "text") {
+                    return multiPreviewText !== null ? (
+                      <PreviewArea
+                        kind="text"
+                        text={multiPreviewText}
+                        name={f.name}
+                      />
+                    ) : (
+                      <Text c="dimmed" size="sm" ta="center">
+                        {t("preview.tooLarge")}
+                      </Text>
+                    );
+                  }
+                  if (f.blob.size > PREVIEW_MAX_BYTES) {
+                    return (
+                      <Text c="dimmed" size="sm" ta="center">
+                        {t("preview.tooLarge")}
+                      </Text>
+                    );
+                  }
+                  return (
+                    multiPreviewUrl && (
+                      <PreviewArea src={multiPreviewUrl} kind={k} name={f.name} />
+                    )
+                  );
+                })()}
 
               {manifest && manifest.files.length > 0 && (
                 <Stack w="100%" gap={4}>
@@ -1078,22 +1168,66 @@ export function DownloadView({
 }
 
 // Inline preview frame shared by the format-2 single-file preview and the
-// format-3 per-file preview. Renders from an already-prepared blob:/inline URL —
-// it never fetches or decrypts. `kind` decides the element: an inert <img> for
-// images, <video controls> (no autoplay) for video, <embed> for PDF. Anything
-// else (kind === null) renders nothing, so a non-allowlisted type can never be
-// embedded. Object-URL lifecycle is owned by the caller (created/revoked in an
-// effect), so this component stays purely presentational.
+// format-3 per-file preview. Purely presentational — it never fetches or
+// decrypts. `kind` decides the element, and every element renders the content
+// INERTLY (no script execution against our origin):
+//   - image: an <img> with the blob:/inline URL. This is ALSO the ONLY safe way
+//            to render image/svg+xml — an SVG inside an <img> runs no scripts
+//            ("secure static mode"). SVG must NEVER be rendered via
+//            <embed>/<iframe>/<object> or inlined into the DOM, and the server
+//            must never serve it inline (see isServerInlineMime). Do not change
+//            the SVG path away from <img>.
+//   - video: <video controls> (no autoplay) from the blob:/inline URL.
+//   - audio: <audio controls> (no autoplay) from the blob:/inline URL.
+//   - pdf:   <embed type="application/pdf"> from the blob:/inline URL.
+//   - text:  the decoded `text` prop rendered as ESCAPED React children inside a
+//            Mantine <Code> in a scrollable monospace block. NEVER via
+//            dangerouslySetInnerHTML/innerHTML, and Markdown is shown as raw text
+//            (no HTML rendering). For this kind the caller passes `text`, not `src`.
+// kind === null renders nothing, so a non-allowlisted type can never be embedded.
+// Object-URL lifecycle (for the URL-backed kinds) is owned by the caller.
 function PreviewArea({
   src,
   kind,
   name,
+  text,
 }: {
-  src: string;
+  src?: string;
   kind: PreviewKind | null;
   name: string | null;
+  text?: string;
 }) {
   if (!kind) return null;
+
+  // Text/code: a scrollable monospace block. The decoded string is passed as a
+  // React child of <Code>, so React escapes it — no HTML is ever interpreted.
+  if (kind === "text") {
+    return (
+      <Box
+        w="100%"
+        style={{
+          borderRadius: "var(--mantine-radius-md)",
+          overflow: "hidden",
+          background: "var(--mantine-color-default-hover)",
+        }}
+      >
+        <ScrollArea.Autosize mah={360} type="auto">
+          <Code
+            block
+            style={{
+              background: "transparent",
+              whiteSpace: "pre",
+              fontSize: rem(12),
+            }}
+          >
+            {text ?? ""}
+          </Code>
+        </ScrollArea.Autosize>
+      </Box>
+    );
+  }
+
+  if (!src) return null;
   return (
     <Box
       w="100%"
@@ -1108,6 +1242,7 @@ function PreviewArea({
       }}
     >
       {kind === "image" ? (
+        // <img> renders raster images AND svg safely (svg = no scripts here).
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
@@ -1129,6 +1264,14 @@ function PreviewArea({
             maxWidth: "100%",
             maxHeight: 360,
           }}
+        />
+      ) : kind === "audio" ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <audio
+          src={src}
+          controls
+          // No autoplay: previewing must not start playback or sound on its own.
+          style={{ display: "block", width: "100%" }}
         />
       ) : (
         <embed
