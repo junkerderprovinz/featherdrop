@@ -4,7 +4,7 @@ import { stat, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { MASTER_KEY, UPLOADS_DIR } from "@/lib/config";
-import { isPreviewableMime } from "@/lib/preview";
+import { isServerInlineMime } from "@/lib/preview";
 import { mimeFromName } from "@/lib/mime";
 import {
   getFileBySlug,
@@ -151,8 +151,11 @@ export async function GET(
   // download. Gated on three things, all enforced server-side because this GET is
   // attacker-reachable directly:
   //   - only UNLIMITED shares (else a preview would bypass the download limit), and
-  //   - only an allowlist of INERT types (no SVG/HTML), so an uploader-chosen MIME
-  //     can't turn an inline response into same-origin stored XSS.
+  //   - only the STRICT server-inline allowlist (isServerInlineMime), which omits
+  //     image/svg+xml and any HTML/XML type — an inline response is rendered as a
+  //     top-level document, so a scriptable MIME would be same-origin stored XSS.
+  //     (SVG is still previewable CLIENT-side via an inert <img>; that path never
+  //     touches this server route.)
   // The stored MIME can be null/empty for files uploaded before the
   // filename-extension fallback was added. Use `||` (not `??`) so both
   // null and empty-string are treated as missing, then infer from the name.
@@ -160,7 +163,7 @@ export async function GET(
   const wantInline =
     req.nextUrl.searchParams.get("inline") === "1" &&
     rec.max_downloads === null &&
-    isPreviewableMime(inlineMime);
+    isServerInlineMime(inlineMime);
 
   // Plaintext blob (legacy): the password gate requires the cookie to carry the
   // unforgeable, hash-derived download token — not merely be present, or anyone
