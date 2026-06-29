@@ -37,6 +37,8 @@ test("inert video containers are previewable", () => {
     "video/ogg",
     "video/quicktime",
     "video/x-m4v",
+    "video/x-matroska",
+    "video/mkv",
   ]) {
     assert.equal(isPreviewableMime(m), true, m);
   }
@@ -131,6 +133,8 @@ test("previewKind maps each allowlisted type to its render kind", () => {
     "video/ogg",
     "video/quicktime",
     "video/x-m4v",
+    "video/x-matroska",
+    "video/mkv",
   ]) {
     assert.equal(previewKind(m), "video", m);
   }

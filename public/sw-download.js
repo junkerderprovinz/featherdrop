@@ -91,23 +91,25 @@ self.addEventListener("fetch", (event) => {
 // Streaming INLINE PREVIEW (large videos) — /sw-preview/<id>
 //
 // A <video src="/sw-preview/<id>"> must be able to start playing a video that is
-// too large to buffer into a blob: URL. The plaintext is produced by a
-// SEQUENTIAL libsodium secretstream on the MAIN THREAD (the WASM/crypto lives
-// there, not in this worker), so this worker does NOT decrypt. Instead it asks
-// the controlling page, per request, for a FRESH decrypted ReadableStream that
-// already starts at the requested byte offset, and pipes it straight to the
-// <video> element. Memory stays bounded: bytes flow through, nothing is
-// collected here.
+// too large to buffer into a blob: URL. The plaintext is produced on the MAIN
+// THREAD (the WASM/crypto lives there, not in this worker), so this worker does
+// NOT decrypt. Instead it asks the controlling page, per request, for a FRESH
+// decrypted ReadableStream of exactly the requested byte range, and pipes it
+// straight to the <video> element. Memory stays bounded: bytes flow through,
+// nothing is collected here. This worker is FORMAT-AGNOSTIC — it only forwards
+// [start, end] to the page and streams back whatever the page produces.
 //
-// Range handling: <video> issues HTTP Range requests. Because the cipher is a
-// stateful sequential stream, the plaintext at offset X can only be produced by
-// decrypting from 0 and discarding the first X bytes — random access is
-// impossible. So a far-forward seek re-decrypts from the start (slow but
-// correct); progressive play and seeking within the already-played region are
-// fast. We honor Range by telling the page the desired [start,end) and letting
-// it produce a stream skipped to `start`; we reply 206 with a correct
-// Content-Range. A plain (no-Range) request is answered 200 with
-// Accept-Ranges: bytes and the full Content-Length.
+// Range handling: <video> issues HTTP Range requests. How the page produces the
+// range depends on the share's content format (the page knows it, this worker
+// does not):
+//   - cf=2 (seekable per-chunk AEAD, all NEW shares): TRUE random access — the
+//     page fetches and decrypts ONLY the covering chunks, so a far seek is fast.
+//   - cf=1 (legacy secretstream): the cipher is sequential, so the page produces
+//     plaintext at offset X by decrypting from 0 and discarding the first X bytes
+//     — a far seek is slow but correct; progressive play / nearby seeks are fast.
+// Either way we honor Range by telling the page the desired [start, end] and
+// replying 206 with a correct Content-Range. A plain (no-Range) request is
+// answered 200 with Accept-Ranges: bytes and the full Content-Length.
 // ───────────────────────────────────────────────────────────────────────────
 
 /**

@@ -23,6 +23,23 @@ export interface ManifestEntry {
 
 export interface Manifest {
   files: ManifestEntry[];
+  /**
+   * Content-format selector for the concatenated content (mirrors FileMeta.cf in
+   * ./crypto). 1 = libsodium secretstream (sequential, the original encoding);
+   * 2 = per-chunk XChaCha20-Poly1305 AEAD (seekable). ABSENT means cf=1 — every
+   * multi-file blob written before this field existed decrypts via secretstream.
+   * Inside enc_meta, so the server never learns which encoding a blob uses.
+   */
+  cf?: 1 | 2;
+  /** cf=2 only: plaintext chunk size (always PT_CHUNK = 65536). Inside enc_meta. */
+  chunkSize?: number;
+  /** cf=2 only: per-file random 24-byte base nonce, base64 (see deriveNonce). */
+  baseNonce?: string;
+  /**
+   * cf=2 only: TOTAL plaintext byte length of the concatenated content (the sum of
+   * the per-file sizes). The seekable decrypt authenticates this length.
+   */
+  size?: number;
 }
 
 /** A file to pack: its metadata plus a factory for its plaintext byte stream. */

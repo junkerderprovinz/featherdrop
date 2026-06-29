@@ -47,6 +47,41 @@ export async function* assembleBlob(
   for await (const c of content) yield c;
 }
 
+/**
+ * Absolute byte offset (within the whole blob) at which the content region — the
+ * encrypted frames/chunks after [varint(metaLen)][enc_meta] — begins. It is the
+ * length of the varint plus `metaLen` bytes. Pure. The cf=2 seekable preview adds
+ * this to a chunk's CONTENT-relative cipher byte range to get the ABSOLUTE blob
+ * bytes to Range-fetch.
+ */
+export function contentOffsetForMetaLen(metaLen: number): number {
+  return encodeVarint(metaLen).length + metaLen;
+}
+
+/**
+ * Read just the header of a buffered blob PREFIX: decode the metaLen varint,
+ * slice out enc_meta, and report where the content region begins. `prefix` must
+ * contain the full [varint(metaLen)][enc_meta] header (the streaming-preview
+ * mount fetches the first 8 KiB, which comfortably covers it). Pure +
+ * synchronous, so the download mount can derive the contentOffset to pass to the
+ * seekable preview without re-walking the stream. Throws if the prefix is too
+ * short to hold the whole header.
+ */
+export function peekBlobHeader(prefix: Uint8Array): {
+  encMeta: Uint8Array;
+  contentOffset: number;
+} {
+  const { value: metaLen, bytesRead } = decodeVarint(prefix, 0);
+  const contentOffset = bytesRead + metaLen;
+  if (prefix.length < contentOffset) {
+    throw new Error("blob: prefix too short to hold the full header");
+  }
+  return {
+    encMeta: prefix.subarray(bytesRead, contentOffset),
+    contentOffset,
+  };
+}
+
 /** Peel off enc_meta from a blob stream; return it + the remaining content stream. */
 export async function readBlobMeta(
   source: AsyncIterable<Uint8Array>,

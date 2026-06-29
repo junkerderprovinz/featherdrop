@@ -9,10 +9,17 @@
 
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, PT_CHUNK } from "../lib/e2e/crypto";
+import { ready, PT_CHUNK, fromBase64 } from "../lib/e2e/crypto";
 import { encryptForUpload, decryptWithKey } from "../lib/e2e/pipeline";
 import { deriveContentKey } from "../lib/e2e/pipeline";
-import { sliceRange, cipherPrefixEnd } from "../lib/e2e/stream-preview";
+import { sliceRange, cipherPrefixEnd, seekCipherByteRange } from "../lib/e2e/stream-preview";
+import { peekBlobHeader } from "../lib/e2e/blob-layout";
+import {
+  cipherLengthForSize,
+  chunkByteRange,
+  chunksForPlaintextRange,
+  decryptSeekableRange,
+} from "../lib/e2e/seekable";
 
 before(async () => {
   await ready();
@@ -257,4 +264,116 @@ test("cipherPrefixEnd prefix is sufficient to decrypt the requested range", asyn
     data.subarray(start, end + 1),
     "the bounded prefix must decode the full requested range",
   );
+});
+
+// ── cf=2 SEEKABLE preview: plaintext→absolute-ciphertext byte mapping ─────────
+
+const VIDEO_META = { name: "clip.mp4", type: "video/mp4" };
+
+test("seekCipherByteRange maps plaintext→absolute blob bytes (offset + chunk math)", () => {
+  const size = PT_CHUNK * 5 + 1234;
+  const contentOffset = 137; // arbitrary [varint(metaLen)][enc_meta] length
+  const cipherLen = cipherLengthForSize(size);
+
+  // A range fully inside chunk 2 → only chunk 2's cipher bytes, shifted by offset.
+  const r = seekCipherByteRange(PT_CHUNK * 2 + 10, PT_CHUNK * 2 + 50, size, contentOffset);
+  assert.ok(r);
+  const { first, last } = chunksForPlaintextRange(PT_CHUNK * 2 + 10, PT_CHUNK * 2 + 50);
+  assert.equal(first, 2);
+  assert.equal(last, 2);
+  assert.equal(r!.start, contentOffset + chunkByteRange(2).start);
+  assert.equal(r!.end, contentOffset + chunkByteRange(2).end);
+
+  // A tail range is clamped to the (short) final chunk's real end, never past EOF.
+  const tail = seekCipherByteRange(size - 5, size - 1, size, contentOffset);
+  assert.ok(tail);
+  assert.equal(tail!.end, contentOffset + cipherLen - 1, "tail clamps to cipher EOF");
+
+  // Empty / inverted ranges fetch nothing.
+  assert.equal(seekCipherByteRange(0, -1, size, contentOffset), null);
+  assert.equal(seekCipherByteRange(0, 0, 0, contentOffset), null);
+});
+
+// The full cf=2 preview pipe, minus the network: take a cf=2 blob, learn its
+// content offset from the header, and prove that decrypting ONLY the covering
+// chunks' bytes (as the SW factory would Range-fetch them) yields exact plaintext
+// AND that the fetched span lies within the covering chunks (not the whole file).
+test("cf=2 preview: a covering-chunk fetch yields exact plaintext, fetching only those bytes", async () => {
+  const data = bytes(PT_CHUNK * 6 + 777);
+  const meta = { ...VIDEO_META, size: data.length };
+  const { blob, keyForUrl } = await encryptForUpload(one(data), meta, {
+    seekable: true,
+  });
+  const cipher = await collect(blob);
+  const key = await deriveContentKey({ keyFromUrl: keyForUrl });
+
+  // The download mount reads the header from a prefix to get the content offset.
+  const { contentOffset } = peekBlobHeader(cipher);
+  const { meta: dec } = await decryptWithKey(one(cipher), key);
+  assert.equal(dec.cf, 2);
+  const baseNonce = fromBase64(dec.baseNonce!);
+  const size = dec.size!;
+
+  // Record every ABSOLUTE byte span the factory would Range-fetch. The injected
+  // fetch is given CONTENT-relative spans; we translate via contentOffset exactly
+  // like makeFormat2SeekRangeFactory does in the browser.
+  const absoluteFetched: [number, number][] = [];
+  const fetchCipherRange = async (cStart: number, cEnd: number): Promise<Uint8Array> => {
+    absoluteFetched.push([contentOffset + cStart, contentOffset + cEnd]);
+    return cipher.subarray(contentOffset + cStart, contentOffset + cEnd + 1);
+  };
+
+  // A range living entirely in chunk 3.
+  const start = PT_CHUNK * 3 + 100;
+  const end = PT_CHUNK * 3 + 4000;
+  const out = await collect(
+    decryptSeekableRange(fetchCipherRange, key, baseNonce, size, start, end),
+  );
+  assert.deepEqual(out, data.subarray(start, end + 1), "exact plaintext for the range");
+
+  // Only chunk 3's bytes were fetched — and they map to absolute blob offsets via
+  // contentOffset. Assert the fetched ciphertext span is exactly chunk 3's.
+  const expected = seekCipherByteRange(start, end, size, contentOffset);
+  assert.ok(expected);
+  assert.equal(absoluteFetched.length, 1, "one covering fetch");
+  assert.equal(absoluteFetched[0][0], expected!.start);
+  assert.equal(absoluteFetched[0][1], expected!.end);
+  const fetchedLen = absoluteFetched[0][1] - absoluteFetched[0][0] + 1;
+  assert.ok(
+    fetchedLen <= PT_CHUNK + 64,
+    `fetched ${fetchedLen} bytes, expected ~one chunk, not the whole file`,
+  );
+});
+
+test("cf=2 preview: sequential covering-chunk ranges reconstruct the whole video", async () => {
+  const data = bytes(PT_CHUNK * 4 + 5000);
+  const meta = { ...VIDEO_META, size: data.length };
+  const { blob, keyForUrl } = await encryptForUpload(one(data), meta, {
+    seekable: true,
+  });
+  const cipher = await collect(blob);
+  const key = await deriveContentKey({ keyFromUrl: keyForUrl });
+  const { contentOffset } = peekBlobHeader(cipher);
+  const { meta: dec } = await decryptWithKey(one(cipher), key);
+  const baseNonce = fromBase64(dec.baseNonce!);
+  const size = dec.size!;
+
+  const fetchCipherRange = async (cStart: number, cEnd: number): Promise<Uint8Array> =>
+    cipher.subarray(contentOffset + cStart, contentOffset + cEnd + 1);
+
+  const pieces: Uint8Array[] = [];
+  const step = 70_000;
+  for (let s = 0; s < data.length; s += step) {
+    const e = Math.min(s + step - 1, data.length - 1);
+    pieces.push(
+      await collect(decryptSeekableRange(fetchCipherRange, key, baseNonce, size, s, e)),
+    );
+  }
+  const total = new Uint8Array(data.length);
+  let off = 0;
+  for (const p of pieces) {
+    total.set(p, off);
+    off += p.length;
+  }
+  assert.deepEqual(total, data);
 });

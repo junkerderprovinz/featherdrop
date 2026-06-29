@@ -1,16 +1,23 @@
 // Browser-only STREAMING inline preview of a large video via the service worker.
 //
-// The download SW (public/sw-download.js) also serves a /sw-preview/<id> URL that
-// a <video> element can use as its src. Because the zero-knowledge cipher is a
-// SEQUENTIAL libsodium secretstream, the plaintext at byte offset X can only be
-// produced by decrypting from 0 and discarding the first X bytes — there is no
-// random access. So:
-//   - Progressive play from the start is fast.
-//   - Seeking within the already-played / buffered region is fast (the browser
-//     serves it from its own media buffer, no new request).
-//   - A FAR-FORWARD seek issues a Range request for a high offset, which we honor
-//     by RE-DECRYPTING from 0 and skipping to that offset. It is correct but slow
-//     (and re-fetches the ciphertext). This is the documented, accepted trade-off.
+// The download SW (public/sw-download.js) serves a /sw-preview/<id> URL that a
+// <video> element uses as its src, asking the page for a fresh decrypted stream
+// per Range request. How a range is produced depends on the share's content
+// format (read from the decrypted enc_meta):
+//
+//   - cf=2 (per-chunk AEAD, ./seekable.ts — the encoding for ALL NEW shares):
+//     TRUE random access. For a plaintext range [a, b] we fetch and decrypt ONLY
+//     the COVERING chunks (floor(a/PT_CHUNK)..floor(b/PT_CHUNK)) — mapping their
+//     content-relative cipher span to ABSOLUTE blob bytes via the contentOffset —
+//     so a far-forward seek into a large video is fast and fetches little. See
+//     makeFormat2SeekRangeFactory.
+//   - cf=1 (legacy libsodium secretstream): the cipher is SEQUENTIAL, so the
+//     plaintext at offset X can only be produced by decrypting from 0 and
+//     discarding the first X bytes — no random access. We fetch the ciphertext
+//     PREFIX needed through the requested `end` and slice. Progressive play and
+//     nearby seeks are fast; a far seek re-decrypts from 0 (correct but slow).
+//     This is the documented, accepted trade-off, kept for old shares. See
+//     makeFormat2RangeFactory.
 //
 // Count-safety: every range fetch hits the server's NO-COUNT ?preview=1 path,
 // which requires the key-verifier but does not call registerDownload and is
@@ -18,20 +25,20 @@
 // caller also gates client-side). So a playback's several GETs never burn or
 // count a download-limited / burn-after-download share.
 //
-// Bandwidth: instead of re-downloading the WHOLE ciphertext per range, each
-// request fetches only the ciphertext PREFIX needed to decrypt plaintext through
-// the requested `end` (a Range request against the encrypted blob). A near-start
-// range fetches little; a tail seek still needs the whole prefix (the cipher is
-// sequential) but never more than the file.
-//
 // Memory stays BOUNDED: nothing collects the whole video. Each requested range is
-// produced by a streaming pipeline (fetch → decrypt → skip → slice) whose chunks
-// flow straight to the SW under backpressure; the skipped prefix is discarded as
-// it is decrypted, never accumulated.
+// produced by a streaming pipeline whose chunks flow straight to the SW under
+// backpressure; for cf=1 the skipped prefix is discarded as it is decrypted, and
+// for cf=2 only the covering chunks are ever in flight — never the whole file.
 
 import { decryptWithKey, deriveContentKey, type DownloadSecret } from "./pipeline";
 import { computeKeyVerifier, PT_CHUNK } from "./crypto";
 import { streamToAsyncIterable, asyncIterableToStream } from "./stream-adapters";
+import {
+  chunkByteRange,
+  chunksForPlaintextRange,
+  cipherLengthForSize,
+  decryptSeekableRange,
+} from "./seekable";
 
 // secretstream/xchacha20poly1305 framing constants (fixed by the algorithm):
 //   ABYTES      — per-frame ciphertext overhead (auth tag + tag byte) = 17.
@@ -168,6 +175,92 @@ function makeFormat2RangeFactory(
 }
 
 /**
+ * Build a RangeStreamFactory for a cf=2 SEEKABLE single-file video — TRUE random
+ * access. For a requested PLAINTEXT range [start, end] it:
+ *   1. Finds the covering chunks (chunksForPlaintextRange).
+ *   2. Maps them to their CONTENT-relative cipher byte span (chunkByteRange,
+ *      clamped to the cf=2 cipher region length cipherLengthForSize(size)).
+ *   3. Adds `contentOffset` — the absolute blob offset where the content region
+ *      begins, i.e. just after [varint(metaLen)][enc_meta] — to get the ABSOLUTE
+ *      blob bytes, and fetches ONLY those via ?preview=1 + an HTTP Range request.
+ *   4. Decrypts those chunks independently (decryptSeekableRange) and yields
+ *      exactly plaintext[start, end].
+ *
+ * This replaces the cf=1 "re-fetch whole ciphertext + decrypt from 0" with a
+ * single covering-chunk fetch, so a far seek into a large video fetches and
+ * decrypts only its tail chunks. The key + baseNonce are captured once.
+ *
+ * The injected fetch maps a CONTENT-relative inclusive cipher span to an absolute
+ * Range request; decryptSeekableRange does all the chunk math against the content
+ * region (offsets 0..cipherLen-1), so the +contentOffset translation lives only
+ * here.
+ */
+function makeFormat2SeekRangeFactory(
+  downloadUrl: string,
+  key: Uint8Array,
+  baseNonce: Uint8Array,
+  plaintextSize: number,
+  contentOffset: number,
+): RangeStreamFactory {
+  const previewUrl = `${downloadUrl}?preview=1`;
+  const verifier = computeKeyVerifier(key);
+  // Fetch a CONTENT-relative inclusive cipher span [cStart, cEnd] → its absolute
+  // blob bytes via an HTTP Range. Only the covering chunks' bytes are requested.
+  const fetchCipherRange = async (
+    cStart: number,
+    cEnd: number,
+  ): Promise<Uint8Array> => {
+    const absStart = contentOffset + cStart;
+    const absEnd = contentOffset + cEnd;
+    const res = await fetch(previewUrl, {
+      headers: {
+        "x-fd-key-verifier": verifier,
+        Range: `bytes=${absStart}-${absEnd}`,
+      },
+    });
+    if (!res.ok || !res.body) throw new Error(`preview fetch ${res.status}`);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    return buf;
+  };
+  return async (start, end) =>
+    asyncIterableToStream(
+      decryptSeekableRange(
+        fetchCipherRange,
+        key,
+        baseNonce,
+        plaintextSize,
+        start,
+        end,
+      ),
+    );
+}
+
+/**
+ * The ABSOLUTE blob byte span [start, end] (inclusive) that a cf=2 seekable
+ * preview fetches to serve plaintext [plaintextStart, plaintextEnd]. Pure +
+ * exported for unit testing the plaintext→ciphertext mapping (the same math
+ * makeFormat2SeekRangeFactory's fetch uses). Returns null when the requested
+ * range is empty (nothing to fetch). `contentOffset` is where the content region
+ * begins (after [varint(metaLen)][enc_meta]).
+ */
+export function seekCipherByteRange(
+  plaintextStart: number,
+  plaintextEnd: number,
+  size: number,
+  contentOffset: number,
+): { start: number; end: number } | null {
+  if (size <= 0) return null;
+  const start = Math.max(0, plaintextStart);
+  const end = Math.min(size - 1, plaintextEnd);
+  if (end < start) return null;
+  const { first, last } = chunksForPlaintextRange(start, end);
+  const cipherRegionLen = cipherLengthForSize(size);
+  const firstByte = chunkByteRange(first).start;
+  const lastByte = Math.min(chunkByteRange(last).end, cipherRegionLen - 1);
+  return { start: contentOffset + firstByte, end: contentOffset + lastByte };
+}
+
+/**
  * Yield exactly the plaintext bytes for the inclusive byte range [start, end]
  * from a SEQUENTIAL source, WITHOUT buffering: bytes before `start` are discarded
  * as they arrive and emission stops once `end` is reached (the source's iterator
@@ -205,7 +298,13 @@ export async function* sliceRange(
 /**
  * Register a streaming video preview with the service worker and return a URL to
  * put in <video src> plus a release() cleanup. Derives the content key once and
- * answers every SW range request by re-decrypting from 0 and slicing.
+ * answers every SW range request via a per-range factory:
+ *   - cf=2 (seekable): TRUE random access — each range fetches and decrypts ONLY
+ *     the covering chunks (makeFormat2SeekRangeFactory). Requires baseNonce +
+ *     contentOffset so plaintext offsets map to absolute ciphertext blob bytes.
+ *   - cf=1 / absent (secretstream): today's behavior — re-decrypt the ciphertext
+ *     prefix from 0 and slice (makeFormat2RangeFactory). A far seek is slow but
+ *     correct. This keeps old shares working unchanged.
  *
  * Caller MUST have already verified: secure context + SW (canStreamPreview),
  * format 2, kind === "video", size > the in-memory blob cap, and an UNLIMITED
@@ -224,10 +323,27 @@ export async function registerVideoPreview(opts: {
   size: number;
   /**
    * On-disk CIPHERTEXT byte length (= the `size` DB column / `rec.size`). Used
-   * only to bound the ciphertext-prefix Range fetch (and to know when to fetch
-   * through EOF). Never used for plaintext Range math.
+   * only to bound the cf=1 ciphertext-prefix Range fetch (and to know when to
+   * fetch through EOF). Never used for plaintext Range math, and unused for cf=2.
    */
   ciphertextSize: number;
+  /**
+   * Content-format from the decrypted enc_meta. 2 → use the seekable chunk-range
+   * factory; absent/1 → the legacy from-0 secretstream factory. The cf=2 factory
+   * additionally needs `baseNonce` + `contentOffset` (below).
+   */
+  cf?: 1 | 2;
+  /**
+   * cf=2 only: the per-file 24-byte base nonce (from the decrypted enc_meta),
+   * needed to derive each chunk's nonce for independent decryption.
+   */
+  baseNonce?: Uint8Array;
+  /**
+   * cf=2 only: absolute blob offset where the content region begins — just after
+   * [varint(metaLen)][enc_meta]. Added to a chunk's content-relative cipher range
+   * to get the absolute blob bytes to Range-fetch.
+   */
+  contentOffset?: number;
 }): Promise<PreviewHandle> {
   await ensureSwRegistered();
   const reg = await navigator.serviceWorker.ready;
@@ -246,14 +362,24 @@ export async function registerVideoPreview(opts: {
     throw new Error("service worker does not control this page yet");
   }
 
-  // Derive the key once — a far seek re-decrypts from 0 but never re-derives.
+  // Derive the key once — a (cf=1) far seek re-decrypts from 0 but never
+  // re-derives; the cf=2 factory captures it for per-chunk decryption.
   const key = await deriveContentKey(opts.secret);
-  const factory = makeFormat2RangeFactory(
-    opts.downloadUrl,
-    key,
-    opts.size, // plaintext length — drives slicing + prefix frame math
-    opts.ciphertextSize, // ciphertext length — bounds the prefix Range fetch
-  );
+  const factory =
+    opts.cf === 2 && opts.baseNonce && typeof opts.contentOffset === "number"
+      ? makeFormat2SeekRangeFactory(
+          opts.downloadUrl,
+          key,
+          opts.baseNonce, // per-file base nonce → derives each chunk's nonce
+          opts.size, // plaintext length — authenticated size + range clamp
+          opts.contentOffset, // plaintext→absolute-ciphertext-byte translation
+        )
+      : makeFormat2RangeFactory(
+          opts.downloadUrl,
+          key,
+          opts.size, // plaintext length — drives slicing + prefix frame math
+          opts.ciphertextSize, // ciphertext length — bounds the prefix Range fetch
+        );
 
   const id =
     typeof crypto !== "undefined" && crypto.randomUUID

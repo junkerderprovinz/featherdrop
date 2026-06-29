@@ -26,6 +26,7 @@ const BY_EXT: Record<string, string> = {
   ogv: "video/ogg",
   mov: "video/quicktime",
   m4v: "video/x-m4v",
+  mkv: "video/x-matroska",
   // Audio.
   mp3: "audio/mpeg",
   m4a: "audio/mp4",

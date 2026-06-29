@@ -88,7 +88,11 @@ export async function uploadEncrypted(
       // large-video preview without trusting the server-visible ciphertext size.
       // It stays inside the ZK envelope — the server never sees it.
       { name: file.name, type: file.type, size: file.size },
-      password,
+      // Every NEW single-file share is cf=2 (seekable per-chunk AEAD) so large
+      // videos get TRUE random-access seeking in the streaming preview. The cf=2
+      // selector + baseNonce live inside enc_meta (zero-knowledge); old cf=1
+      // shares still decrypt via the secretstream path. password is forwarded.
+      { ...password, seekable: true },
     );
     format = 2;
   } else {
