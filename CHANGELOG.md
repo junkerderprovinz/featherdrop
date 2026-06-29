@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **New banner claim and a WeTransfer framing for the description.** The README
+  banner claim is now *"Big files, zero baggage."* (was "Drop it like it's hot.")
+  — on-theme for file sharing and the feather-light brand. The short description
+  now positions featherdrop as your own private WeTransfer (no accounts, no size
+  paywalls) across the README, the GitHub repo description, and the Unraid
+  template / CA-feed card. Added `.github/assets/gen-banner.mjs`, which
+  regenerates the banner SVG + PNG (the feather and wordmark stay verbatim; only
+  the claim is regenerated, set in Lato).
+
 ### Security
 
 - **Zero-knowledge downloads now require proof of key knowledge before
