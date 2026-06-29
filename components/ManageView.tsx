@@ -14,7 +14,6 @@ import {
   Text,
   Title,
   Tooltip,
-  rem,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -170,16 +169,18 @@ export function ManageView({ slug }: ManageViewProps) {
         </Group>
       </Box>
 
-      {/* Brand at the top, centered, linking home — same as the download page. */}
-      <Center mb={88}>
+      {/* Brand at the top, centered, linking home — the same responsive feather
+          hero as the upload page, so returning to the manage link feels like
+          coming back to the share. */}
+      <Center mb={48}>
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
-          <Group gap="sm" style={{ cursor: "pointer" }}>
-            <Logo size={52} />
+          <Stack align="center" gap={4} style={{ cursor: "pointer" }}>
+            <Logo size={220} cssSize="clamp(96px, 14vw, 160px)" />
             <Title
               order={1}
               fw={500}
               style={{
-                fontSize: rem(32),
+                fontSize: "clamp(1.25rem, 3.5vw, 1.75rem)",
                 letterSpacing: -1,
                 fontFamily: "var(--font-bitter), Georgia, serif",
                 fontStyle: "italic",
@@ -187,15 +188,15 @@ export function ManageView({ slug }: ManageViewProps) {
             >
               {appName}
             </Title>
-          </Group>
+          </Stack>
         </Link>
       </Center>
 
-      <Paper radius="lg" p="xl" maw={460} mx="auto" w="100%" className="fd-glass">
-        <Stack align="center" gap="lg">
-          <Logo size={48} />
-
-          <Stack align="center" gap={2}>
+      {/* Same card metrics + heading hierarchy as the share's ResultPanel, so
+          the manage view reads as the same surface. */}
+      <Paper radius="lg" p="xl" maw={520} mx="auto" w="100%" className="fd-glass">
+        <Stack align="center" gap="xl">
+          <Stack align="center" gap={4}>
             <Text fw={700} size="xl" ta="center">
               {t("manage.title")}
             </Text>
@@ -207,7 +208,7 @@ export function ManageView({ slug }: ManageViewProps) {
             {phase === "ready" &&
               status &&
               status.downloadsLeft !== null && (
-                <Text c="dimmed" size="xs">
+                <Text c="dimmed" size="xs" ta="center">
                   {t("download.downloadsLeft", { count: status.downloadsLeft })}
                 </Text>
               )}

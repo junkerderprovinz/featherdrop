@@ -147,66 +147,72 @@ export function ResultPanel({
 
   return (
     <Paper radius="lg" p="xl" maw={520} mx="auto" w="100%" className="fd-glass">
-      <Stack align="center" gap="lg">
+      <Stack align="center" gap="xl">
+        {/* Header — the success state and the share's expiry, centred. */}
         <Stack align="center" gap={4}>
-          <Text fw={700} size="xl">
+          <Text fw={700} size="xl" ta="center">
             {t("result.ready")}
           </Text>
           <Text c="dimmed" size="sm" ta="center">
-            {t("app.subtitle")}
-          </Text>
-          <Text c="dimmed" size="sm" fw={600}>
             {expiryLabel}
           </Text>
         </Stack>
 
-        <Stack align="center" gap="xs">
-          <Box
-            ref={qrRef}
-            p="md"
-            bg="white"
-            style={{ borderRadius: "var(--mantine-radius-md)" }}
-          >
-            <QRCodeSVG value={url} size={QR_SIZE} />
-          </Box>
-          <Button
-            variant="subtle"
-            size="xs"
-            leftSection={<IconDownload size={14} />}
-            onClick={onDownloadQr}
-          >
-            {t("result.downloadQr")}
-          </Button>
-        </Stack>
-
-        <Group w="100%" gap="xs" wrap="nowrap">
-          <TextInput
-            value={url}
-            readOnly
-            style={{ flex: 1 }}
-            onFocus={(e) => e.currentTarget.select()}
-          />
-          <Tooltip label={copied ? t("result.copied") : t("result.copy")} withArrow>
-            <ActionIcon
-              size={36}
-              variant={copied ? "filled" : "light"}
-              color={copied ? "teal" : "fdgold"}
-              onClick={onCopy}
-              aria-label={t("result.copy")}
+        {/* Primary block: the QR + the share link with its copy button. This is
+            the one thing the user came for, so it leads and stays visually
+            dominant (gold copy accent, full-size input). */}
+        <Stack align="center" gap="md" w="100%">
+          <Stack align="center" gap="xs">
+            <Box
+              ref={qrRef}
+              p="md"
+              bg="white"
+              style={{ borderRadius: "var(--mantine-radius-md)" }}
             >
-              {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
-            </ActionIcon>
-          </Tooltip>
-        </Group>
+              <QRCodeSVG value={url} size={QR_SIZE} />
+            </Box>
+            <Button
+              variant="subtle"
+              size="xs"
+              leftSection={<IconDownload size={14} />}
+              onClick={onDownloadQr}
+            >
+              {t("result.downloadQr")}
+            </Button>
+          </Stack>
+
+          <Group w="100%" gap="xs" wrap="nowrap">
+            <TextInput
+              value={url}
+              readOnly
+              style={{ flex: 1 }}
+              aria-label={t("result.copy")}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <Tooltip label={copied ? t("result.copied") : t("result.copy")} withArrow>
+              <ActionIcon
+                size={36}
+                variant={copied ? "filled" : "light"}
+                color={copied ? "teal" : "fdgold"}
+                onClick={onCopy}
+                aria-label={t("result.copy")}
+              >
+                {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Stack>
 
         {/* Secondary, clearly-separated secret: the management link the uploader
             keeps private to delete the share before it expires. The delete token
             rides in the URL #fragment (never sent to the server on navigation),
-            exactly like the content key. Shown only when the server returned one. */}
+            exactly like the content key. Shown only when the server returned one.
+            Same alignment + copy-button colours as the primary block so the two
+            read as one consistent family, just at a quieter (xs) scale. */}
         {manageUrl && (
           <>
             <Divider w="100%" />
-            <Stack w="100%" gap={6}>
+            <Stack w="100%" gap="xs">
               <Group gap={6} wrap="nowrap">
                 <IconTrash size={16} style={{ opacity: 0.7 }} />
                 <Text fw={600} size="sm">
@@ -230,16 +236,16 @@ export function ResultPanel({
                   withArrow
                 >
                   <ActionIcon
-                    size={30}
+                    size={36}
                     variant={manageCopied ? "filled" : "light"}
-                    color={manageCopied ? "teal" : "gray"}
+                    color={manageCopied ? "teal" : "fdgold"}
                     onClick={onCopyManage}
                     aria-label={t("result.copyManage")}
                   >
                     {manageCopied ? (
-                      <IconCheck size={16} />
+                      <IconCheck size={18} />
                     ) : (
-                      <IconCopy size={16} />
+                      <IconCopy size={18} />
                     )}
                   </ActionIcon>
                 </Tooltip>
@@ -248,7 +254,10 @@ export function ResultPanel({
           </>
         )}
 
+        {/* Tertiary action — start over. A subtle, full-width button so it reads
+            clearly as the way out without competing with the share link. */}
         <Button
+          fullWidth
           variant="subtle"
           leftSection={<IconPlus size={16} />}
           onClick={onReset}

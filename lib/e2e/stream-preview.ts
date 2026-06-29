@@ -296,6 +296,37 @@ export async function* sliceRange(
 }
 
 /**
+ * Resolve once the service worker CONTROLS this page (navigator.serviceWorker
+ * .controller is set). The SW's activate handler calls clients.claim(), which
+ * fires `controllerchange` on a page that was loaded before activation; we listen
+ * for that. Rejects after timeoutMs so a page that never gets controlled (e.g. SW
+ * registration blocked) degrades to no-preview instead of hanging.
+ */
+function waitForController(timeoutMs: number): Promise<void> {
+  if (navigator.serviceWorker.controller) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+    };
+    const onChange = () => {
+      if (navigator.serviceWorker.controller) {
+        cleanup();
+        resolve();
+      }
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("service worker did not take control in time"));
+    }, timeoutMs);
+    navigator.serviceWorker.addEventListener("controllerchange", onChange);
+    // Re-check: control may have been taken between the initial check and the
+    // listener registration.
+    onChange();
+  });
+}
+
+/**
  * Register a streaming video preview with the service worker and return a URL to
  * put in <video src> plus a release() cleanup. Derives the content key once and
  * answers every SW range request via a per-range factory:
@@ -350,16 +381,17 @@ export async function registerVideoPreview(opts: {
   const sw = reg.active;
   if (!sw) throw new Error("Service worker active worker not found");
 
-  // The <video> src (/sw-preview/<id>) is a plain navigation/sub-resource fetch:
-  // it is only intercepted when the SW already CONTROLS this page. On a brand-new
-  // first visit the SW activates + claims, but a page loaded before activation may
-  // not be controlled until a reload — in that case the fetch would NOT be
-  // intercepted and the <video> would fail. Bail here so the caller falls back to
-  // today's behavior (no preview, just the download button) instead of showing a
-  // broken player. (The download path is unaffected: it uses a freshly-navigated
-  // iframe, which the just-activated SW does intercept.)
+  // The <video> src (/sw-preview/<id>) is only intercepted once the SW CONTROLS
+  // this page. The SW calls clients.claim() on activate, which takes control even
+  // of a page that was loaded before activation — but on a brand-new FIRST visit
+  // that claim can land just AFTER navigator.serviceWorker.ready resolves, so
+  // `controller` is briefly null. Previously we bailed here, which meant the video
+  // preview never appeared on the first visit and only worked after a manual
+  // reload. Instead, WAIT for the SW to take control (clients.claim() fires a
+  // `controllerchange`), with a short timeout so a genuinely uncontrolled page
+  // still degrades to the download button rather than a broken player.
   if (!navigator.serviceWorker.controller) {
-    throw new Error("service worker does not control this page yet");
+    await waitForController(4000);
   }
 
   // Derive the key once — a (cf=1) far seek re-decrypts from 0 but never
