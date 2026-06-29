@@ -3,7 +3,7 @@ module github.com/junkerderprovinz/featherdrop/server-go
 go 1.26
 
 require (
-	github.com/go-chi/chi/v5 v5.2.1
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/tus/tusd/v2 v2.10.0
 	modernc.org/sqlite v1.34.5
 )

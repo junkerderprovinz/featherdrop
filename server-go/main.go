@@ -13,8 +13,9 @@
 //  5. Dockerfile (multi-stage) + CI (build/test/boot-smoke/e2e).
 //  6. security review + E2E.
 //
-// This file intentionally implements only the skeleton: a health check and a
-// SPA-fallback static handler over the embedded webroot.
+// All phases are implemented: this wires the tus upload endpoint, the JSON/file
+// API (finalize/download/manage/meta/config), and the SPA static handler (with
+// startup branding/OG templating) over the embedded webroot.
 package main
 
 import (
@@ -155,8 +156,13 @@ func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
 			serveShell(w, shell)
 			return
 		}
-		if _, err := fs.Stat(assets, upath); errors.Is(err, fs.ErrNotExist) {
-			// Unknown path: serve the SPA shell so client routing can take over.
+		info, err := fs.Stat(assets, upath)
+		if errors.Is(err, fs.ErrNotExist) || (err == nil && info.IsDir()) {
+			// Unknown path, OR a directory request (e.g. "/assets/"): serve the SPA
+			// shell rather than fall through to http.FileServer. The latter renders
+			// an auto-generated directory LISTING for an existing dir, needlessly
+			// exposing every embedded asset filename — so directories get the shell
+			// (client routing) and never a listing.
 			serveShell(w, shell)
 			return
 		}

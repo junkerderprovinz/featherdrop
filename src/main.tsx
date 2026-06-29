@@ -102,49 +102,58 @@ function Bootstrap() {
     };
   }, []);
 
-  if (!config) {
-    return (
-      <Center style={{ minHeight: "100vh" }}>
-        <Loader />
-      </Center>
-    );
-  }
-
   // Resolve the UI language + direction client-side, the SPA twin of the server
-  // pickLanguage()/isRtl() pass in app/layout.tsx.
+  // pickLanguage()/isRtl() pass in app/layout.tsx. Independent of /api/config, so
+  // it is available immediately (also during the loading state).
   const lang = detectClientLanguage();
   const dir = isRtl(lang) ? "rtl" : "ltr";
 
-  // Same provider tree + structure as app/layout.tsx's <body> (minus the <html>/
-  // <head>, which the Go-templated index.html shell already provides). The
-  // .fd-aurora / .fd-content wrappers and Notifications position match the layout.
+  // The accent only arrives with /api/config; until then theme from the default
+  // so MantineProvider can mount immediately.
+  const accentColor =
+    config?.branding.accentColor ?? FALLBACK_CONFIG.branding.accentColor;
+
+  // CRITICAL: DirectionProvider + MantineProvider must wrap BOTH the loading
+  // state and the loaded app. The loading spinner (<Center>/<Loader>) are Mantine
+  // components whose internal hooks throw "MantineProvider was not found" if
+  // rendered outside a provider — which would crash the SPA on first paint,
+  // before /api/config resolves, so the UI never appears. So the provider tree is
+  // always mounted; only its CONTENT switches on `config`. Same structure as
+  // app/layout.tsx's <body> (minus <html>/<head>, which the Go-templated
+  // index.html shell provides).
   return (
     <DirectionProvider initialDirection={dir} detectDirection={false}>
       <MantineProvider
-        theme={createAppTheme(config.branding.accentColor)}
+        theme={createAppTheme(accentColor)}
         defaultColorScheme="auto"
       >
-        <ServerConfigProvider
-          config={{
-            baseUrl: config.baseUrl,
-            uploadProtected: config.uploadProtected,
-          }}
-        >
-          <BrandingProvider
-            branding={{
-              appName: config.branding.appName,
-              logoUrl: config.branding.logoUrl,
+        {!config ? (
+          <Center style={{ minHeight: "100vh" }}>
+            <Loader />
+          </Center>
+        ) : (
+          <ServerConfigProvider
+            config={{
+              baseUrl: config.baseUrl,
+              uploadProtected: config.uploadProtected,
             }}
           >
-            <Notifications position="top-center" />
-            <div className="fd-aurora" aria-hidden="true" />
-            <div className="fd-content">
-              <I18nProvider initialLanguage={lang}>
-                <App />
-              </I18nProvider>
-            </div>
-          </BrandingProvider>
-        </ServerConfigProvider>
+            <BrandingProvider
+              branding={{
+                appName: config.branding.appName,
+                logoUrl: config.branding.logoUrl,
+              }}
+            >
+              <Notifications position="top-center" />
+              <div className="fd-aurora" aria-hidden="true" />
+              <div className="fd-content">
+                <I18nProvider initialLanguage={lang}>
+                  <App />
+                </I18nProvider>
+              </div>
+            </BrandingProvider>
+          </ServerConfigProvider>
+        )}
       </MantineProvider>
     </DirectionProvider>
   );
