@@ -3,6 +3,10 @@
 // via postMessage and then navigates a hidden <iframe> to /sw-download/<id>; the SW
 // intercepts that fetch and responds with the stream directly, so the browser saves
 // decrypted bytes without ever buffering the whole file in JS heap RAM.
+//
+// The SAME worker also powers streaming INLINE PREVIEW of large videos via a
+// SEPARATE /sw-preview/<id> URL (see the preview section near the bottom). The
+// download path below is intentionally left byte-for-byte unchanged.
 
 /** @type {Map<string, {stream: ReadableStream<Uint8Array>, filename: string, size?: number}>} */
 const pending = new Map();
@@ -18,7 +22,18 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  const { id, stream, filename, size } = event.data ?? {};
+  const data = event.data ?? {};
+  // Preview registration is a tagged message; route it to the preview handler and
+  // return so the download branch below stays exactly as it was.
+  if (data.type === "fd-preview-register") {
+    registerPreview(data);
+    return;
+  }
+  if (data.type === "fd-preview-release") {
+    preview.delete(data.id);
+    return;
+  }
+  const { id, stream, filename, size } = data;
   if (typeof id === "string" && stream instanceof ReadableStream) {
     pending.set(id, { stream, filename: filename ?? "download", size });
     // Best-effort eviction so a stream for a download that never starts (tab
@@ -29,6 +44,16 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+
+  // Preview interception is checked FIRST and only matches its own /sw-preview/
+  // path, so the download matcher below is reached for exactly the same requests
+  // as before — the download behavior is unchanged.
+  const pm = url.pathname.match(/^\/sw-preview\/([^/]+)$/);
+  if (pm) {
+    handlePreviewFetch(event, pm[1]);
+    return;
+  }
+
   // Match /sw-download/<id>
   const m = url.pathname.match(/^\/sw-download\/([^/]+)$/);
   if (!m) return; // fall through — not our URL
@@ -61,3 +86,158 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(new Response(stream, { status: 200, headers }));
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Streaming INLINE PREVIEW (large videos) — /sw-preview/<id>
+//
+// A <video src="/sw-preview/<id>"> must be able to start playing a video that is
+// too large to buffer into a blob: URL. The plaintext is produced by a
+// SEQUENTIAL libsodium secretstream on the MAIN THREAD (the WASM/crypto lives
+// there, not in this worker), so this worker does NOT decrypt. Instead it asks
+// the controlling page, per request, for a FRESH decrypted ReadableStream that
+// already starts at the requested byte offset, and pipes it straight to the
+// <video> element. Memory stays bounded: bytes flow through, nothing is
+// collected here.
+//
+// Range handling: <video> issues HTTP Range requests. Because the cipher is a
+// stateful sequential stream, the plaintext at offset X can only be produced by
+// decrypting from 0 and discarding the first X bytes — random access is
+// impossible. So a far-forward seek re-decrypts from the start (slow but
+// correct); progressive play and seeking within the already-played region are
+// fast. We honor Range by telling the page the desired [start,end) and letting
+// it produce a stream skipped to `start`; we reply 206 with a correct
+// Content-Range. A plain (no-Range) request is answered 200 with
+// Accept-Ranges: bytes and the full Content-Length.
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Active preview registrations: id -> { port, mime, size }. Unlike `pending`
+ * (consumed on first fetch), a preview entry PERSISTS so the <video> can make
+ * many Range requests against it. Evicted on an explicit release message or a
+ * timeout.
+ * @type {Map<string, {port: MessagePort, mime: string, size: number}>}
+ */
+const preview = new Map();
+
+/** Store a preview registration sent from the page. */
+function registerPreview(data) {
+  const { id, port, mime, size } = data;
+  if (typeof id !== "string" || !(port instanceof MessagePort)) return;
+  if (!Number.isFinite(size) || size < 0) return;
+  preview.set(id, {
+    port,
+    mime: typeof mime === "string" && mime ? mime : "application/octet-stream",
+    size,
+  });
+  // Belt-and-suspenders eviction: a preview that is never released (tab closed)
+  // must not pin the page's port forever. 30 min is comfortably longer than any
+  // realistic single playback session; the page also releases on unmount.
+  setTimeout(() => preview.delete(id), 30 * 60_000);
+}
+
+/**
+ * Ask the controlling page for a fresh decrypted stream for [start, end] and
+ * resolve to it. The page decrypts from 0 and skips to `start`, then yields
+ * bytes up to and including `end`. Rejects if the page reports an error.
+ * @returns {Promise<ReadableStream<Uint8Array>>}
+ */
+function requestPreviewStream(entry, start, end) {
+  return new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => {
+      channel.port1.close();
+      reject(new Error("preview stream request timed out"));
+    }, 60_000);
+    channel.port1.onmessage = (ev) => {
+      clearTimeout(timer);
+      const msg = ev.data ?? {};
+      if (msg.stream instanceof ReadableStream) {
+        resolve(msg.stream);
+      } else {
+        reject(new Error(msg.error ? String(msg.error) : "preview stream failed"));
+      }
+      channel.port1.close();
+    };
+    // The reply port (port2) is transferred to the page; the page transfers the
+    // ReadableStream back over it.
+    entry.port.postMessage({ start, end }, [channel.port2]);
+  });
+}
+
+/** Parse a single-range "bytes=start-end" header against `size`. */
+function parseRange(header, size) {
+  if (!header) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m) return null;
+  const hasStart = m[1] !== "";
+  const hasEnd = m[2] !== "";
+  let start;
+  let end;
+  if (hasStart) {
+    start = parseInt(m[1], 10);
+    end = hasEnd ? parseInt(m[2], 10) : size - 1;
+  } else if (hasEnd) {
+    // suffix range: last N bytes.
+    const n = parseInt(m[2], 10);
+    if (n === 0) return null;
+    start = Math.max(0, size - n);
+    end = size - 1;
+  } else {
+    return null;
+  }
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  if (start > end || start >= size) return { unsatisfiable: true };
+  end = Math.min(end, size - 1);
+  return { start, end };
+}
+
+/** Respond to a /sw-preview/<id> fetch. */
+function handlePreviewFetch(event, id) {
+  const entry = preview.get(id);
+  if (!entry) return; // unknown id — fall through (browser will 404 / retry)
+
+  const { mime, size } = entry;
+  const rangeHeader = event.request.headers.get("range");
+  const range = parseRange(rangeHeader, size);
+
+  if (range && range.unsatisfiable) {
+    event.respondWith(
+      new Response(null, {
+        status: 416,
+        headers: { "Content-Range": `bytes */${size}`, "Accept-Ranges": "bytes" },
+      }),
+    );
+    return;
+  }
+
+  const start = range ? range.start : 0;
+  const end = range ? range.end : size - 1;
+  const length = end - start + 1;
+
+  /** @type {Record<string, string>} */
+  const headers = {
+    "Content-Type": mime,
+    "Accept-Ranges": "bytes",
+    "Content-Length": String(length),
+    // Never let a preview response be sniffed into a scriptable type, and never
+    // cache decrypted plaintext.
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+  };
+  if (range) {
+    headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
+  }
+  const status = range ? 206 : 200;
+
+  event.respondWith(
+    requestPreviewStream(entry, start, end)
+      .then((stream) => new Response(stream, { status, headers }))
+      .catch(
+        () =>
+          new Response(null, {
+            status: 502,
+            headers: { "Cache-Control": "no-store" },
+          }),
+      ),
+  );
+}

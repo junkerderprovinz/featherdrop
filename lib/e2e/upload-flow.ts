@@ -83,7 +83,11 @@ export async function uploadEncrypted(
     const file = files[0];
     result = await encryptForUpload(
       streamToAsyncIterable(file.stream()),
-      { name: file.name, type: file.type },
+      // `size` (plaintext byte length) is embedded in the client-encrypted
+      // enc_meta so the download page can do exact Range math for the streaming
+      // large-video preview without trusting the server-visible ciphertext size.
+      // It stays inside the ZK envelope — the server never sees it.
+      { name: file.name, type: file.type, size: file.size },
       password,
     );
     format = 2;
