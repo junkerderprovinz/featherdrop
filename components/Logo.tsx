@@ -8,9 +8,24 @@ import { useBranding } from "@/components/BrandingProvider";
 // uniformly across the mark's separate paths (not per-path). useId keeps the id
 // unique when several logos appear on one page. A self-hoster's custom logo
 // (logoUrl), when set, replaces the feather with their image.
-export function Logo({ size = 28 }: { size?: number }) {
+export function Logo({
+  size = 28,
+  cssSize,
+}: {
+  size?: number;
+  /**
+   * Optional CSS length (e.g. a clamp() expression) that drives the rendered
+   * width/height for a responsive hero. When set it overrides the numeric `size`
+   * box so the mark scales fluidly with the viewport; `size` stays the intrinsic
+   * fallback. Existing callers that pass only `size` are unaffected.
+   */
+  cssSize?: string;
+}) {
   const { logoUrl, appName } = useBranding();
   const gradientId = useId();
+  // When a responsive cssSize is given, let CSS drive the box; otherwise the
+  // numeric width/height attributes remain authoritative.
+  const sizeStyle = cssSize ? { width: cssSize, height: cssSize } : undefined;
   if (logoUrl) {
     // A self-hoster's logo is an arbitrary external/mounted URL; next/image
     // can't optimize it without per-domain config, so a plain <img> is intended.
@@ -21,7 +36,7 @@ export function Logo({ size = 28 }: { size?: number }) {
         width={size}
         height={size}
         alt={appName}
-        style={{ objectFit: "contain", display: "block" }}
+        style={{ objectFit: "contain", display: "block", ...sizeStyle }}
       />
     );
   }
@@ -33,6 +48,7 @@ export function Logo({ size = 28 }: { size?: number }) {
       role="img"
       aria-label={`${appName} logo`}
       xmlns="http://www.w3.org/2000/svg"
+      style={sizeStyle}
     >
       <defs>
         <linearGradient

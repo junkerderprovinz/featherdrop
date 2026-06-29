@@ -266,16 +266,19 @@ export default function HomePage() {
         </Group>
       </Box>
 
-      {/* Clicking the brand returns to the start screen (resets any upload). */}
-      <Center mb={88}>
-        <UnstyledButton onClick={reset} aria-label={t("app.tagline")}>
-          <Group gap="sm" style={{ cursor: "pointer" }}>
-            <Logo size={52} />
+      {/* Smash-style hero: the feather is the big, responsive focal point in the
+          centre, with the wordmark sitting smaller beneath it. The whole block
+          returns to the start screen (resets any upload) on click. The logo
+          scales fluidly via CSS clamp() — large on desktop, graceful on mobile. */}
+      <Center mb={48}>
+        <UnstyledButton onClick={reset} aria-label={t("result.shareAnother")}>
+          <Stack align="center" gap={4} style={{ cursor: "pointer" }}>
+            <Logo size={220} cssSize="clamp(96px, 18vw, 220px)" />
             <Title
               order={1}
               fw={500}
               style={{
-                fontSize: rem(32),
+                fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
                 letterSpacing: -1,
                 fontFamily: "var(--font-bitter), Georgia, serif",
                 fontStyle: "italic",
@@ -283,7 +286,7 @@ export default function HomePage() {
             >
               {appName}
             </Title>
-          </Group>
+          </Stack>
         </UnstyledButton>
       </Center>
 
