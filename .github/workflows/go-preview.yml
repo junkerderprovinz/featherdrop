@@ -1,0 +1,61 @@
+name: Go preview image (RC)
+
+# Builds the Go backend (Dockerfile.goserver) and pushes it under a PREVIEW tag
+# (default :go-rc1) — never :latest. This lets the operator pull + drop-in-smoke
+# the Go server against a COPY of their real /config + /data before the production
+# swap, without affecting any existing install (nobody pulls :go-rc1 unless told).
+# Manual only. The production swap (repoint build.yml + rename Dockerfile) happens
+# after the smoke passes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Preview image tag (not :latest)"
+        required: true
+        default: "go-rc1"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/junkerderprovinz/featherdrop
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: Build & push preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push preview (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.goserver
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ inputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "Pushed ${IMAGE_NAME}:${{ inputs.tag }} (preview, NOT latest)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Drop-in smoke: run it against a COPY of /config + /data, open an existing share." >> "$GITHUB_STEP_SUMMARY"
