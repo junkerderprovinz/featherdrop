@@ -30,6 +30,7 @@ import (
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
 )
 
 //go:embed all:webroot
@@ -54,12 +55,27 @@ func main() {
 		log.Fatalf("sub fs: %v", err)
 	}
 
+	// Resumable upload endpoint (tus protocol). The returned handler is already
+	// wrapped with the optional upload gate (UPLOAD_PASSWORD); bytes land in
+	// cfg.TmpDir for a later finalize phase to move into cfg.UploadsDir.
+	tusHandler, err := upload.NewHandler(cfg)
+	if err != nil {
+		log.Fatalf("build tus handler: %v", err)
+	}
+
 	r := chi.NewRouter()
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+
+	// Mount the tus handler so both "/files" (create/OPTIONS) and "/files/*"
+	// (PATCH/HEAD/DELETE on a specific upload) reach it. chi preserves the full
+	// request path for the sub-handler, which tusd matches against its BasePath
+	// "/files/".
+	r.Handle("/files", tusHandler)
+	r.Handle("/files/*", tusHandler)
 
 	// Catch-all static handler with SPA fallback to index.html.
 	r.NotFound(spaHandler(assets))
