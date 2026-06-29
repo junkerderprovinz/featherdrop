@@ -236,6 +236,11 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			ManageTokenHash: &manageHash,
 		}
 		if err := store.CreateFileRecord(db, rec); err != nil {
+			// The blob was already renamed into UploadsDir; with no DB row pointing
+			// at it, it would be an orphaned file (unreachable without a slug, but a
+			// disk leak). Remove it before failing, mirroring the TS finalize's
+			// partial-ciphertext cleanup intent.
+			_ = os.Remove(storedPath)
 			writeJSONError(w, http.StatusInternalServerError, "could not create record")
 			return
 		}

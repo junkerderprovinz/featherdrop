@@ -64,6 +64,14 @@ jobs:
       - name: go test
         run: CGO_ENABLED=0 go test ./... -count=1
 
+      # Fail the build on a known CVE in a dependency or the Go stdlib. Catches
+      # future advisories (e.g. the chi open-redirect that was fixed by the
+      # v5.2.2 bump) before they reach a release.
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...
+
       # Boot-smoke the native binary (embeds the committed placeholder webroot —
       # enough to prove the server starts, opens the DB, and serves /healthz).
       - name: Native boot smoke
