@@ -17,10 +17,11 @@
 <br>
 
 <p align="center">
-featherdrop is a <b>sleek, feather-light</b>, self-hosted drop zone for your files — drop a
-file, set how long it lives (plus an optional password or download limit), and share
-a short link or QR code. End-to-end encrypted, resumable uploads, one small container.
-No accounts, no clouds, no tracking, no nonsense.
+featherdrop is a <b>sleek, feather-light</b>, self-hosted drop zone for your files — think
+<b>WeTransfer</b> or <b>Smash</b>, but it runs on your own server with no size paywall. Drop a
+file, set how long it lives (plus an optional password or download limit), and share a short
+link or QR code. End-to-end encrypted, resumable uploads, one small container. No accounts,
+no clouds, no tracking, no nonsense.
 </p>
 
 <br>
@@ -51,7 +52,8 @@ No accounts, no clouds, no tracking, no nonsense.
 ## 1. What is this?
 
 featherdrop is a **sleek, feather-light**, self-hosted file-sharing page for your own
-server — a much simpler take inspired by [Pingvin Share](https://github.com/stonith404/pingvin-share).
+server — your own private **WeTransfer**, minus the accounts, size paywalls, and handing your
+files to someone else's cloud. It's a much simpler take inspired by [Pingvin Share](https://github.com/stonith404/pingvin-share).
 Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 **single container** with **no login** and **no separate database**:
 
