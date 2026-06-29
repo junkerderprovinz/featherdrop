@@ -1,0 +1,10 @@
+# Compiled Go binaries (built with `go build` in this dir or `-o`).
+/server-go
+/server-go.exe
+*.exe
+*.test
+*.out
+
+# Go workspace / local tooling
+go.work
+go.work.sum
