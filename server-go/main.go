@@ -28,6 +28,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
@@ -76,6 +77,18 @@ func main() {
 	// "/files/".
 	r.Handle("/files", tusHandler)
 	r.Handle("/files/*", tusHandler)
+
+	// JSON/file API. Registered BEFORE the SPA catch-all so these exact routes
+	// win over the static fallback.
+	//   POST   /api/finalize   publish a completed tus upload -> {slug, manageToken}
+	//   GET    /api/d/{slug}    download the ciphertext (Range/?preview, burn)
+	//   GET    /api/m/{slug}    share status for the uploader
+	//   DELETE /api/m/{slug}    revoke the share early
+	r.Post("/api/finalize", api.FinalizeHandler(cfg, db, nil))
+	r.Get("/api/d/{slug}", api.DownloadHandler(cfg, db, nil))
+	manage := api.ManageHandler(cfg, db, nil)
+	r.Get("/api/m/{slug}", manage)
+	r.Delete("/api/m/{slug}", manage)
 
 	// Catch-all static handler with SPA fallback to index.html.
 	r.NotFound(spaHandler(assets))
