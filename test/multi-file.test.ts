@@ -1,6 +1,9 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, PT_CHUNK } from "../lib/e2e/crypto";
+import { ready, PT_CHUNK, decodeKey } from "../lib/e2e/crypto";
+import { fromBase64, computeKeyVerifier } from "../lib/e2e/crypto";
+import { contentOffsetForMetaLen, peekBlobHeader } from "../lib/e2e/blob-layout";
+import { decryptSeekableRange } from "../lib/e2e/seekable";
 import {
   buildManifest,
   concatFiles,
@@ -10,7 +13,15 @@ import {
 import {
   encryptFilesForUpload,
   decryptFilesFromDownload,
+  decryptFilesWithKey,
 } from "../lib/e2e/multi-pipeline";
+import {
+  generateKey,
+  encodeKey,
+  encryptChunks,
+  encryptManifest as encryptManifestRaw,
+} from "../lib/e2e/crypto";
+import { assembleBlob } from "../lib/e2e/blob-layout";
 
 before(async () => {
   await ready();
@@ -177,7 +188,17 @@ test("crypto: encrypt 3 files (link mode) -> decrypt -> byte-identical", async (
   const { manifest, files: out } = await decryptFilesFromDownload(one(cipher), {
     keyFromUrl: keyForUrl,
   });
-  assert.deepEqual(manifest, expectedManifest);
+  // The file list is preserved exactly; NEW multi-file uploads are cf=2 (seekable),
+  // so the manifest also carries cf/chunkSize/baseNonce + the total concat size.
+  assert.deepEqual(manifest.files, expectedManifest.files);
+  assert.equal(manifest.cf, 2, "new multi-file uploads must be cf=2 (seekable)");
+  assert.equal(manifest.chunkSize, PT_CHUNK);
+  assert.equal(typeof manifest.baseNonce, "string");
+  assert.equal(
+    manifest.size,
+    data.reduce((a, d) => a + d.length, 0),
+    "manifest.size = total concatenated plaintext length",
+  );
 
   let idx = 0;
   for await (const { entry, bytes: fileBytes } of out) {
@@ -203,7 +224,8 @@ test("crypto: password mode -> decrypt with {password,wrapped,salt}", async () =
     wrapped: wrapped!.wrapped,
     salt: wrapped!.salt,
   });
-  assert.deepEqual(manifest, expectedManifest);
+  assert.deepEqual(manifest.files, expectedManifest.files);
+  assert.equal(manifest.cf, 2, "password-mode multi-file is also cf=2 (seekable)");
 
   let idx = 0;
   for await (const { bytes: fileBytes } of out) {
@@ -233,4 +255,76 @@ test("crypto: the server-visible blob leaks neither a filename nor content", asy
   const hay = new TextDecoder("latin1").decode(await collect(blob));
   assert.ok(!hay.includes(marker), "content leaked");
   assert.ok(!hay.includes("secret-name"), "filename leaked");
+});
+
+// (c) cf=2 seekable: zero-knowledge + true seek over the concatenated content ──
+
+test("crypto cf=2: baseNonce/size stay inside enc_meta (zero-knowledge)", async () => {
+  const { files, data } = sampleFiles();
+  const { blob } = await encryptFilesForUpload(files);
+  const total = data.reduce((a, d) => a + d.length, 0);
+  const hay = new TextDecoder("latin1").decode(await collect(blob));
+  // The total concatenated size lives only inside the encrypted manifest.
+  assert.ok(!hay.includes(String(total)), "total size leaked into blob");
+});
+
+test("crypto cf=2: a chunk-range seek over the concat content is byte-exact", async () => {
+  // A bundle whose concatenated content spans several cf=2 chunks; decrypt an
+  // arbitrary PLAINTEXT range straight off the cipher region (the same path the
+  // streaming preview uses, minus the network).
+  const big = bytes(PT_CHUNK * 3 + 4096, 9);
+  const files: PackFile[] = [packFile("movie.bin", "application/octet-stream", big)];
+  const { blob, keyForUrl } = await encryptFilesForUpload(files);
+  const cipher = await collect(blob);
+  const key = decodeKey(keyForUrl);
+
+  // Read the header to learn the content offset + manifest (baseNonce/size).
+  const { contentOffset } = peekBlobHeader(cipher);
+  const { manifest } = await decryptFilesWithKey(one(cipher), key);
+  assert.equal(manifest.cf, 2);
+  const baseNonce = fromBase64(manifest.baseNonce!);
+  const size = manifest.size!;
+
+  // fetchCipherRange over the CONTENT region (absolute = contentOffset + rel).
+  const fetchRange = async (cStart: number, cEnd: number): Promise<Uint8Array> =>
+    cipher.subarray(contentOffset + cStart, contentOffset + cEnd + 1);
+
+  for (const [start, end] of [
+    [0, 0],
+    [PT_CHUNK - 3, PT_CHUNK + 3],
+    [PT_CHUNK * 2 + 10, PT_CHUNK * 2 + 500],
+    [size - 20, size - 1],
+  ] as [number, number][]) {
+    const out = await collect(
+      decryptSeekableRange(fetchRange, key, baseNonce, size, start, end),
+    );
+    assert.deepEqual(out, big.subarray(start, end + 1), `range [${start}, ${end}]`);
+  }
+  void contentOffsetForMetaLen;
+  void computeKeyVerifier;
+});
+
+// (d) BACK-COMPAT: a cf=1 (secretstream) multi-file blob still decrypts ────────
+
+test("crypto: a legacy cf=1 multi-file blob still decrypts via the branched path", async () => {
+  // Build the blob the OLD way: secretstream content + a manifest WITHOUT cf.
+  // decryptFilesWithKey must route it through the secretstream path.
+  const { files, data } = sampleFiles();
+  const manifest = buildManifest(files); // no cf field → cf=1
+  const key = generateKey();
+  const encMeta = encryptManifestRaw(manifest, key);
+  const blob = assembleBlob(encMeta, encryptChunks(concatFiles(files), key));
+  const cipher = await collect(blob);
+
+  const { manifest: out, files: outFiles } = await decryptFilesFromDownload(
+    one(cipher),
+    { keyFromUrl: encodeKey(key) },
+  );
+  assert.ok(out.cf === undefined || out.cf === 1, "legacy multi blob is cf=1");
+  let idx = 0;
+  for await (const { bytes: fileBytes } of outFiles) {
+    assert.deepEqual(await collect(fileBytes), data[idx], `file ${idx}`);
+    idx++;
+  }
+  assert.equal(idx, files.length);
 });

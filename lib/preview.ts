@@ -44,14 +44,17 @@ const PREVIEW_KINDS: Record<string, PreviewKind> = {
   // SVG — safe ONLY via <img> (see SVG SAFETY note above). Never inline/embed it.
   "image/svg+xml": "image",
   // Video containers the <video> element can play; rendered from a blob: URL.
-  // Exotic containers/codecs (mkv/avi) are intentionally omitted: <video> can't
-  // reliably decode them, so they fall through to download instead of a broken
-  // player. Keep this list to formats browsers commonly play.
+  // mkv (Matroska) is included on request, but browsers only DECODE it when the
+  // inner codecs are supported (VP8/VP9/AV1 + Vorbis/Opus); an mkv with
+  // H.264/HEVC+AC3 shows a non-playing <video> (inert, never unsafe). avi stays
+  // omitted (rarely playable). Keep this list to containers browsers can play.
   "video/mp4": "video",
   "video/webm": "video",
   "video/ogg": "video",
   "video/quicktime": "video", // .mov
   "video/x-m4v": "video", // .m4v
+  "video/x-matroska": "video", // .mkv (plays only with browser-supported codecs)
+  "video/mkv": "video", // some uploaders/browsers report .mkv as video/mkv
   // Audio containers the <audio> element can play; rendered from a blob: URL.
   "audio/mpeg": "audio",
   "audio/mp4": "audio",

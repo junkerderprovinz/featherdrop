@@ -49,7 +49,8 @@ import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { downloadDecrypted, type DownloadSecret } from "@/lib/e2e/download-flow";
 import { decryptFilesWithKey, type MultiDownload } from "@/lib/e2e/multi-pipeline";
 import { deriveContentKey, decryptWithKey } from "@/lib/e2e/pipeline";
-import { computeKeyVerifier } from "@/lib/e2e/crypto";
+import { computeKeyVerifier, fromBase64 } from "@/lib/e2e/crypto";
+import { peekBlobHeader } from "@/lib/e2e/blob-layout";
 import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
 import type { Manifest } from "@/lib/e2e/multi-file";
 import {
@@ -738,9 +739,9 @@ export function DownloadView({
         // Same key-verifier proof the server requires; ?preview=1 makes it a
         // NO-COUNT GET on unlimited shares (the server enforces unlimited-only).
         const key = await deriveContentKey({ keyFromUrl: linkKey });
-        // Range the header read to the first 8 KiB: [varint][enc_meta][header]
-        // all live there, so this never pulls the whole ciphertext even before
-        // the abort. (Server replies 206 with just the prefix.)
+        // Range the header read to the first 8 KiB: [varint][enc_meta] all live
+        // there, so this never pulls the whole ciphertext even before the abort.
+        // (Server replies 206 with just the prefix.)
         const res = await fetch(`${downloadUrl}?preview=1`, {
           headers: {
             "x-fd-key-verifier": computeKeyVerifier(key),
@@ -749,14 +750,21 @@ export function DownloadView({
           signal: abort.signal,
         });
         if (!res.ok || !res.body) throw new Error(`fetch ${res.status}`);
-        const { meta } = await decryptWithKey(
-          streamToAsyncIterable(res.body as ReadableStream<Uint8Array>),
-          key,
-        );
+        // Buffer the prefix bytes so we can BOTH compute the content offset
+        // (where the encrypted chunks begin, after [varint(metaLen)][enc_meta])
+        // and decrypt the header from the SAME bytes — no second fetch. The 8 KiB
+        // prefix comfortably holds the whole [varint][enc_meta] header.
+        const prefix = new Uint8Array(await res.arrayBuffer());
         // Tear down the response body so the rest of the ciphertext is NOT
-        // fetched in the background (the stream is locked by the iterator above,
-        // so abort — not cancel — is the correct teardown).
+        // fetched in the background.
         abort.abort();
+        // contentOffset = absolute blob offset of the first encrypted chunk; the
+        // cf=2 seek factory adds it to a chunk's content-relative cipher range.
+        const { contentOffset } = peekBlobHeader(prefix);
+        async function* fromPrefix(): AsyncGenerator<Uint8Array> {
+          yield prefix;
+        }
+        const { meta } = await decryptWithKey(fromPrefix(), key);
         if (cancelled) return;
         setRevealedName(meta.name);
         setRevealedMime(meta.type);
@@ -772,9 +780,15 @@ export function DownloadView({
           secret: { keyFromUrl: linkKey },
           mime: meta.type,
           // meta.size = exact PLAINTEXT length (Range math); the `size` prop is
-          // rec.size = the on-disk CIPHERTEXT length (bounds the prefix fetch).
+          // rec.size = the on-disk CIPHERTEXT length (bounds the cf=1 prefix fetch).
           size: meta.size,
           ciphertextSize: size,
+          // cf=2 → TRUE seeking: the factory fetches only the covering chunks,
+          // mapping plaintext offsets to absolute blob bytes via contentOffset +
+          // baseNonce. cf=1/absent → the legacy from-0 secretstream factory.
+          cf: meta.cf,
+          baseNonce: meta.baseNonce ? fromBase64(meta.baseNonce) : undefined,
+          contentOffset,
         });
         if (cancelled) {
           handle.release();

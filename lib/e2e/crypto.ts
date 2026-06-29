@@ -46,6 +46,76 @@ export function generateKey(): Uint8Array {
   return sodium.crypto_secretstream_xchacha20poly1305_keygen();
 }
 
+/**
+ * XChaCha20-Poly1305-IETF nonce length (24 B). The seekable content format
+ * (cf=2) uses one random base nonce of this size per file. Requires `ready()`.
+ */
+export function aeadNonceBytes(): number {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
+}
+
+/**
+ * XChaCha20-Poly1305-IETF auth-tag length (16 B). Each emitted seekable chunk is
+ * plaintext + this many tag bytes. Requires `ready()`.
+ */
+export function aeadTagBytes(): number {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES;
+}
+
+/** Fresh random base nonce (24 B) for a seekable file. Requires `ready()`. */
+export function generateAeadBaseNonce(): Uint8Array {
+  return sodium.randombytes_buf(aeadNonceBytes());
+}
+
+/**
+ * AEAD-encrypt one seekable chunk: XChaCha20-Poly1305-IETF over `plaintext` with
+ * additional data `aad`, nonce `nonce` and content key `key`. Returns
+ * ciphertext+tag (plaintext.length + 16). No secret nonce. Requires `ready()`.
+ */
+export function aeadEncrypt(
+  plaintext: Uint8Array,
+  aad: Uint8Array,
+  nonce: Uint8Array,
+  key: Uint8Array,
+): Uint8Array {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
+    plaintext,
+    aad,
+    null, // nsec — always null for this construction
+    nonce,
+    key,
+  );
+}
+
+/**
+ * Reverse of aeadEncrypt. Throws on a wrong key, tampered ciphertext, wrong AAD
+ * (e.g. a swapped/relabelled chunk), or wrong nonce. Requires `ready()`.
+ */
+export function aeadDecrypt(
+  ciphertext: Uint8Array,
+  aad: Uint8Array,
+  nonce: Uint8Array,
+  key: Uint8Array,
+): Uint8Array {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+    null, // nsec
+    ciphertext,
+    aad,
+    nonce,
+    key,
+  );
+}
+
+/** Encode bytes as standard base64 (with padding) — used for enc_meta fields. */
+export function toBase64(bytes: Uint8Array): string {
+  return sodium.to_base64(bytes, sodium.base64_variants.ORIGINAL);
+}
+
+/** Decode standard base64 (with padding) back to bytes. */
+export function fromBase64(s: string): Uint8Array {
+  return sodium.from_base64(s, sodium.base64_variants.ORIGINAL);
+}
+
 /** Encode a key for the URL fragment (base64url, no padding). */
 export function encodeKey(key: Uint8Array): string {
   return sodium.to_base64(key, sodium.base64_variants.URLSAFE_NO_PADDING);
@@ -81,6 +151,27 @@ export interface FileMeta {
    * ignores it, so adding it does not change any existing behavior.
    */
   size?: number;
+  /**
+   * Content-format selector (see ./seekable.ts). 1 = libsodium secretstream
+   * (sequential, the original encoding); 2 = per-chunk XChaCha20-Poly1305 AEAD
+   * (independently decryptable chunks → O(1) seek). ABSENT means cf=1 — every
+   * blob written before this field existed decrypts through the secretstream
+   * path unchanged. Lives INSIDE the encrypted enc_meta, so the server never
+   * learns which encoding a blob uses (zero-knowledge preserved).
+   */
+  cf?: 1 | 2;
+  /**
+   * cf=2 only: plaintext chunk size (always PT_CHUNK = 65536). Stored so a future
+   * format can change it without breaking old seekable blobs. Inside enc_meta.
+   */
+  chunkSize?: number;
+  /**
+   * cf=2 only: the per-file random 24-byte base nonce, base64 (standard, no
+   * padding stripping needed — sodium round-trips it). Every chunk's nonce is
+   * derived from this + its index (see deriveNonce). Inside enc_meta, so the
+   * server never sees it (and it is useless without the content key K anyway).
+   */
+  baseNonce?: string;
 }
 
 /**
