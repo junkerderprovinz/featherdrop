@@ -6,6 +6,20 @@ node_modules/
 out/
 next-env.d.ts
 
+# Vite SPA build output (Phase 4a). client-dist/ is the raw Vite build; the
+# build:webroot step copies it into server-go/webroot/ for `go build` to embed.
+# The committed webroot/index.html (the %%TOKEN%% placeholder) and
+# webroot/opengraph-image.png stay tracked; only the BUILT artifacts are ignored.
+client-dist/
+/server-go/webroot/assets/
+/server-go/webroot/*.js
+/server-go/webroot/*.css
+/server-go/webroot/*.svg
+/server-go/webroot/*.ico
+/server-go/webroot/*.woff
+/server-go/webroot/*.woff2
+/server-go/webroot/vite.svg
+
 # TypeScript / tooling output
 *.tsbuildinfo
 lint-out.txt
