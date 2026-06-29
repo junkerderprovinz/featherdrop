@@ -30,6 +30,7 @@ import (
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/static"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
 )
@@ -54,6 +55,16 @@ func main() {
 	assets, err := fs.Sub(webroot, "webroot")
 	if err != nil {
 		log.Fatalf("sub fs: %v", err)
+	}
+
+	// Render the SPA HTML shell ONCE at startup: read the embedded placeholder
+	// index.html and replace its %%TOKEN%% markers with this instance's resolved
+	// branding + the fixed, generic OG metadata. This templated HTML is served
+	// for "/" and every SPA-fallback route; other static assets are served
+	// verbatim from the embed.
+	shell, err := renderShell(assets, cfg)
+	if err != nil {
+		log.Fatalf("render shell: %v", err)
 	}
 
 	// Resumable upload endpoint (tus protocol). The returned handler is already
@@ -86,13 +97,23 @@ func main() {
 	//   DELETE /api/m/{slug}    revoke the share early
 	r.Post("/api/finalize", api.FinalizeHandler(cfg, db, nil))
 	r.Get("/api/d/{slug}", api.DownloadHandler(cfg, db, nil))
+	r.Get("/api/d/{slug}/meta", api.MetaHandler(db, nil))
 	manage := api.ManageHandler(cfg, db, nil)
 	r.Get("/api/m/{slug}", manage)
 	r.Delete("/api/m/{slug}", manage)
 
-	// Catch-all static handler with SPA fallback to index.html.
-	r.NotFound(spaHandler(assets))
-	r.MethodNotAllowed(spaHandler(assets))
+	// Client-visible runtime configuration for the static SPA (non-secret only).
+	r.Get("/api/config", api.ConfigHandler(cfg))
+
+	// Catch-all for any unmatched /api path: a JSON 404 (all real API routes are
+	// registered above and win). Without this, GET /api/foo would fall through to
+	// the SPA fallback and return the HTML shell with 200; under /api a client or
+	// crawler should get an application/json 404 instead.
+	r.HandleFunc("/api/*", api.NotFoundHandler())
+
+	// Catch-all static handler with SPA fallback to the templated HTML shell.
+	r.NotFound(spaHandler(assets, shell))
+	r.MethodNotAllowed(spaHandler(assets, shell))
 
 	addr := ":" + cfg.Port
 	log.Printf("featherdrop go server listening on %s (data=%s db=%s)", addr, cfg.DataDir, cfg.DBPath)
@@ -101,32 +122,51 @@ func main() {
 	}
 }
 
-// spaHandler serves files from assets, falling back to index.html for paths
-// that don't resolve to a file (so client-side routes load the SPA shell).
-func spaHandler(assets fs.FS) http.HandlerFunc {
+// renderShell reads the embedded webroot/index.html placeholder and substitutes
+// its %%TOKEN%% markers with this instance's resolved branding and the fixed,
+// generic Open-Graph metadata, returning the templated HTML served for "/" and
+// the SPA fallback. Run once at startup.
+func renderShell(assets fs.FS, cfg config.Config) ([]byte, error) {
+	raw, err := fs.ReadFile(assets, "index.html")
+	if err != nil {
+		return nil, err
+	}
+	html := static.RenderShell(string(raw), static.ShellTokens{
+		AppName:     cfg.Branding().AppName,
+		Description: static.Description,
+		OGImage:     static.DefaultOGImage,
+		Lang:        static.DefaultLang,
+		BaseURL:     cfg.BaseURL,
+	})
+	return []byte(html), nil
+}
+
+// spaHandler serves files from assets, falling back to the templated HTML shell
+// for "/" and for paths that don't resolve to a file (so client-side routes load
+// the SPA shell). The raw embedded index.html is never served directly — only its
+// startup-templated form (shell) goes out, so the branding/OG markers are always
+// substituted.
+func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
 	fileServer := http.FileServer(http.FS(assets))
 	return func(w http.ResponseWriter, r *http.Request) {
 		upath := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
-		if upath == "" {
-			upath = "index.html"
+		if upath == "" || upath == "index.html" {
+			// Root or an explicit index.html request: serve the templated shell.
+			serveShell(w, shell)
+			return
 		}
 		if _, err := fs.Stat(assets, upath); errors.Is(err, fs.ErrNotExist) {
 			// Unknown path: serve the SPA shell so client routing can take over.
-			serveIndex(w, r, assets)
+			serveShell(w, shell)
 			return
 		}
 		fileServer.ServeHTTP(w, r)
 	}
 }
 
-// serveIndex writes the embedded index.html as the SPA fallback response.
-func serveIndex(w http.ResponseWriter, _ *http.Request, assets fs.FS) {
-	data, err := fs.ReadFile(assets, "index.html")
-	if err != nil {
-		http.Error(w, "not found", http.StatusNotFound)
-		return
-	}
+// serveShell writes the pre-templated HTML shell as the SPA response.
+func serveShell(w http.ResponseWriter, shell []byte) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
+	_, _ = w.Write(shell)
 }
