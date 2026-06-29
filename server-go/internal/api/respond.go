@@ -30,3 +30,13 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func writeJSONError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, errorBody{Error: msg})
 }
+
+// NotFoundHandler responds with a uniform JSON 404 for unmatched API paths.
+// Mount it as the catch-all under /api so a request to a non-existent /api/*
+// route returns application/json 404 instead of falling through to the SPA HTML
+// shell (which would serve text/html 200), matching typical API semantics.
+func NotFoundHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		writeJSONError(w, http.StatusNotFound, "not found")
+	}
+}
