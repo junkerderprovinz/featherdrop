@@ -1,0 +1,130 @@
+name: Go backend (build · test · smoke)
+
+# Validates the parallel Go backend (server-go/ + the Vite SPA it embeds) without
+# touching the published :latest image — the Next.js build.yml still ships the
+# release. This job: vets/tests the Go code, boot-smokes the native binary, and
+# builds + boot-smokes the Dockerfile.goserver image (the future drop-in). It does
+# NOT push. The swap to :latest happens only after the Go server passes the same
+# e2e (Phase 6).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server-go/**"
+      - "src/**"
+      - "components/**"
+      - "lib/**"
+      - "app/**"
+      - "public/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/build-client.mjs"
+      - "Dockerfile.goserver"
+      - ".dockerignore"
+      - ".github/workflows/go.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  go-test:
+    name: vet · gofmt · test · native smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server-go
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server-go/go.mod
+
+      - name: gofmt (must be clean)
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt found unformatted files:"; echo "$unformatted"; exit 1
+          fi
+          echo "gofmt clean"
+
+      - name: go vet
+        run: CGO_ENABLED=0 go vet ./...
+
+      - name: go test
+        run: CGO_ENABLED=0 go test ./... -count=1
+
+      # Boot-smoke the native binary (embeds the committed placeholder webroot —
+      # enough to prove the server starts, opens the DB, and serves /healthz).
+      - name: Native boot smoke
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=0 go build -o /tmp/fd-go .
+          DATA_DIR="$(mktemp -d)" PORT=38080 /tmp/fd-go &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null "http://127.0.0.1:38080/healthz"; then
+              echo "✅ /healthz up after ${i}s"; break
+            fi
+            sleep 1
+            if [ "$i" = 30 ]; then echo "❌ /healthz never came up"; exit 1; fi
+          done
+          body="$(curl -fsS http://127.0.0.1:38080/healthz)"
+          [ "$body" = "ok" ] || { echo "❌ /healthz body='$body' (want 'ok')"; exit 1; }
+          echo "✅ native binary healthy"
+
+  docker-smoke:
+    name: build + boot Dockerfile.goserver image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build the full multi-stage image (Vite SPA -> embedded webroot -> static
+      # binary). amd64 only here; arm64 is exercised at swap time in build.yml.
+      - name: Build image (amd64, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.goserver
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: featherdrop-go:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # A green build only proves it *builds* — boot it and require the real
+      # endpoints (the embedded SPA shell + the API) to answer.
+      - name: Boot smoke — server must serve /healthz, /, /api/config
+        run: |
+          set -euo pipefail
+          docker run -d --name fd-go -p 3000:3000 featherdrop-go:smoke
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:3000/healthz; then ok=1; break; fi
+            sleep 1
+          done
+          if [ "$ok" != 1 ]; then echo "❌ /healthz never came up — logs:"; docker logs fd-go || true; docker rm -f fd-go; exit 1; fi
+          echo "✅ /healthz: $(curl -fsS http://localhost:3000/healthz)"
+          # The SPA shell (templated index.html) and the config API must answer.
+          code_root="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)"
+          code_cfg="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/config)"
+          echo "/ -> $code_root ; /api/config -> $code_cfg"
+          docker rm -f fd-go >/dev/null
+          [ "$code_root" = 200 ] && [ "$code_cfg" = 200 ] || { echo "❌ endpoint check failed"; exit 1; }
+          echo "✅ Go image boots and serves the SPA shell + API"
