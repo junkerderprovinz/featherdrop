@@ -52,6 +52,50 @@ function fileStream(id: string, deleteAfter = false): ReadableStream<Uint8Array>
   return Readable.toWeb(rs) as ReadableStream<Uint8Array>;
 }
 
+// Read a byte range [start, end] (inclusive) of the stored ENCRYPTED blob. Used
+// only by the no-count ?preview=1 path so the streaming video preview can fetch
+// just the ciphertext prefix it needs (per Range request) instead of the whole
+// file. Never burns/deletes — preview is read-only.
+function fileRangeStream(
+  id: string,
+  start: number,
+  end: number,
+): ReadableStream<Uint8Array> {
+  const path = join(UPLOADS_DIR, id);
+  const rs = createReadStream(path, { start, end });
+  return Readable.toWeb(rs) as ReadableStream<Uint8Array>;
+}
+
+// Parse a single "bytes=start-end" Range header against the total size. Returns
+// the resolved inclusive [start, end], a 416 marker, or null for no/invalid
+// range (caller serves the whole blob). Mirrors the SW's parser.
+function parseByteRange(
+  header: string | null,
+  size: number,
+): { start: number; end: number } | { unsatisfiable: true } | null {
+  if (!header) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m) return null;
+  const hasStart = m[1] !== "";
+  const hasEnd = m[2] !== "";
+  let start: number;
+  let end: number;
+  if (hasStart) {
+    start = parseInt(m[1], 10);
+    end = hasEnd ? parseInt(m[2], 10) : size - 1;
+  } else if (hasEnd) {
+    const n = parseInt(m[2], 10);
+    if (n === 0) return null;
+    start = Math.max(0, size - n);
+    end = size - 1;
+  } else {
+    return null;
+  }
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  if (start > end || start >= size) return { unsatisfiable: true };
+  return { start, end: Math.min(end, size - 1) };
+}
+
 // Resolve the per-file age key for an encrypted record:
 //   - link:     from the link key the client read out of the URL fragment.
 //   - password: unwrap with the verified password.
@@ -126,6 +170,56 @@ export async function GET(
         return NextResponse.json({ error: "unauthorized" }, { status: 401 });
       }
     }
+
+    // ?preview=1 — NO-COUNT, Range-capable read of the encrypted blob, for the
+    // streaming large-video inline preview. It still requires the key-verifier
+    // (proof of key knowledge) but does NOT call registerDownload, and supports
+    // HTTP Range so the client can fetch only the ciphertext prefix it needs per
+    // Range/seek instead of re-downloading the whole file.
+    //
+    // SECURITY — no-count only for UNLIMITED shares: skipping the counter on a
+    // download-LIMITED share would be a limit-bypass (free unlimited reads). So
+    // ?preview=1 is allowed ONLY when max_downloads === null; for a limited share
+    // it is refused (the client only ever uses it for unlimited shares, gated
+    // client-side too — this enforces the same rule server-side). Range is on the
+    // CIPHERTEXT only; the server still never decrypts and never sees the key.
+    if (req.nextUrl.searchParams.get("preview") === "1") {
+      if (rec.max_downloads !== null) {
+        return NextResponse.json({ error: "not found" }, { status: 404 });
+      }
+      const range = parseByteRange(req.headers.get("range"), rec.size);
+      if (range && "unsatisfiable" in range) {
+        return new Response(null, {
+          status: 416,
+          headers: {
+            "Content-Range": `bytes */${rec.size}`,
+            "Accept-Ranges": "bytes",
+          },
+        });
+      }
+      const commonHeaders: Record<string, string> = {
+        "Content-Type": "application/octet-stream",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+        "Accept-Ranges": "bytes",
+      };
+      if (range) {
+        const length = range.end - range.start + 1;
+        return new Response(fileRangeStream(rec.id, range.start, range.end), {
+          status: 206,
+          headers: {
+            ...commonHeaders,
+            "Content-Range": `bytes ${range.start}-${range.end}/${rec.size}`,
+            "Content-Length": String(length),
+          },
+        });
+      }
+      return new Response(fileStream(rec.id), {
+        status: 200,
+        headers: { ...commonHeaders, "Content-Length": String(rec.size) },
+      });
+    }
+
     const dl = registerDownload(rec.slug);
     if (!dl.allowed) {
       return NextResponse.json({ error: "not found" }, { status: 404 });

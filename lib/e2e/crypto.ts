@@ -72,6 +72,15 @@ export function computeKeyVerifier(key: Uint8Array): string {
 export interface FileMeta {
   name: string;
   type: string;
+  /**
+   * Plaintext byte length of the file (format-2 single-file only). Lives INSIDE
+   * the client-encrypted enc_meta, so the server never sees it — zero-knowledge
+   * is preserved. Optional: shares uploaded before this field existed omit it,
+   * and consumers that need the exact plaintext length (e.g. the streaming video
+   * preview's Range math) must fall back when it is absent. Everything else
+   * ignores it, so adding it does not change any existing behavior.
+   */
+  size?: number;
 }
 
 /**

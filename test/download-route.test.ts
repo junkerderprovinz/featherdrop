@@ -403,3 +403,153 @@ test(
     assert.deepEqual(body, content, "v1 body must equal the stored plaintext");
   },
 );
+
+// ---------------------------------------------------------------------------
+// v2 ?preview=1 — NO-COUNT, Range-capable read of the encrypted blob, used by
+// the streaming large-video preview. Must: require the verifier, NOT count on
+// UNLIMITED shares, support HTTP Range (206 + correct Content-Range), and REFUSE
+// on download-LIMITED shares (no counting-bypass).
+// ---------------------------------------------------------------------------
+
+function makePreviewRequest(
+  slug: string,
+  headers?: Record<string, string>,
+): NextRequest {
+  return new NextRequest(`http://localhost/api/d/${slug}?preview=1`, { headers });
+}
+
+test(
+  "preview=1 (unlimited): 200, full bytes, and NOT counted",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("PREVIEW unlimited full read — must not count");
+    const { slug } = seedV2Record(content, {
+      maxDownloads: null,
+      keyVerifier: VERIFIER,
+    });
+    const res = await routeMod!.GET(
+      makePreviewRequest(slug, { [HEADER]: VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 200, "preview must be 200");
+    assert.equal(res.headers.get("Accept-Ranges"), "bytes");
+    assert.equal(res.headers.get("Content-Length"), String(content.length));
+    const body = Buffer.from(await res.arrayBuffer());
+    assert.deepEqual(body, content, "preview body must equal the stored blob");
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row, "row must survive a preview read");
+    assert.equal(row.download_count, 0, "preview must NOT increment the counter");
+  },
+);
+
+test(
+  "preview=1 (unlimited) with Range: 206, correct Content-Range + sliced bytes, NOT counted",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from(
+      "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-the-quick-brown-fox",
+    );
+    const { slug } = seedV2Record(content, {
+      maxDownloads: null,
+      keyVerifier: VERIFIER,
+    });
+    const res = await routeMod!.GET(
+      makePreviewRequest(slug, { [HEADER]: VERIFIER, Range: "bytes=10-19" }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 206, "ranged preview must be 206");
+    assert.equal(
+      res.headers.get("Content-Range"),
+      `bytes 10-19/${content.length}`,
+    );
+    assert.equal(res.headers.get("Content-Length"), "10");
+    const body = Buffer.from(await res.arrayBuffer());
+    assert.deepEqual(body, content.subarray(10, 20), "must serve exactly [10,19]");
+    const row = db!.getFileBySlug(slug);
+    assert.equal(row!.download_count, 0, "ranged preview must NOT count");
+  },
+);
+
+test(
+  "preview=1 (unlimited): unsatisfiable Range is 416",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("short");
+    const { slug } = seedV2Record(content, {
+      maxDownloads: null,
+      keyVerifier: VERIFIER,
+    });
+    const res = await routeMod!.GET(
+      makePreviewRequest(slug, { [HEADER]: VERIFIER, Range: "bytes=9999-" }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 416, "out-of-range must be 416");
+    assert.equal(res.headers.get("Content-Range"), `bytes */${content.length}`);
+    const row = db!.getFileBySlug(slug);
+    assert.equal(row!.download_count, 0, "416 must NOT count");
+  },
+);
+
+test(
+  "preview=1 (LIMITED share): REFUSED 404, not counted, not burned",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("limited share must not be previewable for free");
+    const { slug, id } = seedV2Record(content, {
+      maxDownloads: 1,
+      keyVerifier: VERIFIER,
+    });
+    const res = await routeMod!.GET(
+      makePreviewRequest(slug, { [HEADER]: VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 404, "preview on a limited share must be refused");
+    const row = db!.getFileBySlug(slug);
+    assert.ok(row, "limited share must NOT be burned by a refused preview");
+    assert.equal(row.download_count, 0, "refused preview must NOT count");
+    assert.equal(existsSync(join(testUploadsDir, id)), true, "blob must remain");
+  },
+);
+
+test(
+  "preview=1: missing/wrong verifier is 401 and not counted",
+  { skip: dbReason },
+  async () => {
+    const content = Buffer.from("verifier still required for preview");
+    const { slug } = seedV2Record(content, {
+      maxDownloads: null,
+      keyVerifier: VERIFIER,
+    });
+    const resMissing = await routeMod!.GET(makePreviewRequest(slug), {
+      params: { slug },
+    });
+    assert.equal(resMissing.status, 401, "missing verifier must be 401");
+    const resWrong = await routeMod!.GET(
+      makePreviewRequest(slug, { [HEADER]: WRONG_VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(resWrong.status, 401, "wrong verifier must be 401");
+    const row = db!.getFileBySlug(slug);
+    assert.equal(row!.download_count, 0, "a 401 preview must NOT count");
+  },
+);
+
+test(
+  "preview=1: a normal (no preview) GET still counts — preview path is opt-in only",
+  { skip: dbReason },
+  async () => {
+    // Regression guard: adding ?preview=1 must not change the counted GET path.
+    const content = Buffer.from("normal counted GET regression");
+    const { slug } = seedV2Record(content, {
+      maxDownloads: null,
+      keyVerifier: VERIFIER,
+    });
+    const res = await routeMod!.GET(
+      makeGetRequest(slug, { [HEADER]: VERIFIER }),
+      { params: { slug } },
+    );
+    assert.equal(res.status, 200);
+    const row = db!.getFileBySlug(slug);
+    assert.equal(row!.download_count, 1, "the normal GET must still count");
+  },
+);

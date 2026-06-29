@@ -48,7 +48,7 @@ import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { downloadDecrypted, type DownloadSecret } from "@/lib/e2e/download-flow";
 import { decryptFilesWithKey, type MultiDownload } from "@/lib/e2e/multi-pipeline";
-import { deriveContentKey } from "@/lib/e2e/pipeline";
+import { deriveContentKey, decryptWithKey } from "@/lib/e2e/pipeline";
 import { computeKeyVerifier } from "@/lib/e2e/crypto";
 import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
 import type { Manifest } from "@/lib/e2e/multi-file";
@@ -57,6 +57,11 @@ import {
   streamToDownload,
   blobDownload,
 } from "@/lib/e2e/stream-download";
+import {
+  canStreamPreview,
+  registerVideoPreview,
+  type PreviewHandle,
+} from "@/lib/e2e/stream-preview";
 
 // Inline preview is fully client-side for v2 shares (the server has no ?inline
 // route). Below this size we decrypt the whole file into memory once, so we can
@@ -164,6 +169,12 @@ export function DownloadView({
     type: string;
   } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Streaming inline preview for a LARGE (over the in-memory blob cap) format-2
+  // video: a /sw-preview/<id> URL served by the download service worker. Set only
+  // when the feature-detect + count-safety gate below holds; otherwise null and
+  // the over-cap share keeps today's behavior (no preview, just the download
+  // button). Memory stays bounded — the video is never collected into a blob.
+  const [swPreviewUrl, setSwPreviewUrl] = useState<string | null>(null);
   // Decoded text for the format-2 text/code preview (UTF-8, capped). Rendered as
   // ESCAPED React children in a <pre> — never as HTML. null = not a text preview.
   const [previewText, setPreviewText] = useState<string | null>(null);
@@ -685,6 +696,105 @@ export function DownloadView({
     };
   }, [isV2, hasPassword, downloadsLeft, size, linkKey, downloadUrl]);
 
+  // STREAMING inline preview for a LARGE format-2 video — the only case the
+  // blob-preview effect above deliberately skips (size > PREVIEW_MAX_BYTES). When
+  // the service worker can serve it we point <video src> at /sw-preview/<id> and
+  // play progressively without ever buffering the whole video into memory.
+  //
+  // Feature-detect (all must hold; otherwise this effect no-ops and the over-cap
+  // share keeps today's behavior — no preview, just the download button):
+  //   - secure context AND an available/active service worker (canStreamPreview),
+  //   - format 2 single-file (isV2) — multi-file (format 3) keeps the buffered-
+  //     blob preview and is intentionally NOT streamed here,
+  //   - the file is OVER the in-memory blob cap (size > PREVIEW_MAX_BYTES); at or
+  //     under the cap the blob-preview effect above handles it,
+  //   - the decrypted MIME's preview kind is "video".
+  //
+  // Count-safety: a streaming preview is a GET of the share (and a single
+  // playback can issue several — one per Range/seek), so it is gated to UNLIMITED
+  // shares (downloadsLeft === null) exactly like the existing previews. On an
+  // unlimited share registerDownload() only bumps a cosmetic counter and never
+  // burns/limits, so it can never consume a download-limited or burn-after share.
+  // Also requires a password-less LINK share (the #fragment key) so the key is
+  // available without an unlock step — mirroring the blob-preview gate.
+  useEffect(() => {
+    if (!isV2 || hasPassword || downloadsLeft !== null) return;
+    if (size <= PREVIEW_MAX_BYTES || !linkKey) return;
+    if (!canStreamPreview()) return;
+    let cancelled = false;
+    let handle: PreviewHandle | null = null;
+    // AbortController, not stream.cancel(): decryptWithKey's blob-meta read takes
+    // over the response body via its async iterator, which LOCKS the stream — so a
+    // later res.body.cancel() throws "locked" (silently caught) and the full
+    // ciphertext keeps downloading in the background. Aborting the fetch tears the
+    // body down cleanly once we have the header.
+    const abort = new AbortController();
+    void (async () => {
+      try {
+        // Header-only decrypt to learn the metadata WITHOUT decrypting the whole
+        // video: decryptWithKey reads just the blob-meta header to produce `meta`;
+        // its returned plaintext generator is never pulled, so no body bytes are
+        // decrypted. We abort right after, so this is a tiny ranged-prefix read.
+        // Same key-verifier proof the server requires; ?preview=1 makes it a
+        // NO-COUNT GET on unlimited shares (the server enforces unlimited-only).
+        const key = await deriveContentKey({ keyFromUrl: linkKey });
+        // Range the header read to the first 8 KiB: [varint][enc_meta][header]
+        // all live there, so this never pulls the whole ciphertext even before
+        // the abort. (Server replies 206 with just the prefix.)
+        const res = await fetch(`${downloadUrl}?preview=1`, {
+          headers: {
+            "x-fd-key-verifier": computeKeyVerifier(key),
+            Range: "bytes=0-8191",
+          },
+          signal: abort.signal,
+        });
+        if (!res.ok || !res.body) throw new Error(`fetch ${res.status}`);
+        const { meta } = await decryptWithKey(
+          streamToAsyncIterable(res.body as ReadableStream<Uint8Array>),
+          key,
+        );
+        // Tear down the response body so the rest of the ciphertext is NOT
+        // fetched in the background (the stream is locked by the iterator above,
+        // so abort — not cancel — is the correct teardown).
+        abort.abort();
+        if (cancelled) return;
+        setRevealedName(meta.name);
+        setRevealedMime(meta.type);
+        // Only stream-preview videos; other large kinds keep the download-only UI.
+        if (previewKind(meta.type) !== "video") return;
+        // Exact PLAINTEXT length is REQUIRED for correct Range math. It lives in
+        // the encrypted meta (meta.size). Shares uploaded before that field
+        // existed omit it — for those, fall back to today's behavior (no
+        // streaming preview) rather than do Range math against the wrong size.
+        if (typeof meta.size !== "number" || meta.size <= 0) return;
+        handle = await registerVideoPreview({
+          downloadUrl,
+          secret: { keyFromUrl: linkKey },
+          mime: meta.type,
+          // meta.size = exact PLAINTEXT length (Range math); the `size` prop is
+          // rec.size = the on-disk CIPHERTEXT length (bounds the prefix fetch).
+          size: meta.size,
+          ciphertextSize: size,
+        });
+        if (cancelled) {
+          handle.release();
+          handle = null;
+          return;
+        }
+        setSwPreviewUrl(handle.url);
+      } catch {
+        // Leave the share without a streaming preview; the download button works.
+        // (An AbortError from our own teardown lands here too — harmless.)
+      }
+    })();
+    return () => {
+      cancelled = true;
+      abort.abort();
+      if (handle) handle.release();
+      setSwPreviewUrl(null);
+    };
+  }, [isV2, hasPassword, downloadsLeft, size, linkKey, downloadUrl]);
+
   // -------------------------------------------------------------------------
   // v1 helpers (unchanged)
   // -------------------------------------------------------------------------
@@ -883,10 +993,19 @@ export function DownloadView({
             )}
           </Stack>
 
-          {/* format-2 / v1 single-file inline preview. Text/code (format 2 only)
-              renders the decoded text; a text file over the text cap shows the
-              "too large" note instead. Every other kind renders from the URL. */}
-          {isV2TextPreview ? (
+          {/* STREAMING preview of a LARGE format-2 video: the SW-served
+              /sw-preview/<id> URL feeds a <video> that plays progressively
+              without buffering the whole file. Set only when the feature-detect +
+              count-safety gate held (see the effect above); takes precedence over
+              the blob preview, which never runs for an over-cap file. Seeking is
+              fast within the played/buffered region; a far-forward seek
+              re-decrypts from the start (slow but correct). */}
+          {swPreviewUrl ? (
+            <PreviewArea src={swPreviewUrl} kind="video" name={revealedName} />
+          ) : /* format-2 / v1 single-file inline preview. Text/code (format 2
+              only) renders the decoded text; a text file over the text cap shows
+              the "too large" note instead. Every other kind renders from the URL. */
+          isV2TextPreview ? (
             previewText !== null ? (
               <PreviewArea kind="text" text={previewText} name={revealedName} />
             ) : decrypted ? (
