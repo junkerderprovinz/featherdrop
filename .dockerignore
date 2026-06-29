@@ -10,6 +10,8 @@
 node_modules/
 .next/
 out/
+client-dist/
+server-go/webroot/assets/
 
 # GitHub metadata — except the init-log banner art, which the Dockerfile COPYs
 .github/
