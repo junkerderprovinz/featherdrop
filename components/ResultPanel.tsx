@@ -5,6 +5,7 @@ import {
   ActionIcon,
   Box,
   Button,
+  Divider,
   Group,
   Paper,
   Stack,
@@ -13,13 +14,26 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCheck, IconCopy, IconDownload, IconPlus } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconDownload,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useTranslation } from "react-i18next";
 import { copyText } from "@/lib/clipboard";
 
 interface ResultPanelProps {
   url: string;
+  /**
+   * Secret "delete early" link for the uploader (…/m/<slug>#t=<token>). The token
+   * lives in the URL fragment, so it never reaches the server on navigation —
+   * exactly like the content key. Shown as a separate, clearly-labelled secret.
+   * Absent for legacy servers that don't mint a manage token.
+   */
+  manageUrl?: string;
   expiryLabel: string;
   onReset: () => void;
 }
@@ -30,9 +44,15 @@ const QR_SIZE = 160;
 
 // Shown after a successful upload: the shareable link, a copy button, a QR code
 // for phones, and a way to start over.
-export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
+export function ResultPanel({
+  url,
+  manageUrl,
+  expiryLabel,
+  onReset,
+}: ResultPanelProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const [manageCopied, setManageCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
   // This panel mounts only once the share link exists — i.e. the upload reached
@@ -112,6 +132,19 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
     }
   };
 
+  // Copy the secret management ("delete early") link. Same robust copy path as
+  // the share link, with its own feedback so the two buttons don't share state.
+  const onCopyManage = async () => {
+    if (!manageUrl) return;
+    const ok = await copyText(manageUrl);
+    if (ok) {
+      setManageCopied(true);
+      setTimeout(() => setManageCopied(false), 2000);
+    } else {
+      notifications.show({ color: "red", message: t("result.copyFailed") });
+    }
+  };
+
   return (
     <Paper radius="lg" p="xl" maw={520} mx="auto" w="100%" className="fd-glass">
       <Stack align="center" gap="lg">
@@ -165,6 +198,55 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
             </ActionIcon>
           </Tooltip>
         </Group>
+
+        {/* Secondary, clearly-separated secret: the management link the uploader
+            keeps private to delete the share before it expires. The delete token
+            rides in the URL #fragment (never sent to the server on navigation),
+            exactly like the content key. Shown only when the server returned one. */}
+        {manageUrl && (
+          <>
+            <Divider w="100%" />
+            <Stack w="100%" gap={6}>
+              <Group gap={6} wrap="nowrap">
+                <IconTrash size={16} style={{ opacity: 0.7 }} />
+                <Text fw={600} size="sm">
+                  {t("result.manageTitle")}
+                </Text>
+              </Group>
+              <Text c="dimmed" size="xs">
+                {t("result.manageHint")}
+              </Text>
+              <Group w="100%" gap="xs" wrap="nowrap">
+                <TextInput
+                  value={manageUrl}
+                  readOnly
+                  size="xs"
+                  style={{ flex: 1 }}
+                  aria-label={t("result.manageTitle")}
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <Tooltip
+                  label={manageCopied ? t("result.copied") : t("result.copy")}
+                  withArrow
+                >
+                  <ActionIcon
+                    size={30}
+                    variant={manageCopied ? "filled" : "light"}
+                    color={manageCopied ? "teal" : "gray"}
+                    onClick={onCopyManage}
+                    aria-label={t("result.copyManage")}
+                  >
+                    {manageCopied ? (
+                      <IconCheck size={16} />
+                    ) : (
+                      <IconCopy size={16} />
+                    )}
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            </Stack>
+          </>
+        )}
 
         <Button
           variant="subtle"

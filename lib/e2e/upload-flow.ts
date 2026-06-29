@@ -34,8 +34,12 @@ export interface FinalizeRequest {
 export interface UploadDeps {
   /** Upload a File (e.g. via tus). Resolves to the server-assigned upload ID. */
   upload(file: File, onProgress: (sent: number, total: number) => void): Promise<string>;
-  /** POST /api/finalize. Resolves to the slug for the share URL. */
-  finalize(body: FinalizeRequest): Promise<{ slug: string }>;
+  /**
+   * POST /api/finalize. Resolves to the slug for the share URL and the raw
+   * manage token (the uploader's "delete early" credential). `manageToken` is
+   * absent only for legacy servers that predate the management-link feature.
+   */
+  finalize(body: FinalizeRequest): Promise<{ slug: string; manageToken?: string }>;
   /** Base URL (no trailing slash), e.g. "https://drop.example.tld". */
   baseUrl: string;
 }
@@ -62,7 +66,7 @@ export async function uploadEncrypted(
   opts: { expiry: string; maxDownloads: number | null; password?: string },
   deps: UploadDeps,
   onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
-): Promise<{ shareUrl: string }> {
+): Promise<{ shareUrl: string; manageUrl?: string }> {
   if (files.length === 0) throw new Error("uploadEncrypted: no files given");
 
   // The combined plaintext size — what the in-memory fallback cap applies to.
@@ -139,7 +143,7 @@ export async function uploadEncrypted(
       body.kdfSalt = btoa(String.fromCharCode(...wrapped.salt));
     }
 
-    const { slug } = await deps.finalize(body);
+    const { slug, manageToken } = await deps.finalize(body);
 
     // Build the share URL.
     // Link mode:    https://…/d/<slug>#k=<key>   (key in fragment, never sent to server)
@@ -147,7 +151,16 @@ export async function uploadEncrypted(
     const shareUrl =
       keyForUrl ? `${deps.baseUrl}/d/${slug}#k=${keyForUrl}` : `${deps.baseUrl}/d/${slug}`;
 
-    return { shareUrl };
+    // Build the management URL. The manage token lives in the URL #fragment
+    // (#t=<token>), exactly like the content key, so it is never sent to the
+    // server on navigation and never appears in access logs. The DELETE request
+    // later reads it from the fragment and sends it via the x-fd-manage-token
+    // header. Absent only for legacy servers that don't return a manageToken.
+    const manageUrl = manageToken
+      ? `${deps.baseUrl}/m/${slug}#t=${manageToken}`
+      : undefined;
+
+    return { shareUrl, manageUrl };
   } finally {
     await cleanup();
   }

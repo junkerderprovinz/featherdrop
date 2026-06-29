@@ -35,6 +35,18 @@ export const en = {
   "result.downloadQr": "Save QR code",
   "result.neverExpires": "Never expires",
   "result.expiresAfter": "Expires after {{label}}",
+  "result.manageTitle": "Management link",
+  "result.manageHint": "Keep this private — use it to delete the share before it expires.",
+  "result.copyManage": "Copy management link",
+
+  "manage.title": "Manage your share",
+  "manage.loading": "Checking the share…",
+  "manage.intro": "Deleting removes the file and its link immediately. This cannot be undone.",
+  "manage.delete": "Delete now",
+  "manage.confirmDelete": "Click again to confirm",
+  "manage.deleted": "Share deleted",
+  "manage.deleteFailed": "Delete failed",
+  "manage.notFound": "This management link is invalid, or the share has already expired or been deleted.",
 
   "download.protected": "This file is password-protected",
   "download.passwordPlaceholder": "Enter password",

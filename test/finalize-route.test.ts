@@ -225,6 +225,69 @@ test(
 );
 
 // ---------------------------------------------------------------------------
+// manage token ("delete early" credential)
+// ---------------------------------------------------------------------------
+
+test(
+  "finalize: returns a raw manageToken and stores ONLY its hash",
+  { skip: dbReason },
+  async () => {
+    const { hashManageToken, isValidManageToken } = await import(
+      "../lib/manage-token"
+    );
+    const uploadId = makeFakeTusUpload(Buffer.from("blob with manage token"));
+
+    const req = makeRequest({ uploadId, format: 2 });
+    const res = await routeMod!.POST(req);
+    assert.equal(res.status, 200);
+
+    const json = (await res.json()) as Record<string, unknown>;
+    const manageToken = json.manageToken as string;
+    assert.ok(
+      typeof manageToken === "string" && isValidManageToken(manageToken),
+      "response must include a well-formed raw manageToken",
+    );
+
+    const row = db!.getFileBySlug(json.slug as string);
+    assert.ok(row, "DB row must exist");
+    // The server stores ONLY the hash — never the raw token.
+    assert.equal(
+      row.manage_token_hash,
+      hashManageToken(manageToken),
+      "stored manage_token_hash must be SHA-256(token), base64url",
+    );
+    assert.notEqual(
+      row.manage_token_hash,
+      manageToken,
+      "stored value must NOT be the raw token",
+    );
+  },
+);
+
+test(
+  "finalize v1: also returns a manageToken and stores its hash",
+  { skip: dbReason },
+  async () => {
+    const { isValidManageToken } = await import("../lib/manage-token");
+    const uploadId = makeFakeTusUpload(Buffer.from("v1 blob with manage token"), {
+      metadata: { filename: "v1.txt", filetype: "text/plain" },
+    });
+
+    const req = makeRequest({ uploadId });
+    const res = await routeMod!.POST(req);
+    assert.equal(res.status, 200);
+
+    const json = (await res.json()) as Record<string, unknown>;
+    assert.ok(
+      isValidManageToken(json.manageToken),
+      "v1 response must also include a raw manageToken",
+    );
+    const row = db!.getFileBySlug(json.slug as string);
+    assert.ok(row?.manage_token_hash, "v1 row must store a manage_token_hash");
+  },
+);
+
+// ---------------------------------------------------------------------------
 // v2 sidecar cleanup
 // ---------------------------------------------------------------------------
 

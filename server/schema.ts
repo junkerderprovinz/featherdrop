@@ -68,4 +68,14 @@ export function applySchema(db: Database.Database): void {
   // it never reveals K. NULL = pre-verifier v2 uploads (and all v1 rows) —
   // those keep downloading without proof, exactly as before.
   addColumn("key_verifier", "key_verifier TEXT");
+
+  // `manage_token_hash` — the uploader's "delete early" credential.
+  // base64url(SHA-256(manageToken)) of a random 32-byte token minted at finalize.
+  // Only the HASH is stored (one-way); the raw token is returned to the uploader
+  // once and lives in the management link's URL #fragment. The DELETE route
+  // (app/api/m/[slug]) hashes a client-supplied `x-fd-manage-token` header and
+  // constant-time-compares it to this column to authorize deletion. NULL = a
+  // share created before this feature existed — simply not manageable (no early
+  // delete link), exactly as before.
+  addColumn("manage_token_hash", "manage_token_hash TEXT");
 }
