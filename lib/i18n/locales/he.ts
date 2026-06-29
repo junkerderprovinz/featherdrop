@@ -63,6 +63,12 @@ export const he: Translation = {
   "upload.finalizeFailed": "לא ניתן היה להשלים את השיתוף",
   "upload.encrypting": "מצפין…",
 
+  "uploadGate.title": "מופע זה דורש סיסמת העלאה",
+  "uploadGate.password": "סיסמת העלאה",
+  "uploadGate.placeholder": "הזינו את סיסמת ההעלאה",
+  "uploadGate.unlock": "ביטול נעילת ההעלאה",
+  "uploadGate.wrongPassword": "סיסמת העלאה שגויה",
+
   "expiry.1h": "שעה אחת",
   "expiry.6h": "6 שעות",
   "expiry.1d": "יום אחד",

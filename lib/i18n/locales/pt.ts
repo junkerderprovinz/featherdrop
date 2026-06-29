@@ -63,6 +63,12 @@ export const pt: Translation = {
   "upload.finalizeFailed": "Não foi possível finalizar a partilha",
   "upload.encrypting": "A cifrar…",
 
+  "uploadGate.title": "Esta instância requer uma palavra-passe de envio",
+  "uploadGate.password": "Palavra-passe de envio",
+  "uploadGate.placeholder": "Introduza a palavra-passe de envio",
+  "uploadGate.unlock": "Desbloquear o envio",
+  "uploadGate.wrongPassword": "Palavra-passe de envio incorreta",
+
   "expiry.1h": "1 hora",
   "expiry.6h": "6 horas",
   "expiry.1d": "1 dia",

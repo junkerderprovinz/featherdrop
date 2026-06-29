@@ -42,6 +42,15 @@ export const ENCRYPT_UPLOADS =
 export const MASTER_KEY = process.env.MASTER_KEY ?? "";
 export const SERVER_KEY_MODE = MASTER_KEY.length > 0;
 
+// Optional upload gate. When set, CREATING a share requires this secret: the
+// client sends it in the `x-fd-upload-token` header and the server compares it
+// constant-time on both write paths (tus + /api/finalize). Empty/unset = uploads
+// are open to everyone (the default, unchanged). Downloading a share link is
+// NEVER affected — only uploads are gated. The secret stays in the container
+// environment: only the boolean `UPLOAD_PROTECTED` is ever exposed to the client.
+export const UPLOAD_PASSWORD = process.env.UPLOAD_PASSWORD ?? "";
+export const UPLOAD_PROTECTED = UPLOAD_PASSWORD.length > 0;
+
 // Custom branding (app name, logo, accent colour) for self-hosters. Resolved
 // once on the server from the environment; passed to the client via props.
 export const BRANDING = resolveBranding({

@@ -63,6 +63,12 @@ export const ko: Translation = {
   "upload.finalizeFailed": "공유를 완료할 수 없습니다",
   "upload.encrypting": "암호화 중…",
 
+  "uploadGate.title": "이 인스턴스는 업로드 비밀번호가 필요합니다",
+  "uploadGate.password": "업로드 비밀번호",
+  "uploadGate.placeholder": "업로드 비밀번호를 입력하세요",
+  "uploadGate.unlock": "업로드 잠금 해제",
+  "uploadGate.wrongPassword": "업로드 비밀번호가 틀렸습니다",
+
   "expiry.1h": "1시간",
   "expiry.6h": "6시간",
   "expiry.1d": "1일",

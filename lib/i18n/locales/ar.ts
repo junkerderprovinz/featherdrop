@@ -63,6 +63,12 @@ export const ar: Translation = {
   "upload.finalizeFailed": "تعذّر إتمام المشاركة",
   "upload.encrypting": "جارٍ التشفير…",
 
+  "uploadGate.title": "يتطلب هذا المثيل كلمة مرور للرفع",
+  "uploadGate.password": "كلمة مرور الرفع",
+  "uploadGate.placeholder": "أدخل كلمة مرور الرفع",
+  "uploadGate.unlock": "إلغاء قفل الرفع",
+  "uploadGate.wrongPassword": "كلمة مرور الرفع غير صحيحة",
+
   "expiry.1h": "ساعة واحدة",
   "expiry.6h": "6 ساعات",
   "expiry.1d": "يوم واحد",

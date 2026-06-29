@@ -63,6 +63,12 @@ export const it: Translation = {
   "upload.finalizeFailed": "Impossibile finalizzare la condivisione",
   "upload.encrypting": "Cifratura in corso…",
 
+  "uploadGate.title": "Questa istanza richiede una password di caricamento",
+  "uploadGate.password": "Password di caricamento",
+  "uploadGate.placeholder": "Inserisci la password di caricamento",
+  "uploadGate.unlock": "Sblocca il caricamento",
+  "uploadGate.wrongPassword": "Password di caricamento errata",
+
   "expiry.1h": "1 ora",
   "expiry.6h": "6 ore",
   "expiry.1d": "1 giorno",

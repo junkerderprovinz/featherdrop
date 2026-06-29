@@ -63,6 +63,12 @@ export const tr: Translation = {
   "upload.finalizeFailed": "Paylaşım tamamlanamadı",
   "upload.encrypting": "Şifreleniyor…",
 
+  "uploadGate.title": "Bu örnek bir yükleme parolası gerektiriyor",
+  "uploadGate.password": "Yükleme parolası",
+  "uploadGate.placeholder": "Yükleme parolasını girin",
+  "uploadGate.unlock": "Yüklemeyi aç",
+  "uploadGate.wrongPassword": "Yanlış yükleme parolası",
+
   "expiry.1h": "1 saat",
   "expiry.6h": "6 saat",
   "expiry.1d": "1 gün",

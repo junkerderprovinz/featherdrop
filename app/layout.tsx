@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 import { createAppTheme } from "@/theme";
-import { BASE_URL, BRANDING } from "@/lib/config";
+import { BASE_URL, BRANDING, UPLOAD_PROTECTED } from "@/lib/config";
 import { BrandingProvider } from "@/components/BrandingProvider";
 import { ServerConfigProvider } from "@/components/ServerConfigProvider";
 import { bitter } from "./fonts";
@@ -81,7 +81,9 @@ export default function RootLayout({
             theme={createAppTheme(BRANDING.accentColor)}
             defaultColorScheme="auto"
           >
-            <ServerConfigProvider config={{ baseUrl: BASE_URL }}>
+            <ServerConfigProvider
+              config={{ baseUrl: BASE_URL, uploadProtected: UPLOAD_PROTECTED }}
+            >
               <BrandingProvider
                 branding={{
                   appName: BRANDING.appName,

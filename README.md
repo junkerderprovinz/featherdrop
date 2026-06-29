@@ -283,6 +283,7 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 | `BASE_URL` | *(empty)* | Public URL featherdrop is reached at, so share links use your domain. Empty = use the address the browser is on. |
 | `DEFAULT_EXPIRY` | `7d` | Expiry pre-selected in the UI. One of `1h`, `6h`, `1d`, `7d`, `30d`, `never`. |
 | `MAX_FILE_SIZE` | `0` | Max upload size in bytes. `0` = unlimited (disk-limited). E.g. `5368709120` = 5 GB. |
+| `UPLOAD_PASSWORD` | *(empty)* | Optional upload lock. Empty = anyone can upload (the default). Set it and **creating** a share requires this password (entered once per browser session); **downloading** an existing share link stays open to everyone. The server checks it constant-time on both write paths and never stores or logs it — only a "this instance is protected" flag reaches the browser, never the password. Send over HTTPS. |
 | `MASTER_KEY` | *(empty)* | **Legacy.** Only decrypts pre-v4 server-mode shares until they expire; has no effect on new uploads, which are end-to-end encrypted in the browser (see [Zero-knowledge encryption](#zero-knowledge-encryption)). |
 | `ENCRYPT_UPLOADS` | `true` | **Legacy.** Applies to the old at-rest path only; new uploads are always end-to-end encrypted client-side. |
 | `PORT` | `3000` | Port the server listens on. |

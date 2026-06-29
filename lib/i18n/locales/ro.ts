@@ -63,6 +63,12 @@ export const ro: Translation = {
   "upload.finalizeFailed": "Partajarea nu a putut fi finalizată",
   "upload.encrypting": "Se criptează…",
 
+  "uploadGate.title": "Această instanță necesită o parolă de încărcare",
+  "uploadGate.password": "Parolă de încărcare",
+  "uploadGate.placeholder": "Introduceți parola de încărcare",
+  "uploadGate.unlock": "Deblochează încărcarea",
+  "uploadGate.wrongPassword": "Parolă de încărcare incorectă",
+
   "expiry.1h": "1 oră",
   "expiry.6h": "6 ore",
   "expiry.1d": "1 zi",

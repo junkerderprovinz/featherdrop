@@ -63,6 +63,12 @@ export const pl: Translation = {
   "upload.finalizeFailed": "Nie udało się sfinalizować udostępniania",
   "upload.encrypting": "Szyfrowanie…",
 
+  "uploadGate.title": "Ta instancja wymaga hasła do przesyłania",
+  "uploadGate.password": "Hasło do przesyłania",
+  "uploadGate.placeholder": "Wprowadź hasło do przesyłania",
+  "uploadGate.unlock": "Odblokuj przesyłanie",
+  "uploadGate.wrongPassword": "Nieprawidłowe hasło do przesyłania",
+
   "expiry.1h": "1 godzina",
   "expiry.6h": "6 godzin",
   "expiry.1d": "1 dzień",

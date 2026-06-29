@@ -63,6 +63,12 @@ export const zh: Translation = {
   "upload.finalizeFailed": "无法完成分享",
   "upload.encrypting": "加密中…",
 
+  "uploadGate.title": "此实例需要上传密码",
+  "uploadGate.password": "上传密码",
+  "uploadGate.placeholder": "请输入上传密码",
+  "uploadGate.unlock": "解锁上传",
+  "uploadGate.wrongPassword": "上传密码错误",
+
   "expiry.1h": "1 小时",
   "expiry.6h": "6 小时",
   "expiry.1d": "1 天",
