@@ -63,6 +63,12 @@ export const no: Translation = {
   "upload.finalizeFailed": "Kunne ikke fullføre delingen",
   "upload.encrypting": "Krypterer…",
 
+  "uploadGate.title": "Denne instansen krever et opplastingspassord",
+  "uploadGate.password": "Opplastingspassord",
+  "uploadGate.placeholder": "Skriv inn opplastingspassordet",
+  "uploadGate.unlock": "Lås opp opplasting",
+  "uploadGate.wrongPassword": "Feil opplastingspassord",
+
   "expiry.1h": "1 time",
   "expiry.6h": "6 timer",
   "expiry.1d": "1 dag",

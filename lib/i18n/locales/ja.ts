@@ -63,6 +63,12 @@ export const ja: Translation = {
   "upload.finalizeFailed": "共有を完了できませんでした",
   "upload.encrypting": "暗号化中…",
 
+  "uploadGate.title": "このインスタンスではアップロードパスワードが必要です",
+  "uploadGate.password": "アップロードパスワード",
+  "uploadGate.placeholder": "アップロードパスワードを入力",
+  "uploadGate.unlock": "アップロードのロックを解除",
+  "uploadGate.wrongPassword": "アップロードパスワードが違います",
+
   "expiry.1h": "1時間",
   "expiry.6h": "6時間",
   "expiry.1d": "1日",

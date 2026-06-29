@@ -63,6 +63,12 @@ export const es: Translation = {
   "upload.finalizeFailed": "No se pudo finalizar el recurso compartido",
   "upload.encrypting": "Cifrando…",
 
+  "uploadGate.title": "Esta instancia requiere una contraseña de subida",
+  "uploadGate.password": "Contraseña de subida",
+  "uploadGate.placeholder": "Introduce la contraseña de subida",
+  "uploadGate.unlock": "Desbloquear la subida",
+  "uploadGate.wrongPassword": "Contraseña de subida incorrecta",
+
   "expiry.1h": "1 hora",
   "expiry.6h": "6 horas",
   "expiry.1d": "1 día",

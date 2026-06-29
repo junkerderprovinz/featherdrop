@@ -63,6 +63,12 @@ export const vi: Translation = {
   "upload.finalizeFailed": "Không thể hoàn tất việc chia sẻ",
   "upload.encrypting": "Đang mã hóa…",
 
+  "uploadGate.title": "Phiên bản này yêu cầu mật khẩu tải lên",
+  "uploadGate.password": "Mật khẩu tải lên",
+  "uploadGate.placeholder": "Nhập mật khẩu tải lên",
+  "uploadGate.unlock": "Mở khóa tải lên",
+  "uploadGate.wrongPassword": "Mật khẩu tải lên không đúng",
+
   "expiry.1h": "1 giờ",
   "expiry.6h": "6 giờ",
   "expiry.1d": "1 ngày",

@@ -63,6 +63,12 @@ export const cs: Translation = {
   "upload.finalizeFailed": "Sdílení se nepodařilo dokončit",
   "upload.encrypting": "Šifrování…",
 
+  "uploadGate.title": "Tato instance vyžaduje heslo pro nahrávání",
+  "uploadGate.password": "Heslo pro nahrávání",
+  "uploadGate.placeholder": "Zadejte heslo pro nahrávání",
+  "uploadGate.unlock": "Odemknout nahrávání",
+  "uploadGate.wrongPassword": "Nesprávné heslo pro nahrávání",
+
   "expiry.1h": "1 hodina",
   "expiry.6h": "6 hodin",
   "expiry.1d": "1 den",

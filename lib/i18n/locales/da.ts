@@ -63,6 +63,12 @@ export const da: Translation = {
   "upload.finalizeFailed": "Kunne ikke fuldføre delingen",
   "upload.encrypting": "Krypterer…",
 
+  "uploadGate.title": "Denne instans kræver en upload-adgangskode",
+  "uploadGate.password": "Upload-adgangskode",
+  "uploadGate.placeholder": "Indtast upload-adgangskoden",
+  "uploadGate.unlock": "Lås upload op",
+  "uploadGate.wrongPassword": "Forkert upload-adgangskode",
+
   "expiry.1h": "1 time",
   "expiry.6h": "6 timer",
   "expiry.1d": "1 dag",

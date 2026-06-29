@@ -63,6 +63,12 @@ export const fr: Translation = {
   "upload.finalizeFailed": "Impossible de finaliser le partage",
   "upload.encrypting": "Chiffrement en cours…",
 
+  "uploadGate.title": "Cette instance nécessite un mot de passe de téléversement",
+  "uploadGate.password": "Mot de passe de téléversement",
+  "uploadGate.placeholder": "Saisissez le mot de passe de téléversement",
+  "uploadGate.unlock": "Déverrouiller le téléversement",
+  "uploadGate.wrongPassword": "Mot de passe de téléversement incorrect",
+
   "expiry.1h": "1 heure",
   "expiry.6h": "6 heures",
   "expiry.1d": "1 jour",

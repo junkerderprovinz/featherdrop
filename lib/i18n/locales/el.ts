@@ -63,6 +63,12 @@ export const el: Translation = {
   "upload.finalizeFailed": "Δεν ήταν δυνατή η ολοκλήρωση της κοινής χρήσης",
   "upload.encrypting": "Κρυπτογράφηση…",
 
+  "uploadGate.title": "Αυτή η εγκατάσταση απαιτεί κωδικό μεταφόρτωσης",
+  "uploadGate.password": "Κωδικός μεταφόρτωσης",
+  "uploadGate.placeholder": "Εισαγάγετε τον κωδικό μεταφόρτωσης",
+  "uploadGate.unlock": "Ξεκλείδωμα μεταφόρτωσης",
+  "uploadGate.wrongPassword": "Λανθασμένος κωδικός μεταφόρτωσης",
+
   "expiry.1h": "1 ώρα",
   "expiry.6h": "6 ώρες",
   "expiry.1d": "1 ημέρα",

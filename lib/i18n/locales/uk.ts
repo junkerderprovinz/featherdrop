@@ -63,6 +63,12 @@ export const uk: Translation = {
   "upload.finalizeFailed": "Не вдалося завершити публікацію",
   "upload.encrypting": "Шифрування…",
 
+  "uploadGate.title": "Цей екземпляр вимагає пароль для завантаження",
+  "uploadGate.password": "Пароль для завантаження",
+  "uploadGate.placeholder": "Введіть пароль для завантаження",
+  "uploadGate.unlock": "Розблокувати завантаження",
+  "uploadGate.wrongPassword": "Неправильний пароль для завантаження",
+
   "expiry.1h": "1 година",
   "expiry.6h": "6 годин",
   "expiry.1d": "1 день",

@@ -63,6 +63,12 @@ export const th: Translation = {
   "upload.finalizeFailed": "ไม่สามารถดำเนินการแชร์ให้เสร็จสิ้นได้",
   "upload.encrypting": "กำลังเข้ารหัส…",
 
+  "uploadGate.title": "อินสแตนซ์นี้ต้องใช้รหัสผ่านสำหรับการอัปโหลด",
+  "uploadGate.password": "รหัสผ่านสำหรับการอัปโหลด",
+  "uploadGate.placeholder": "ป้อนรหัสผ่านสำหรับการอัปโหลด",
+  "uploadGate.unlock": "ปลดล็อกการอัปโหลด",
+  "uploadGate.wrongPassword": "รหัสผ่านสำหรับการอัปโหลดไม่ถูกต้อง",
+
   "expiry.1h": "1 ชั่วโมง",
   "expiry.6h": "6 ชั่วโมง",
   "expiry.1d": "1 วัน",

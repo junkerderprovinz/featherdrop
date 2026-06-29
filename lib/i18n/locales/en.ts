@@ -63,6 +63,12 @@ export const en = {
   "upload.finalizeFailed": "Could not finalize share",
   "upload.encrypting": "Encrypting…",
 
+  "uploadGate.title": "This instance requires an upload password",
+  "uploadGate.password": "Upload password",
+  "uploadGate.placeholder": "Enter the upload password",
+  "uploadGate.unlock": "Unlock uploading",
+  "uploadGate.wrongPassword": "Wrong upload password",
+
   "expiry.1h": "1 hour",
   "expiry.6h": "6 hours",
   "expiry.1d": "1 day",

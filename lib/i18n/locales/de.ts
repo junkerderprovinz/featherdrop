@@ -64,6 +64,12 @@ export const de: Translation = {
   "upload.finalizeFailed": "Freigabe konnte nicht abgeschlossen werden",
   "upload.encrypting": "Verschlüsselung läuft…",
 
+  "uploadGate.title": "Diese Instanz erfordert ein Upload-Passwort",
+  "uploadGate.password": "Upload-Passwort",
+  "uploadGate.placeholder": "Upload-Passwort eingeben",
+  "uploadGate.unlock": "Upload freischalten",
+  "uploadGate.wrongPassword": "Falsches Upload-Passwort",
+
   "expiry.1h": "1 Stunde",
   "expiry.6h": "6 Stunden",
   "expiry.1d": "1 Tag",

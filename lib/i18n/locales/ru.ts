@@ -63,6 +63,12 @@ export const ru: Translation = {
   "upload.finalizeFailed": "Не удалось завершить публикацию",
   "upload.encrypting": "Шифрование…",
 
+  "uploadGate.title": "Этот экземпляр требует пароль для загрузки",
+  "uploadGate.password": "Пароль для загрузки",
+  "uploadGate.placeholder": "Введите пароль для загрузки",
+  "uploadGate.unlock": "Разблокировать загрузку",
+  "uploadGate.wrongPassword": "Неверный пароль для загрузки",
+
   "expiry.1h": "1 час",
   "expiry.6h": "6 часов",
   "expiry.1d": "1 день",

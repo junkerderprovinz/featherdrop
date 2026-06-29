@@ -63,6 +63,12 @@ export const sv: Translation = {
   "upload.finalizeFailed": "Kunde inte slutföra delningen",
   "upload.encrypting": "Krypterar…",
 
+  "uploadGate.title": "Den här instansen kräver ett uppladdningslösenord",
+  "uploadGate.password": "Uppladdningslösenord",
+  "uploadGate.placeholder": "Ange uppladdningslösenordet",
+  "uploadGate.unlock": "Lås upp uppladdning",
+  "uploadGate.wrongPassword": "Fel uppladdningslösenord",
+
   "expiry.1h": "1 timme",
   "expiry.6h": "6 timmar",
   "expiry.1d": "1 dag",

@@ -63,6 +63,12 @@ export const nl: Translation = {
   "upload.finalizeFailed": "Kon delen niet voltooien",
   "upload.encrypting": "Versleutelen…",
 
+  "uploadGate.title": "Deze instantie vereist een uploadwachtwoord",
+  "uploadGate.password": "Uploadwachtwoord",
+  "uploadGate.placeholder": "Voer het uploadwachtwoord in",
+  "uploadGate.unlock": "Uploaden ontgrendelen",
+  "uploadGate.wrongPassword": "Onjuist uploadwachtwoord",
+
   "expiry.1h": "1 uur",
   "expiry.6h": "6 uur",
   "expiry.1d": "1 dag",

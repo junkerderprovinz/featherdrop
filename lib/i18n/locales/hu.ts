@@ -63,6 +63,12 @@ export const hu: Translation = {
   "upload.finalizeFailed": "A megosztást nem sikerült véglegesíteni",
   "upload.encrypting": "Titkosítás…",
 
+  "uploadGate.title": "Ez a példány feltöltési jelszót igényel",
+  "uploadGate.password": "Feltöltési jelszó",
+  "uploadGate.placeholder": "Adja meg a feltöltési jelszót",
+  "uploadGate.unlock": "Feltöltés feloldása",
+  "uploadGate.wrongPassword": "Hibás feltöltési jelszó",
+
   "expiry.1h": "1 óra",
   "expiry.6h": "6 óra",
   "expiry.1d": "1 nap",

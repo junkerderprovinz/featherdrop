@@ -63,6 +63,12 @@ export const fi: Translation = {
   "upload.finalizeFailed": "Jakoa ei voitu viimeistellä",
   "upload.encrypting": "Salataan…",
 
+  "uploadGate.title": "Tämä instanssi vaatii latauksen salasanan",
+  "uploadGate.password": "Latauksen salasana",
+  "uploadGate.placeholder": "Syötä latauksen salasana",
+  "uploadGate.unlock": "Avaa lataus",
+  "uploadGate.wrongPassword": "Väärä latauksen salasana",
+
   "expiry.1h": "1 tunti",
   "expiry.6h": "6 tuntia",
   "expiry.1d": "1 päivä",

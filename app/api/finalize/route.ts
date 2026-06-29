@@ -21,6 +21,7 @@ import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
 import { isValidKeyVerifier } from "@/lib/key-verifier";
 import { mimeFromName } from "@/lib/mime";
 import { hashPassword } from "@/lib/password";
+import { UPLOAD_TOKEN_HEADER, isUploadAuthorized } from "@/lib/upload-auth";
 import { createFileRecord, getFileBySlug } from "@/server/db";
 import { encryptStream, wrapKey } from "@/server/crypto";
 
@@ -100,6 +101,18 @@ async function encryptIntoStore(
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Optional upload gate (see lib/upload-auth.ts). When UPLOAD_PASSWORD is set,
+  // creating a share requires a matching `x-fd-upload-token` header. Enforced
+  // FIRST, before reading the body or touching storage, so an unauthorized
+  // request creates no share and stores no bytes. The compare is constant-time;
+  // the secret is never logged. Unset UPLOAD_PASSWORD → always authorized (open).
+  if (!isUploadAuthorized(req.headers.get(UPLOAD_TOKEN_HEADER) ?? undefined)) {
+    return NextResponse.json(
+      { error: "upload password required" },
+      { status: 401 },
+    );
+  }
+
   ensureDataDirs();
 
   let body: FinalizeBody;
