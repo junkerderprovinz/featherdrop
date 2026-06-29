@@ -61,6 +61,7 @@ test("v1 record: createFileRecord + getFileBySlug round-trips all v1 fields", { 
     wrapped_key: null,
     kdf_salt: null,
     key_verifier: null,
+    manage_token_hash: null,
   });
 
   const row = db!.getFileBySlug(slug);
@@ -104,6 +105,7 @@ test("v2 link-mode record: format = 2, wrapped_key/kdf_salt = null", { skip: dbR
     wrapped_key: null,
     kdf_salt: null,
     key_verifier: null,
+    manage_token_hash: null,
   });
 
   const row = db!.getFileBySlug(slug);
@@ -145,6 +147,7 @@ test("v2 password-mode record: wrapped_key + kdf_salt survive the round-trip as 
     wrapped_key: wrappedKey,
     kdf_salt: kdfSalt,
     key_verifier: "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU",
+    manage_token_hash: null,
   });
 
   const row = db!.getFileBySlug(slug);

@@ -52,6 +52,7 @@ function makeShare(maxDownloads: number | null): string {
     wrapped_key: null,
     kdf_salt: null,
     key_verifier: null,
+    manage_token_hash: null,
   });
   return slug;
 }

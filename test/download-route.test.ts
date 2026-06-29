@@ -83,6 +83,7 @@ function seedV2Record(
     wrapped_key: opts.wrappedKey ?? null,
     kdf_salt: opts.kdfSalt ?? null,
     key_verifier: opts.keyVerifier ?? null,
+    manage_token_hash: null,
   });
   return { slug, id };
 }
@@ -109,6 +110,7 @@ function seedV1Record(content: Buffer): { slug: string; id: string } {
     wrapped_key: null,
     kdf_salt: null,
     key_verifier: null,
+    manage_token_hash: null,
   });
   return { slug, id };
 }

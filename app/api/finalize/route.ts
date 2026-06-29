@@ -19,6 +19,7 @@ import { parseMaxDownloads } from "@/lib/downloads";
 import { chooseEncMode } from "@/lib/encmode";
 import { isValidExpiry, expiryToTimestamp } from "@/lib/expiry";
 import { isValidKeyVerifier } from "@/lib/key-verifier";
+import { hashManageToken, newManageToken } from "@/lib/manage-token";
 import { mimeFromName } from "@/lib/mime";
 import { hashPassword } from "@/lib/password";
 import { UPLOAD_TOKEN_HEADER, isUploadAuthorized } from "@/lib/upload-auth";
@@ -162,6 +163,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const storedPath = join(UPLOADS_DIR, storedId);
   const slug = uniqueSlug();
 
+  // Management ("delete early") token: a random 32-byte secret minted here. Only
+  // its SHA-256 hash is stored (one-way) — the raw token is returned to the
+  // uploader ONCE and rides in the management link's URL #fragment, exactly like
+  // the content key. The DELETE route (app/api/m/[slug]) hashes a client-supplied
+  // header and constant-time-compares it to manage_token_hash to authorize the
+  // delete. The server can never reconstruct the token from the stored hash.
+  const manageToken = newManageToken();
+  const manage_token_hash = hashManageToken(manageToken);
+
   // -------------------------------------------------------------------------
   // v2 zero-knowledge path (Phase 7b) — formats 2 (single file) and 3 (multi-
   // file manifest blob).
@@ -205,12 +215,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // NULL when an (older) client sent none — such shares download without
       // proof, exactly like pre-verifier uploads.
       key_verifier: body.keyVerifier ?? null,
+      manage_token_hash,
     });
 
     // The client already holds the key (link: URL fragment it generated;
     // password: it just sent wrapped_key+kdf_salt and will reconstruct).
-    // No key in the response — zero knowledge.
-    return NextResponse.json({ slug });
+    // No key in the response — zero knowledge. The raw manage token IS returned:
+    // it is the uploader's own delete credential and lives only in their browser
+    // (and the management link fragment), never persisted server-side in raw form.
+    return NextResponse.json({ slug, manageToken });
   }
 
   // -------------------------------------------------------------------------
@@ -275,10 +288,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     wrapped_key: null,
     kdf_salt: null,
     key_verifier: null,
+    manage_token_hash,
   });
 
   // The link key (link mode) goes to the uploader only, in the JSON response —
   // the client appends it to the share URL as a #fragment, which never reaches
-  // the server. It is intentionally absent for password-protected shares.
-  return NextResponse.json(linkKey ? { slug, key: linkKey } : { slug });
+  // the server. It is intentionally absent for password-protected shares. The
+  // raw manage token is always returned so the uploader gets a delete link.
+  return NextResponse.json(
+    linkKey ? { slug, key: linkKey, manageToken } : { slug, manageToken },
+  );
 }

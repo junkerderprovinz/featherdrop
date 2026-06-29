@@ -25,6 +25,10 @@ export interface FileRecord {
   // format=2 download authorization: base64url(SHA-256(content key)), computed
   // client-side. NULL = legacy v2 upload without a verifier (served as before).
   key_verifier: string | null;
+  // Uploader's "delete early" credential: base64url(SHA-256(manage token)).
+  // Only the hash is stored; the raw token rides in the management link fragment.
+  // NULL = a share created before this feature — not manageable (no regression).
+  manage_token_hash: string | null;
 }
 
 export interface DownloadResult {
@@ -55,11 +59,11 @@ export function createFileRecord(rec: Omit<FileRecord, "download_count">): void 
       `INSERT INTO files
         (id, slug, original_name, size, mime, password_hash, expires_at,
          created_at, max_downloads, encrypted, enc_mode, enc_key_wrapped,
-         format, wrapped_key, kdf_salt, key_verifier)
+         format, wrapped_key, kdf_salt, key_verifier, manage_token_hash)
        VALUES
         (@id, @slug, @original_name, @size, @mime, @password_hash, @expires_at,
          @created_at, @max_downloads, @encrypted, @enc_mode, @enc_key_wrapped,
-         @format, @wrapped_key, @kdf_salt, @key_verifier)`,
+         @format, @wrapped_key, @kdf_salt, @key_verifier, @manage_token_hash)`,
     )
     .run(rec);
 }
@@ -116,4 +120,22 @@ export function listExpired(now = Date.now()): FileRecord[] {
 
 export function deleteFileRecord(id: string): void {
   conn().prepare(`DELETE FROM files WHERE id = ?`).run(id);
+}
+
+/**
+ * Atomically delete a share row by slug, returning its stored file id so the
+ * caller can remove the blob from disk. Returns null when no such row exists
+ * (already gone / unknown slug). Used by the uploader's "delete early" route.
+ */
+export function deleteFileBySlug(slug: string): string | null {
+  const c = conn();
+  const run = c.transaction((s: string): string | null => {
+    const row = c.prepare(`SELECT id FROM files WHERE slug = ?`).get(s) as
+      | { id: string }
+      | undefined;
+    if (!row) return null;
+    c.prepare(`DELETE FROM files WHERE slug = ?`).run(s);
+    return row.id;
+  });
+  return run(slug);
 }

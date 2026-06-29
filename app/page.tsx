@@ -74,6 +74,9 @@ export default function HomePage() {
   const [password, setPassword] = useState("");
   const [maxDownloads, setMaxDownloads] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string>("");
+  // Secret "delete early" link for the uploader. Empty when the (legacy) server
+  // returned no manage token. Lives only in this tab's memory — never persisted.
+  const [manageUrl, setManageUrl] = useState<string>("");
 
   // Upload gate (only relevant when the instance sets UPLOAD_PASSWORD, surfaced
   // as `uploadProtected`). The operator's secret never reaches the client config;
@@ -133,6 +136,7 @@ export default function HomePage() {
   const reset = () => {
     setFiles([]);
     setShareUrl("");
+    setManageUrl("");
     setProgress(0);
     setPassword("");
     setExpiry("7d");
@@ -182,7 +186,7 @@ export default function HomePage() {
           body: JSON.stringify(body),
         }).then(async (res) => {
           if (!res.ok) throw new Error(`finalize ${res.status}`);
-          return res.json() as Promise<{ slug: string }>;
+          return res.json() as Promise<{ slug: string; manageToken?: string }>;
         });
       },
       baseUrl,
@@ -204,8 +208,9 @@ export default function HomePage() {
         }
       },
     )
-      .then(({ shareUrl: url }) => {
+      .then(({ shareUrl: url, manageUrl: mUrl }) => {
         setShareUrl(url);
+        setManageUrl(mUrl ?? "");
         setStatus("done");
       })
       .catch((e: unknown) => {
@@ -297,7 +302,12 @@ export default function HomePage() {
       )}
 
       {status === "done" ? (
-        <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
+        <ResultPanel
+          url={shareUrl}
+          manageUrl={manageUrl || undefined}
+          expiryLabel={expiryText}
+          onReset={reset}
+        />
       ) : (
         <Stack align="center" gap={0}>
           <Stack align="center" gap={6} mb={36}>
