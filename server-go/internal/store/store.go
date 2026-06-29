@@ -13,11 +13,28 @@ import (
 
 // Open opens (creating if needed) the SQLite database at dbPath and applies the
 // schema/migrations idempotently. The returned *sql.DB is ready to use.
+//
+// Concurrency: modernc.org/sqlite over database/sql opens a pool of connections,
+// and SQLite allows only one writer at a time. Without a busy timeout the second
+// concurrent writer fails immediately with "database is locked" — under
+// overlapping downloads that surfaces as spurious 404s from RegisterDownload's
+// write transaction. We therefore (a) enable WAL so readers never block the
+// writer, (b) set a 5s busy_timeout so a contending writer waits instead of
+// erroring, and (c) cap the pool at a single connection so writers serialize
+// cleanly, matching the single-connection, serialized-write behaviour of the
+// TypeScript server's better-sqlite3. foreign_keys is enabled for parity with
+// the TS schema setup.
 func Open(dbPath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", dbPath)
+	dsn := "file:" + dbPath +
+		"?_pragma=busy_timeout(5000)" +
+		"&_pragma=journal_mode(WAL)" +
+		"&_pragma=foreign_keys(on)"
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite %q: %w", dbPath, err)
 	}
+	// One connection => writers serialize instead of racing for the write lock.
+	db.SetMaxOpenConns(1)
 	if err := ApplySchema(db); err != nil {
 		db.Close()
 		return nil, err
