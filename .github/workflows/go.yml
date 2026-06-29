@@ -93,7 +93,7 @@ jobs:
           echo "✅ native binary healthy"
 
   docker-smoke:
-    name: build + boot Dockerfile.goserver image
+    name: build + boot the image (amd64 smoke, no push)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -108,7 +108,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.goserver
+          file: Dockerfile
           platforms: linux/amd64
           push: false
           load: true
