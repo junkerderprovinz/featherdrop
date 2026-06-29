@@ -128,3 +128,57 @@ jobs:
           docker rm -f fd-go >/dev/null
           [ "$code_root" = 200 ] && [ "$code_cfg" = 200 ] || { echo "❌ endpoint check failed"; exit 1; }
           echo "✅ Go image boots and serves the SPA shell + API"
+
+  browser-e2e:
+    name: browser e2e (real Chromium) against the Go server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server-go/go.mod
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Build the static SPA into server-go/webroot, then the Go binary embedding
+      # it, then run the SAME zero-knowledge browser round-trip the Next e2e uses
+      # (test/e2e/run.mjs is driven entirely by E2E_BASE_URL) — but against the Go
+      # server. Proves the real client crypto (cf=2 seekable upload, multi-file,
+      # inline preview) works end-to-end through the Go drop-in.
+      - name: Build SPA + Go binary, run browser e2e against Go
+        env:
+          PORT: "3000"
+          DATA_DIR: /tmp/fd-go-e2e
+          BASE_URL: http://localhost:3000
+          E2E_BASE_URL: http://localhost:3000
+        run: |
+          set -e
+          npm run build:spa
+          ( cd server-go && CGO_ENABLED=0 go build -o /tmp/fd-go . )
+          mkdir -p /tmp/fd-go-e2e
+          /tmp/fd-go > /tmp/go-server.log 2>&1 &
+          SRV=$!
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/healthz >/dev/null; then echo "Go server up"; break; fi
+            if ! kill -0 "$SRV" 2>/dev/null; then echo "Go server died early"; cat /tmp/go-server.log; exit 1; fi
+            sleep 1
+          done
+          curl -sf http://localhost:3000/healthz >/dev/null || { echo "Go server never came up"; cat /tmp/go-server.log; exit 1; }
+          node test/e2e/run.mjs
+          kill "$SRV" 2>/dev/null || true
+
+      - name: Go server log (on failure)
+        if: failure()
+        run: cat /tmp/go-server.log || true
