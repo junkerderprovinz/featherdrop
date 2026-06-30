@@ -401,20 +401,21 @@ export default function HomePage() {
                     disabled={uploading}
                     style={{ cursor: uploading ? "default" : "pointer" }}
                   >
-                    {/* The WHOLE hero (feather + wordmark + hint) reacts together
-                        on hover/drag — it scales up a touch (see .fd-hero). */}
-                    <Stack
-                      align="center"
-                      gap={8}
-                      className="fd-hero"
-                      data-dragging={dragging || undefined}
-                    >
-                      <Box className="fd-hero-logo">
+                    {/* The feather and the two text lines react INDEPENDENTLY on
+                        hover (see .fd-hero-logo / .fd-hero-text): the feather glows,
+                        each text line grows a touch. The feather also glows while a
+                        file is dragged over the page (data-dragging). */}
+                    <Stack align="center" gap={8}>
+                      <Box
+                        className="fd-hero-logo"
+                        data-dragging={dragging || undefined}
+                      >
                         <Logo size={300} cssSize="clamp(120px, 26vw, 300px)" />
                       </Box>
                       <Title
                         order={1}
                         fw={500}
+                        className="fd-hero-text"
                         style={{
                           fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
                           letterSpacing: -1,
@@ -424,7 +425,13 @@ export default function HomePage() {
                       >
                         {appName}
                       </Title>
-                      <Text c="dimmed" size="sm" ta="center" mt={4}>
+                      <Text
+                        c="dimmed"
+                        size="sm"
+                        ta="center"
+                        mt={4}
+                        className="fd-hero-text"
+                      >
                         {`${t("drop.drag")} · ${t("drop.browse")}`}
                       </Text>
                     </Stack>
