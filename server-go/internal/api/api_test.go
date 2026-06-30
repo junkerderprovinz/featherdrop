@@ -92,15 +92,12 @@ func (e *testEnv) makeTusUpload(t *testing.T, content []byte) string {
 	return info.ID
 }
 
-// router wires the three handlers exactly as main.go does, so tests exercise the
-// real chi routing (URL params) too.
+// router wires the handlers exactly as main.go does, so tests exercise the real
+// chi routing (URL params) too.
 func (e *testEnv) router(now func() time.Time) http.Handler {
 	r := chi.NewRouter()
 	r.Post("/api/finalize", FinalizeHandler(e.cfg, e.db, now))
 	r.Get("/api/d/{slug}", DownloadHandler(e.cfg, e.db, now))
-	manage := ManageHandler(e.cfg, e.db, now)
-	r.Get("/api/m/{slug}", manage)
-	r.Delete("/api/m/{slug}", manage)
 	return r
 }
 
@@ -344,11 +341,14 @@ func TestFinalize_Format2Happy(t *testing.T) {
 	}
 	var resp finalizeResponse
 	decodeJSON(t, rec, &resp)
-	if resp.Slug == "" || resp.ManageToken == "" {
-		t.Fatalf("response missing slug/manageToken: %+v", resp)
+	if resp.Slug == "" {
+		t.Fatalf("response missing slug: %+v", resp)
 	}
-	if !share.IsValidManageToken(resp.ManageToken) {
-		t.Fatalf("manageToken not a valid token: %q", resp.ManageToken)
+	// Response is {slug} only — the manage feature was removed.
+	var raw map[string]any
+	decodeJSON(t, rec, &raw)
+	if _, ok := raw["manageToken"]; ok {
+		t.Fatalf("response must not include manageToken: %s", rec.Body.String())
 	}
 
 	// Blob moved to uploads, removed from tmp; sidecar removed.
@@ -383,8 +383,9 @@ func TestFinalize_Format2Happy(t *testing.T) {
 	if row.KeyVerifier == nil || *row.KeyVerifier != goodVerifier {
 		t.Fatalf("key_verifier mismatch: %v", row.KeyVerifier)
 	}
-	if row.ManageTokenHash == nil || *row.ManageTokenHash != share.HashManageToken(resp.ManageToken) {
-		t.Fatalf("manage_token_hash must match the returned token's hash")
+	// The manage feature was removed: the column stays but is never populated.
+	if row.ManageTokenHash != nil {
+		t.Fatalf("manage_token_hash must be NULL, got %q", *row.ManageTokenHash)
 	}
 	// expires_at = now + 7d.
 	wantExp := int64(1_000_000_000_000) + 7*24*60*60*1000
@@ -778,190 +779,7 @@ func TestDownload_Preview_RequiresVerifier_401(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// manage
-// ---------------------------------------------------------------------------
-
-func TestManage_Get_200(t *testing.T) {
-	e := newTestEnv(t)
-	token := share.NewManageToken()
-	h := share.HashManageToken(token)
-	exp := int64(5_000_000)
-	three := int64(3)
-	content := []byte("blob-content")
-	v := goodVerifier
-	slug := e.seedV2(t, content, func(r *store.FileRecord) {
-		r.ManageTokenHash = &h
-		r.ExpiresAt = &exp
-		r.MaxDownloads = &three
-		r.KeyVerifier = &v
-	})
-
-	// Consume one download so download_count == 1 (CreateFileRecord always
-	// inserts count=0; registerDownload is the only way to bump it, mirroring
-	// the real flow).
-	dlReq := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
-	dlReq.Header.Set(keyVerifierHeader, v)
-	dlRec := httptest.NewRecorder()
-	e.router(fixedNow(1000)).ServeHTTP(dlRec, dlReq)
-	if dlRec.Code != http.StatusOK {
-		t.Fatalf("seed download status = %d", dlRec.Code)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/m/"+slug, nil)
-	req.Header.Set(manageTokenHeader, token)
-	rec := httptest.NewRecorder()
-	e.router(fixedNow(1000)).ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
-	}
-	var resp manageGetResponse
-	decodeJSON(t, rec, &resp)
-	if !resp.OK || resp.Size != int64(len(content)) {
-		t.Fatalf("unexpected resp %+v", resp)
-	}
-	if resp.ExpiresAt == nil || *resp.ExpiresAt != exp {
-		t.Fatalf("expiresAt = %v, want %d", resp.ExpiresAt, exp)
-	}
-	if resp.DownloadsLeft == nil || *resp.DownloadsLeft != 2 {
-		t.Fatalf("downloadsLeft = %v, want 2 (3 limit - 1 used)", deref(resp.DownloadsLeft))
-	}
-}
-
-func TestManage_Get_UnlimitedNullDownloadsLeft(t *testing.T) {
-	e := newTestEnv(t)
-	token := share.NewManageToken()
-	h := share.HashManageToken(token)
-	slug := e.seedV2(t, []byte("x"), func(r *store.FileRecord) { r.ManageTokenHash = &h })
-
-	req := httptest.NewRequest(http.MethodGet, "/api/m/"+slug, nil)
-	req.Header.Set(manageTokenHeader, token)
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	// downloadsLeft must serialize as JSON null, expiresAt too.
-	var m map[string]any
-	decodeJSON(t, rec, &m)
-	if m["downloadsLeft"] != nil {
-		t.Fatalf("downloadsLeft = %v, want null", m["downloadsLeft"])
-	}
-	if m["expiresAt"] != nil {
-		t.Fatalf("expiresAt = %v, want null", m["expiresAt"])
-	}
-}
-
-func TestManage_WrongToken_404(t *testing.T) {
-	e := newTestEnv(t)
-	token := share.NewManageToken()
-	h := share.HashManageToken(token)
-	slug := e.seedV2(t, []byte("blob"), func(r *store.FileRecord) { r.ManageTokenHash = &h })
-
-	req := httptest.NewRequest(http.MethodGet, "/api/m/"+slug, nil)
-	req.Header.Set(manageTokenHeader, share.NewManageToken()) // different token
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", rec.Code)
-	}
-	var body errorBody
-	decodeJSON(t, rec, &body)
-	if body.Error != "not found" {
-		t.Fatalf("error = %q, want not found", body.Error)
-	}
-}
-
-func TestManage_AbsentToken_404(t *testing.T) {
-	e := newTestEnv(t)
-	token := share.NewManageToken()
-	h := share.HashManageToken(token)
-	slug := e.seedV2(t, []byte("blob"), func(r *store.FileRecord) { r.ManageTokenHash = &h })
-
-	req := httptest.NewRequest(http.MethodGet, "/api/m/"+slug, nil) // no header
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", rec.Code)
-	}
-}
-
-func TestManage_LegacyShareNotManageable_404(t *testing.T) {
-	e := newTestEnv(t)
-	// No manage_token_hash stored (legacy). Even a syntactically valid token 404s.
-	slug := e.seedV2(t, []byte("blob"), nil)
-	req := httptest.NewRequest(http.MethodGet, "/api/m/"+slug, nil)
-	req.Header.Set(manageTokenHeader, share.NewManageToken())
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", rec.Code)
-	}
-}
-
-func TestManage_Delete_200_RemovesBlobAndRow(t *testing.T) {
-	e := newTestEnv(t)
-	token := share.NewManageToken()
-	h := share.HashManageToken(token)
-	slug := e.seedV2(t, []byte("delete me"), func(r *store.FileRecord) { r.ManageTokenHash = &h })
-	row, _ := store.GetFileBySlug(e.db, slug)
-	blobPath := filepath.Join(e.cfg.UploadsDir, row.ID)
-
-	req := httptest.NewRequest(http.MethodDelete, "/api/m/"+slug, nil)
-	req.Header.Set(manageTokenHeader, token)
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
-	}
-	var ok struct {
-		OK bool `json:"ok"`
-	}
-	decodeJSON(t, rec, &ok)
-	if !ok.OK {
-		t.Fatalf("ok = false")
-	}
-	if _, err := os.Stat(blobPath); !os.IsNotExist(err) {
-		t.Fatalf("blob must be removed")
-	}
-	if r, _ := store.GetFileBySlug(e.db, slug); r != nil {
-		t.Fatalf("row must be removed")
-	}
-
-	// Second delete -> 404 (row gone).
-	rec2 := httptest.NewRecorder()
-	req2 := httptest.NewRequest(http.MethodDelete, "/api/m/"+slug, nil)
-	req2.Header.Set(manageTokenHeader, token)
-	e.router(nil).ServeHTTP(rec2, req2)
-	if rec2.Code != http.StatusNotFound {
-		t.Fatalf("second delete status = %d, want 404", rec2.Code)
-	}
-}
-
-func TestManage_Delete_WrongToken_404_BlobSurvives(t *testing.T) {
-	e := newTestEnv(t)
-	token := share.NewManageToken()
-	h := share.HashManageToken(token)
-	slug := e.seedV2(t, []byte("keep me"), func(r *store.FileRecord) { r.ManageTokenHash = &h })
-	row, _ := store.GetFileBySlug(e.db, slug)
-	blobPath := filepath.Join(e.cfg.UploadsDir, row.ID)
-
-	req := httptest.NewRequest(http.MethodDelete, "/api/m/"+slug, nil)
-	req.Header.Set(manageTokenHeader, share.NewManageToken())
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", rec.Code)
-	}
-	if _, err := os.Stat(blobPath); err != nil {
-		t.Fatalf("blob must survive an unauthorized delete: %v", err)
-	}
-	if r, _ := store.GetFileBySlug(e.db, slug); r == nil {
-		t.Fatalf("row must survive an unauthorized delete")
-	}
-}
-
-// ---------------------------------------------------------------------------
-// End-to-end: real tus upload -> finalize -> download -> manage delete
+// End-to-end: real tus upload -> finalize -> download (+ burn-after-download)
 // ---------------------------------------------------------------------------
 
 func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
@@ -1010,10 +828,12 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 	// Extract the upload id from the Location URL's last path segment.
 	uploadID := loc[strings.LastIndex(loc, "/")+1:]
 
-	// 2. Finalize.
+	// 2. Finalize as a burn-after-download share (maxDownloads=1) so the single
+	// allowed download also removes the share — exercising the full removal path
+	// end-to-end now that the manage delete-early feature is gone.
 	apiRouter := e.router(nil)
 	finRec := e.finalize(t, nil, map[string]any{
-		"uploadId": uploadID, "format": 2, "keyVerifier": verifier,
+		"uploadId": uploadID, "format": 2, "keyVerifier": verifier, "maxDownloads": 1,
 	}, nil)
 	if finRec.Code != http.StatusOK {
 		t.Fatalf("finalize status = %d (body %s)", finRec.Code, finRec.Body.String())
@@ -1021,7 +841,8 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 	var fin finalizeResponse
 	decodeJSON(t, finRec, &fin)
 
-	// 3. Download with the verifier -> the exact ciphertext bytes.
+	// 3. Download with the verifier -> the exact ciphertext bytes. This is the
+	// last allowed download, so it burns the share.
 	dlReq := httptest.NewRequest(http.MethodGet, "/api/d/"+fin.Slug, nil)
 	dlReq.Header.Set(keyVerifierHeader, verifier)
 	dlRec := httptest.NewRecorder()
@@ -1033,35 +854,18 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 		t.Fatalf("downloaded bytes do not match uploaded ciphertext")
 	}
 
-	// 4. Manage GET shows status.
-	mgRec := httptest.NewRecorder()
-	mgReq := httptest.NewRequest(http.MethodGet, "/api/m/"+fin.Slug, nil)
-	mgReq.Header.Set(manageTokenHeader, fin.ManageToken)
-	apiRouter.ServeHTTP(mgRec, mgReq)
-	if mgRec.Code != http.StatusOK {
-		t.Fatalf("manage GET status = %d", mgRec.Code)
-	}
-
-	// 5. Manage DELETE revokes it; subsequent download 404s.
-	delRec := httptest.NewRecorder()
-	delReq := httptest.NewRequest(http.MethodDelete, "/api/m/"+fin.Slug, nil)
-	delReq.Header.Set(manageTokenHeader, fin.ManageToken)
-	apiRouter.ServeHTTP(delRec, delReq)
-	if delRec.Code != http.StatusOK {
-		t.Fatalf("manage DELETE status = %d", delRec.Code)
-	}
-
+	// 4. The share is burned: a second download 404s.
 	after := httptest.NewRecorder()
 	afterReq := httptest.NewRequest(http.MethodGet, "/api/d/"+fin.Slug, nil)
 	afterReq.Header.Set(keyVerifierHeader, verifier)
 	apiRouter.ServeHTTP(after, afterReq)
 	if after.Code != http.StatusNotFound {
-		t.Fatalf("post-delete download status = %d, want 404", after.Code)
+		t.Fatalf("post-burn download status = %d, want 404", after.Code)
 	}
 
 	// blob gone from disk.
 	if _, err := os.Stat(filepath.Join(e.cfg.UploadsDir, uploadID)); !os.IsNotExist(err) {
-		t.Fatalf("blob must be removed after manage delete")
+		t.Fatalf("blob must be removed after burn-after-download")
 	}
 }
 

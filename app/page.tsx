@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActionIcon,
   Alert,
   Box,
   Center,
   Container,
-  Flex,
   Group,
   Paper,
+  Progress,
   Stack,
   Text,
   Title,
   Tooltip,
   Transition,
   UnstyledButton,
-  rem,
   useComputedColorScheme,
   useMantineColorScheme,
 } from "@mantine/core";
@@ -26,12 +25,13 @@ import { useTranslation } from "react-i18next";
 import * as tus from "tus-js-client";
 import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
-import { DropArea } from "@/components/DropArea";
 import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
 import { UploadGate } from "@/components/UploadGate";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { EXPIRY_OPTIONS } from "@/lib/expiry";
+import { filesFromDropEvent } from "@/lib/dropped-files";
+import { formatBytes } from "@/lib/format";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
 
@@ -74,9 +74,15 @@ export default function HomePage() {
   const [password, setPassword] = useState("");
   const [maxDownloads, setMaxDownloads] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string>("");
-  // Secret "delete early" link for the uploader. Empty when the (legacy) server
-  // returned no manage token. Lives only in this tab's memory — never persisted.
-  const [manageUrl, setManageUrl] = useState<string>("");
+
+  // Hidden file input — the ONLY <input type="file"> on the page. The big Logo
+  // is the visible affordance and forwards its click here; e2e drives uploads by
+  // calling setInputFiles() on this element. `multiple` keeps multi-file uploads
+  // (and the multi-file e2e scenario) working.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Page-wide drag feedback: dim the page subtly while a drag hovers anywhere.
+  const [dragging, setDragging] = useState(false);
 
   // Upload gate (only relevant when the instance sets UPLOAD_PASSWORD, surfaced
   // as `uploadProtected`). The operator's secret never reaches the client config;
@@ -136,12 +142,53 @@ export default function HomePage() {
   const reset = () => {
     setFiles([]);
     setShareUrl("");
-    setManageUrl("");
     setProgress(0);
     setPassword("");
     setExpiry("7d");
     setMaxDownloads(null);
     setStatus("idle");
+    // Clear the native input so re-picking the same file fires `change` again.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // The upload is "in progress" during both the encrypt and upload phases.
+  const uploading = status === "uploading" || status === "encrypting";
+  const showPanel = status === "ready" || uploading;
+
+  // Clicking the big Logo opens the native file picker (unless an upload runs or
+  // the gate is locked). The hidden input's onChange routes the selection
+  // through the same onDrop(files) path as a drag-drop.
+  const openPicker = () => {
+    if (uploading || uploadLocked) return;
+    fileInputRef.current?.click();
+  };
+
+  // Page-level drag-and-drop: dropping files ANYWHERE selects them. We read the
+  // flat FileList via filesFromDropEvent (NOT webkitGetAsEntry) to avoid the
+  // Chromium/Edge renderer crash (issue #4); folders are never expanded.
+  const onPageDragOver = (e: React.DragEvent) => {
+    if (uploading || uploadLocked) return;
+    // Only react to file drags (ignore text/element drags) and allow the drop.
+    if (e.dataTransfer?.types?.includes("Files")) {
+      e.preventDefault();
+      if (!dragging) setDragging(true);
+    }
+  };
+  const onPageDragLeave = (e: React.DragEvent) => {
+    // Only clear when the cursor actually left the container, not when moving
+    // between children (relatedTarget still inside the container).
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setDragging(false);
+    }
+  };
+  const onPageDrop = (e: React.DragEvent) => {
+    setDragging(false);
+    if (uploading || uploadLocked) return;
+    const dropped = filesFromDropEvent(e);
+    if (dropped.length > 0) {
+      e.preventDefault();
+      onDrop(dropped);
+    }
   };
 
   const startUpload = () => {
@@ -186,7 +233,7 @@ export default function HomePage() {
           body: JSON.stringify(body),
         }).then(async (res) => {
           if (!res.ok) throw new Error(`finalize ${res.status}`);
-          return res.json() as Promise<{ slug: string; manageToken?: string }>;
+          return res.json() as Promise<{ slug: string }>;
         });
       },
       baseUrl,
@@ -208,9 +255,8 @@ export default function HomePage() {
         }
       },
     )
-      .then(({ shareUrl: url, manageUrl: mUrl }) => {
+      .then(({ shareUrl: url }) => {
         setShareUrl(url);
-        setManageUrl(mUrl ?? "");
         setStatus("done");
       })
       .catch((e: unknown) => {
@@ -230,18 +276,36 @@ export default function HomePage() {
       });
   };
 
-  // The upload is "in progress" during both the encrypt and upload phases.
-  const uploading = status === "uploading" || status === "encrypting";
-  const showPanel = status === "ready" || uploading;
-
   const expiryOpt = EXPIRY_OPTIONS.find((o) => o.value === expiry);
   const expiryText =
     expiryOpt?.value === "never"
       ? t("result.neverExpires")
       : t("result.expiresAfter", { label: t(`expiry.${expiry}`) });
 
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+
   return (
-    <Container size="lg" py={60} style={{ position: "relative", minHeight: "100vh" }}>
+    <Container
+      size="lg"
+      py={48}
+      style={{ position: "relative", minHeight: "100vh" }}
+      onDragOver={onPageDragOver}
+      onDragLeave={onPageDragLeave}
+      onDrop={onPageDrop}
+    >
+      {/* Hidden, multiple file input — the page's single input[type=file]. The
+          big Logo forwards its click here; e2e sets files directly on it. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        hidden
+        onChange={(e) => {
+          const picked = filesFromDropEvent(e);
+          if (picked.length > 0) onDrop(picked);
+        }}
+      />
+
       {/* Controls pinned to the viewport top-right so they sit at the exact same
           spot on every page, independent of each page's Container width. */}
       <Box pos="fixed" top={24} right={24} style={{ zIndex: 2 }}>
@@ -266,29 +330,16 @@ export default function HomePage() {
         </Group>
       </Box>
 
-      {/* Smash-style hero: the feather is the big, responsive focal point in the
-          centre, with the wordmark sitting smaller beneath it. The whole block
-          returns to the start screen (resets any upload) on click. The logo
-          scales fluidly via CSS clamp() — large on desktop, graceful on mobile. */}
-      <Center mb={48}>
-        <UnstyledButton onClick={reset} aria-label={t("result.shareAnother")}>
-          <Stack align="center" gap={4} style={{ cursor: "pointer" }}>
-            <Logo size={220} cssSize="clamp(96px, 18vw, 220px)" />
-            <Title
-              order={1}
-              fw={500}
-              style={{
-                fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
-                letterSpacing: -1,
-                fontFamily: "var(--font-bitter), Georgia, serif",
-                fontStyle: "italic",
-              }}
-            >
-              {appName}
-            </Title>
-          </Stack>
-        </UnstyledButton>
-      </Center>
+      {/* Tagline pinned to the VERY TOP, clean — the page text lives up here so
+          the centre belongs entirely to the big, reactive feather. */}
+      <Stack align="center" gap={4} mb={8} mt={8} px="md">
+        <Text fw={500} ta="center" style={{ fontSize: "clamp(1.1rem, 2.4vw, 1.5rem)", letterSpacing: -0.3 }}>
+          {t("app.tagline")}
+        </Text>
+        <Text c="dimmed" size="sm" ta="center">
+          {t("app.privacy")}
+        </Text>
+      </Stack>
 
       {insecure && (
         <Center mb={24}>
@@ -305,64 +356,136 @@ export default function HomePage() {
       )}
 
       {status === "done" ? (
-        <ResultPanel
-          url={shareUrl}
-          manageUrl={manageUrl || undefined}
-          expiryLabel={expiryText}
-          onReset={reset}
-        />
+        <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
       ) : (
-        <Stack align="center" gap={0}>
-          <Stack align="center" gap={6} mb={36}>
-            <Text fw={500} size={rem(26)} ta="center" style={{ letterSpacing: -0.3 }}>
-              {t("app.tagline")}
-            </Text>
-            <Text c="dimmed" size="md" ta="center">
-              {t("app.privacy")}
-            </Text>
-          </Stack>
+        <Stack align="center" gap="lg">
+          {/* The big, reactive feather IS the upload affordance (Smash-style):
+              clicking it ALWAYS opens the file picker (so it adds or replaces the
+              selection — it never silently discards chosen files); dragging files
+              anywhere on the page drops them. The wordmark sits quietly beneath.
+              Starting over from the "ready" state is just re-picking files. */}
+          <UnstyledButton
+            onClick={openPicker}
+            aria-label={t("settings.upload")}
+            disabled={uploading}
+            style={{ cursor: uploading ? "default" : "pointer" }}
+          >
+            <Stack align="center" gap={8}>
+              <Box
+                style={{
+                  transform: dragging ? "scale(1.06)" : "scale(1)",
+                  transition: "transform 180ms ease, filter 180ms ease",
+                  // Glow uses the accent token (fdgold step 6 = the base accent,
+                  // #d4af37 by default) so a custom ACCENT_COLOR stays consistent;
+                  // color-mix adds the alpha the bare token can't carry.
+                  filter: dragging
+                    ? "drop-shadow(0 0 28px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent))"
+                    : "drop-shadow(0 0 0 transparent)",
+                }}
+                className="fd-hero-logo"
+              >
+                <Logo size={300} cssSize="clamp(120px, 26vw, 300px)" />
+              </Box>
+              <Title
+                order={1}
+                fw={500}
+                style={{
+                  fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
+                  letterSpacing: -1,
+                  fontFamily: "var(--font-bitter), Georgia, serif",
+                  fontStyle: "italic",
+                }}
+              >
+                {appName}
+              </Title>
+            </Stack>
+          </UnstyledButton>
 
-          {/* Floating frosted-glass window holding the drop zone + settings.
-              When the instance gates uploads (UPLOAD_PASSWORD set) and the user
-              has not entered a valid secret yet, the upload password gate takes
-              the window's place — uploading cannot start until it is unlocked. */}
-          <Paper radius="lg" p="xl" w="100%" maw={860} className="fd-glass">
-            {uploadLocked ? (
-              <Center py="md">
+          {/* Hint under the feather — what clicking/dragging does. In the idle
+              state it explains the upload affordance; once files are chosen it
+              tells the user the feather still opens the picker to replace them, so
+              the prominent click target is never an undiscoverable surprise. */}
+          {!uploading && !uploadLocked && (
+            <Text c="dimmed" size="sm" ta="center">
+              {status === "idle"
+                ? `${t("drop.drag")} · ${t("drop.browse")}`
+                : files.length > 1
+                  ? t("drop.replaceMulti")
+                  : t("drop.replace")}
+            </Text>
+          )}
+
+          {/* Upload progress lives near the logo now that the dropzone box (which
+              used to host the ring) is gone — a clean full-width bar. */}
+          {uploading && (
+            <Stack align="center" gap={6} w="100%" maw={480}>
+              <Progress
+                value={progress}
+                size="lg"
+                radius="xl"
+                w="100%"
+                color="fdgold"
+                striped
+                animated
+                aria-label={t("settings.upload")}
+              />
+              <Text c="dimmed" size="sm" ta="center">
+                {status === "encrypting"
+                  ? t("upload.encrypting")
+                  : `${Math.round(progress)}%`}
+              </Text>
+            </Stack>
+          )}
+
+          {/* When the instance gates uploads (UPLOAD_PASSWORD set) and the user
+              has not entered a valid secret yet, the upload password gate is
+              shown — uploading cannot start until it is unlocked. */}
+          {uploadLocked ? (
+            <Paper radius="lg" p="xl" w="100%" maw={460} className="fd-glass">
+              <Center>
                 <UploadGate onUnlock={unlockUpload} error={gateError} />
               </Center>
-            ) : (
-              <Flex
-                direction={{ base: "column", sm: "row" }}
-                gap="lg"
-                align="stretch"
-              >
-                <DropArea
-                  onDrop={onDrop}
-                  uploading={uploading}
-                  progress={progress}
-                  files={files}
-                  phaseLabel={status === "encrypting" ? t("upload.encrypting") : undefined}
-                />
-                <Transition mounted={showPanel} transition="slide-left" duration={200}>
-                  {(styles) => (
-                    <div style={styles}>
-                      <SettingsPanel
-                        expiry={expiry}
-                        onExpiryChange={setExpiry}
-                        password={password}
-                        onPasswordChange={setPassword}
-                        maxDownloads={maxDownloads}
-                        onMaxDownloadsChange={setMaxDownloads}
-                        onUpload={startUpload}
-                        uploading={uploading}
-                      />
-                    </div>
-                  )}
-                </Transition>
-              </Flex>
-            )}
-          </Paper>
+            </Paper>
+          ) : (
+            <Transition mounted={showPanel} transition="pop" duration={200}>
+              {(styles) => (
+                <Paper
+                  radius="lg"
+                  p="xl"
+                  w="100%"
+                  maw={460}
+                  className="fd-glass"
+                  style={styles}
+                >
+                  <Stack gap="md">
+                    {/* Chosen-files summary — replaces the old dropzone's file
+                        list so the user still sees what they picked. */}
+                    {files.length > 0 && (
+                      <Text size="sm" ta="center" c="dimmed">
+                        {files.length === 1
+                          ? `${files[0].name} · ${formatBytes(files[0].size)}`
+                          : `${t("drop.fileCount", {
+                              count: files.length,
+                            })} · ${t("drop.total", {
+                              size: formatBytes(totalSize),
+                            })}`}
+                      </Text>
+                    )}
+                    <SettingsPanel
+                      expiry={expiry}
+                      onExpiryChange={setExpiry}
+                      password={password}
+                      onPasswordChange={setPassword}
+                      maxDownloads={maxDownloads}
+                      onMaxDownloadsChange={setMaxDownloads}
+                      onUpload={startUpload}
+                      uploading={uploading}
+                    />
+                  </Stack>
+                </Paper>
+              )}
+            </Transition>
+          )}
         </Stack>
       )}
     </Container>

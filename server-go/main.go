@@ -92,16 +92,11 @@ func main() {
 
 	// JSON/file API. Registered BEFORE the SPA catch-all so these exact routes
 	// win over the static fallback.
-	//   POST   /api/finalize   publish a completed tus upload -> {slug, manageToken}
+	//   POST   /api/finalize   publish a completed tus upload -> {slug}
 	//   GET    /api/d/{slug}    download the ciphertext (Range/?preview, burn)
-	//   GET    /api/m/{slug}    share status for the uploader
-	//   DELETE /api/m/{slug}    revoke the share early
 	r.Post("/api/finalize", api.FinalizeHandler(cfg, db, nil))
 	r.Get("/api/d/{slug}", api.DownloadHandler(cfg, db, nil))
 	r.Get("/api/d/{slug}/meta", api.MetaHandler(db, nil))
-	manage := api.ManageHandler(cfg, db, nil)
-	r.Get("/api/m/{slug}", manage)
-	r.Delete("/api/m/{slug}", manage)
 
 	// Client-visible runtime configuration for the static SPA (non-secret only).
 	r.Get("/api/config", api.ConfigHandler(cfg))

@@ -132,15 +132,14 @@ scanning, S3 backends. If you need those, use Pingvin Share — that is the poin
 Browser (drop zone, Mantine UI)
    │  resumable upload (tus)
    ▼
-featherdrop container (Next.js + small custom Node server)
+featherdrop container (single static Go binary, embedded React/Vite SPA)
    ├─ /files            tus upload endpoint
    ├─ /api/finalize     move file into store, write metadata, mint share slug
    ├─ /d/<slug>         share page (info, password gate, download)
-   ├─ /m/<slug>         manage page — uploader's secret "delete early" link
    └─ cleanup job       deletes expired files
    ▼
 /data volume (uploads, bulk)        /config volume (metadata, small)
-   ├─ uploads/<id>   the files          └─ db.sqlite   (better-sqlite3 — a file, not a server)
+   ├─ uploads/<id>   the files          └─ db.sqlite   (pure-Go SQLite — a file, not a server)
    └─ tmp/<id>       in-progress uploads
 ```
 
@@ -170,10 +169,8 @@ only on your server, and the app talks to nobody else.
 - **The operator can't read your files either.** The key never reaches the
   server — it lives in the link's `#fragment`, or is derived from your password.
 - **Self-destructing.** Every share has an expiry (down to 1 hour), and an
-  optional **download limit** burns the file the moment it's reached.
-- **Delete it early.** Every upload also returns a separate, secret
-  **management link** (`…/m/<slug>#t=…`) that lets *you* revoke the share — file
-  and metadata — before it expires ([details below](#deleting-a-share-early)).
+  optional **download limit** burns the file the moment it's reached — shares are
+  removed automatically, no manual cleanup needed.
 - **Minimal attack surface.** No login to brute-force, no user database to leak;
   share slugs are unguessable, and share pages and link previews never expose the
   file's name.
@@ -222,23 +219,6 @@ produced entirely in the browser from the decrypted bytes.
 > encryption (age) and stay readable with their original links until they expire.
 > The `MASTER_KEY` / `ENCRYPT_UPLOADS` settings only affect those legacy shares
 > and no longer apply to new uploads.
-
-### Deleting a share early
-
-Alongside the share link, every upload returns a separate **management link**
-(`…/m/<slug>#t=<token>`) that only **you** get. Open it and hit **Delete now** to
-revoke the share immediately — the file is wiped from disk and its metadata row
-removed, well before the expiry or download limit would have done it.
-
-It works the same zero-knowledge way as the content key: the delete token lives
-in the link's `#fragment`, so it is **never sent to the server on navigation**
-and never appears in logs. The server stores only a one-way **SHA-256 hash** of
-the token, so a stolen database or backup can't reconstruct it. When you delete,
-the browser sends the raw token in a header (`x-fd-manage-token`, never the URL
-path), the server hashes it and compares it (constant-time) to the stored hash.
-Unknown, expired, or wrong-token requests all get an identical `404`, revealing
-nothing. **Keep the management link private** — anyone who has it can delete the
-share. (Shares created before this feature simply have no management link.)
 
 <br>
 

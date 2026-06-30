@@ -69,13 +69,9 @@ export function applySchema(db: Database.Database): void {
   // those keep downloading without proof, exactly as before.
   addColumn("key_verifier", "key_verifier TEXT");
 
-  // `manage_token_hash` — the uploader's "delete early" credential.
-  // base64url(SHA-256(manageToken)) of a random 32-byte token minted at finalize.
-  // Only the HASH is stored (one-way); the raw token is returned to the uploader
-  // once and lives in the management link's URL #fragment. The DELETE route
-  // (app/api/m/[slug]) hashes a client-supplied `x-fd-manage-token` header and
-  // constant-time-compares it to this column to authorize deletion. NULL = a
-  // share created before this feature existed — simply not manageable (no early
-  // delete link), exactly as before.
+  // `manage_token_hash` — kept as a drop-in column for schema compatibility.
+  // The early-delete management feature was removed (expiry handles removal), so
+  // this column is no longer populated: finalize always writes NULL and nothing
+  // reads it. Existing rows keep whatever value they had; new rows store NULL.
   addColumn("manage_token_hash", "manage_token_hash TEXT");
 }

@@ -225,51 +225,42 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// manage token ("delete early" credential)
+// manage feature removed: no manageToken in the response, column stays NULL
 // ---------------------------------------------------------------------------
 
 test(
-  "finalize: returns a raw manageToken and stores ONLY its hash",
+  "finalize: response is {slug} with NO manageToken; manage_token_hash stays NULL",
   { skip: dbReason },
   async () => {
-    const { hashManageToken, isValidManageToken } = await import(
-      "../lib/manage-token"
-    );
-    const uploadId = makeFakeTusUpload(Buffer.from("blob with manage token"));
+    const uploadId = makeFakeTusUpload(Buffer.from("blob without manage token"));
 
     const req = makeRequest({ uploadId, format: 2 });
     const res = await routeMod!.POST(req);
     assert.equal(res.status, 200);
 
     const json = (await res.json()) as Record<string, unknown>;
-    const manageToken = json.manageToken as string;
-    assert.ok(
-      typeof manageToken === "string" && isValidManageToken(manageToken),
-      "response must include a well-formed raw manageToken",
+    assert.equal(
+      json.manageToken,
+      undefined,
+      "response must NOT include a manageToken (feature removed)",
     );
 
     const row = db!.getFileBySlug(json.slug as string);
     assert.ok(row, "DB row must exist");
-    // The server stores ONLY the hash — never the raw token.
+    // The column is kept as a drop-in but is never populated anymore.
     assert.equal(
       row.manage_token_hash,
-      hashManageToken(manageToken),
-      "stored manage_token_hash must be SHA-256(token), base64url",
-    );
-    assert.notEqual(
-      row.manage_token_hash,
-      manageToken,
-      "stored value must NOT be the raw token",
+      null,
+      "manage_token_hash must be NULL (feature removed)",
     );
   },
 );
 
 test(
-  "finalize v1: also returns a manageToken and stores its hash",
+  "finalize v1: response is {slug} with NO manageToken; manage_token_hash stays NULL",
   { skip: dbReason },
   async () => {
-    const { isValidManageToken } = await import("../lib/manage-token");
-    const uploadId = makeFakeTusUpload(Buffer.from("v1 blob with manage token"), {
+    const uploadId = makeFakeTusUpload(Buffer.from("v1 blob without manage token"), {
       metadata: { filename: "v1.txt", filetype: "text/plain" },
     });
 
@@ -278,12 +269,17 @@ test(
     assert.equal(res.status, 200);
 
     const json = (await res.json()) as Record<string, unknown>;
-    assert.ok(
-      isValidManageToken(json.manageToken),
-      "v1 response must also include a raw manageToken",
+    assert.equal(
+      json.manageToken,
+      undefined,
+      "v1 response must NOT include a manageToken (feature removed)",
     );
     const row = db!.getFileBySlug(json.slug as string);
-    assert.ok(row?.manage_token_hash, "v1 row must store a manage_token_hash");
+    assert.equal(
+      row?.manage_token_hash,
+      null,
+      "v1 row must store NULL manage_token_hash (feature removed)",
+    );
   },
 );
 
