@@ -932,7 +932,7 @@ export function DownloadView({
   const isV2TextPreview = isV2 && renderKind === "text";
 
   return (
-    <Container size="sm" py={60} style={{ position: "relative", minHeight: "100vh" }}>
+    <Container size="md" py={60} style={{ position: "relative", minHeight: "100vh" }}>
       {/* Pinned to the viewport top-right — same spot as the upload page,
           independent of this page's narrower Container width. */}
       <Box pos="fixed" top={24} right={24} style={{ zIndex: 2 }}>
@@ -978,11 +978,8 @@ export function DownloadView({
         </Link>
       </Center>
 
-      <Paper radius="lg" p="xl" maw={460} mx="auto" w="100%" className="fd-glass">
+      <Paper radius="lg" p="xl" maw={720} mx="auto" w="100%" className="fd-glass">
         <Stack align="center" gap="lg">
-          {/* Logo only (no wordmark) crowning the card, like the drop zone. */}
-          <Logo size={48} />
-
           <Stack align="center" gap={2}>
             <Text fw={700} size="xl" ta="center" lineClamp={2}>
               {isV3
@@ -1344,7 +1341,7 @@ function PreviewArea({
           background: "var(--mantine-color-default-hover)",
         }}
       >
-        <ScrollArea.Autosize mah={360} type="auto">
+        <ScrollArea.Autosize mah="min(70vh, 760px)" type="auto">
           <Code
             block
             style={{
@@ -1383,7 +1380,9 @@ function PreviewArea({
           style={{
             display: "block",
             maxWidth: "100%",
-            maxHeight: 360,
+            // Large + responsive: fill most of the viewport height on big
+            // screens, capped so it never overflows on very tall windows.
+            maxHeight: "min(74vh, 820px)",
             objectFit: "contain",
           }}
         />
@@ -1395,7 +1394,7 @@ function PreviewArea({
           style={{
             display: "block",
             maxWidth: "100%",
-            maxHeight: 360,
+            maxHeight: "min(74vh, 820px)",
           }}
         />
       ) : kind === "audio" ? (
@@ -1413,7 +1412,8 @@ function PreviewArea({
           style={{
             display: "block",
             width: "100%",
-            height: 360,
+            // A PDF needs a tall frame to be readable — match the media cap.
+            height: "min(80vh, 900px)",
             border: "none",
           }}
         />

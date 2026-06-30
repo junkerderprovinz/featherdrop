@@ -1,9 +1,9 @@
 // Drop-in replacement for `next/link`, aliased to this module in vite.config.ts.
 //
-// The featherdrop components import `Link from "next/link"` in exactly two ways:
-//   - <Link href="/" style={…}>…</Link>            (DownloadView, ManageView)
-//   - <Button component={Link} href="/" …/>         (ManageView — Mantine
-//     polymorphic `component`, which forwards arbitrary props AND a ref)
+// The featherdrop components import `Link from "next/link"` in two ways:
+//   - <Link href="/" style={…}>…</Link>            (DownloadView)
+//   - <Button component={Link} href="/" …/>         (Mantine polymorphic
+//     `component`, which forwards arbitrary props AND a ref)
 //
 // So this shim must (a) accept `href` like next/link, (b) forward every other
 // prop (className/style/onClick/role/…) onto the rendered element, and (c)

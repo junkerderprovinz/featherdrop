@@ -33,8 +33,10 @@ type FileRecord struct {
 	KDFSalt    []byte // password mode: 16-byte Argon2id salt
 	// format>=2 download authorization: base64url(SHA-256(content key)).
 	KeyVerifier *string // null = legacy/no-verifier upload
-	// Uploader's "delete early" credential: base64url(SHA-256(manage token)).
-	ManageTokenHash *string // null = a share created before this feature
+	// Kept as a drop-in column for schema compatibility. The early-delete
+	// management feature was removed (expiry handles removal), so finalize always
+	// writes NULL here and nothing reads it.
+	ManageTokenHash *string // always null for new rows
 }
 
 // DownloadResult mirrors server/db.ts DownloadResult.

@@ -213,8 +213,22 @@ function handlePreviewFetch(event, id) {
   }
 
   const start = range ? range.start : 0;
-  const end = range ? range.end : size - 1;
+  let end = range ? range.end : size - 1;
+
+  // Cap how much a single response serves. A <video> opens playback with an
+  // open-ended "bytes=0-" request; without a cap that asks the page to fetch +
+  // decrypt the WHOLE file before the first frame ("lädt sehr lange"). Serve a
+  // bounded window instead and let the element re-request later windows via Range
+  // as it plays/seeks — standard chunked range streaming, fast first byte, bounded
+  // memory. Any clamped response MUST be a 206 with Content-Range (it is partial).
+  const MAX_WINDOW = 4 * 1024 * 1024; // 4 MiB per response
+  let clamped = false;
+  if (end - start + 1 > MAX_WINDOW) {
+    end = start + MAX_WINDOW - 1;
+    clamped = true;
+  }
   const length = end - start + 1;
+  const partial = Boolean(range) || clamped;
 
   /** @type {Record<string, string>} */
   const headers = {
@@ -226,10 +240,10 @@ function handlePreviewFetch(event, id) {
     "X-Content-Type-Options": "nosniff",
     "Cache-Control": "no-store",
   };
-  if (range) {
+  if (partial) {
     headers["Content-Range"] = `bytes ${start}-${end}/${size}`;
   }
-  const status = range ? 206 : 200;
+  const status = partial ? 206 : 200;
 
   event.respondWith(
     requestPreviewStream(entry, start, end)

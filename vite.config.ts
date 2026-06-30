@@ -12,8 +12,8 @@ import react from "@vitejs/plugin-react";
 //                 "@/theme" path imports resolve exactly as they do under Next
 //                 (tsconfig paths "@/*": ["./*"]).
 //   "next/link" -> src/shims/next-link.tsx, the ONLY next-specific import in the
-//                 component tree (DownloadView/ManageView), rendered via
-//                 react-router-dom in the SPA.
+//                 component tree (DownloadView), rendered via react-router-dom in
+//                 the SPA.
 const repoRoot = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({

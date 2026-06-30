@@ -1,8 +1,7 @@
 // Package api holds the JSON/file HTTP handlers that mirror the existing
 // TypeScript Next.js route handlers EXACTLY (status codes, headers, JSON
-// bodies): finalize (publish a completed tus upload), download (stream the
-// ciphertext, with Range/?preview support and burn-after-download), and manage
-// (status + delete-early for the uploader).
+// bodies): finalize (publish a completed tus upload) and download (stream the
+// ciphertext, with Range/?preview support and burn-after-download).
 //
 // Every handler is built by a constructor taking only the dependencies it needs
 // (config, the SQLite *sql.DB, and the tus filestore over cfg.TmpDir) and
@@ -55,11 +54,12 @@ type finalizeBody struct {
 	KeyVerifier  json.RawMessage `json:"keyVerifier"`
 }
 
-// finalizeResponse is the success body: {"slug":..,"manageToken":..}. Mirrors
-// the v2 NextResponse.json({ slug, manageToken }).
+// finalizeResponse is the success body: {"slug":..}. Mirrors the v2
+// NextResponse.json({ slug }). The content key is generated client-side (link
+// mode: URL #fragment; password mode: derived from the password), so the server
+// returns only the slug.
 type finalizeResponse struct {
-	Slug        string `json:"slug"`
-	ManageToken string `json:"manageToken"`
+	Slug string `json:"slug"`
 }
 
 // FinalizeHandler builds POST /api/finalize. db is the metadata store; cfg
@@ -176,11 +176,6 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		// Mint the management ("delete early") token: only its SHA-256 hash is
-		// stored; the raw token is returned to the uploader ONCE.
-		manageToken := share.NewManageToken()
-		manageHash := share.HashManageToken(manageToken)
-
 		// Allocate a unique slug (retry on the astronomically unlikely collision).
 		slug, err := uniqueSlug(db)
 		if err != nil {
@@ -217,23 +212,25 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 		}
 
 		rec := store.FileRecord{
-			ID:              body.UploadID,
-			Slug:            slug,
-			OriginalName:    "", // server does not know the real filename (ZK)
-			Size:            size,
-			Mime:            nil, // server does not know the MIME type (ZK)
-			PasswordHash:    nil, // password never reaches the server in v2
-			ExpiresAt:       expiresAt,
-			CreatedAt:       nowMs,
-			MaxDownloads:    share.ParseMaxDownloads(body.MaxDownloads),
-			Encrypted:       0, // v1 age-encryption flag unused in v2
-			EncMode:         nil,
-			EncKeyWrapped:   nil,
-			Format:          format, // 2 (single file) or 3 (multi-file manifest)
-			WrappedKey:      wrappedKey,
-			KDFSalt:         kdfSalt,
-			KeyVerifier:     keyVerifier, // nil when absent (no-verifier share)
-			ManageTokenHash: &manageHash,
+			ID:            body.UploadID,
+			Slug:          slug,
+			OriginalName:  "", // server does not know the real filename (ZK)
+			Size:          size,
+			Mime:          nil, // server does not know the MIME type (ZK)
+			PasswordHash:  nil, // password never reaches the server in v2
+			ExpiresAt:     expiresAt,
+			CreatedAt:     nowMs,
+			MaxDownloads:  share.ParseMaxDownloads(body.MaxDownloads),
+			Encrypted:     0, // v1 age-encryption flag unused in v2
+			EncMode:       nil,
+			EncKeyWrapped: nil,
+			Format:        format, // 2 (single file) or 3 (multi-file manifest)
+			WrappedKey:    wrappedKey,
+			KDFSalt:       kdfSalt,
+			KeyVerifier:   keyVerifier, // nil when absent (no-verifier share)
+			// The early-delete management feature was removed (expiry handles
+			// removal); manage_token_hash stays as a drop-in NULL column.
+			ManageTokenHash: nil,
 		}
 		if err := store.CreateFileRecord(db, rec); err != nil {
 			// The blob was already renamed into UploadsDir; with no DB row pointing
@@ -245,7 +242,7 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		writeJSON(w, http.StatusOK, finalizeResponse{Slug: slug, ManageToken: manageToken})
+		writeJSON(w, http.StatusOK, finalizeResponse{Slug: slug})
 	}
 }
 
