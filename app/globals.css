@@ -157,26 +157,29 @@ body {
   transform: translateY(-1px);
 }
 
-/* The WHOLE home hero (feather + wordmark + hint) is the click/drop target and
-   REACTS on mouse-over (and while a file is dragged over the page): the group
-   scales up a touch — fast + snappy — and the feather blooms a soft gold glow.
-   Driven by CSS (not inline styles) so :hover works; the drag state is mirrored
-   via the data-dragging attribute on the group. */
-.fd-hero {
+/* On the home, the feather and each text line react INDEPENDENTLY on hover —
+   each element responds only to its OWN mouse-over (CSS :hover), fast + snappy:
+   - the feather blooms a soft gold glow (a "Schein") + a hair of scale; it also
+     glows while a file is dragged anywhere over the page (data-dragging),
+   - each text line (wordmark + hint) grows a touch. */
+.fd-hero-logo {
+  transition:
+    transform 110ms ease,
+    filter 110ms ease;
+  filter: drop-shadow(0 0 0 transparent);
+}
+.fd-hero-logo:hover,
+.fd-hero-logo[data-dragging] {
+  transform: scale(1.04);
+  filter: drop-shadow(
+    0 0 30px color-mix(in srgb, var(--mantine-color-fdgold-6) 60%, transparent)
+  );
+}
+.fd-hero-text {
+  display: inline-block; /* hug the text so the scale grows the line from centre */
   transition: transform 110ms ease;
   will-change: transform;
 }
-.fd-hero:hover,
-.fd-hero[data-dragging] {
-  transform: scale(1.04);
-}
-.fd-hero-logo {
-  transition: filter 110ms ease;
-  filter: drop-shadow(0 0 0 transparent);
-}
-.fd-hero:hover .fd-hero-logo,
-.fd-hero[data-dragging] .fd-hero-logo {
-  filter: drop-shadow(
-    0 0 26px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent)
-  );
+.fd-hero-text:hover {
+  transform: scale(1.06);
 }
