@@ -39,6 +39,13 @@ test("inert video containers are previewable", () => {
     "video/x-m4v",
     "video/x-matroska",
     "video/mkv",
+    "video/x-msvideo",
+    "video/avi",
+    "video/mpeg",
+    "video/3gpp",
+    "video/x-ms-wmv",
+    "video/x-flv",
+    "video/mp2t",
   ]) {
     assert.equal(isPreviewableMime(m), true, m);
   }
@@ -135,6 +142,13 @@ test("previewKind maps each allowlisted type to its render kind", () => {
     "video/x-m4v",
     "video/x-matroska",
     "video/mkv",
+    "video/x-msvideo",
+    "video/avi",
+    "video/mpeg",
+    "video/3gpp",
+    "video/x-ms-wmv",
+    "video/x-flv",
+    "video/mp2t",
   ]) {
     assert.equal(previewKind(m), "video", m);
   }

@@ -140,3 +140,19 @@ body {
     inset 0 2px 24px rgba(0, 0, 0, 0.30),
     0 0 30px -6px rgba(212, 175, 55, 0.35);
 }
+
+/* Icon buttons (the copy-link button) get a CLEAR, consistent hover: the gold
+   accent fills in (Mantine's light-variant hover alone is too subtle for the
+   primary copy CTA). Applies in the idle state; the copied/teal state keeps its
+   own colour. */
+.fd-icon-btn {
+  transition:
+    background-color 130ms ease,
+    color 130ms ease,
+    transform 130ms ease;
+}
+.fd-icon-btn:not([data-copied]):hover {
+  background-color: var(--mantine-color-fdgold-6);
+  color: #1a1a1a;
+  transform: translateY(-1px);
+}
