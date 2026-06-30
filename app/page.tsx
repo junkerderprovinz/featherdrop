@@ -401,11 +401,15 @@ export default function HomePage() {
                     disabled={uploading}
                     style={{ cursor: uploading ? "default" : "pointer" }}
                   >
-                    <Stack align="center" gap={8}>
-                      <Box
-                        className="fd-hero-logo"
-                        data-dragging={dragging || undefined}
-                      >
+                    {/* The WHOLE hero (feather + wordmark + hint) reacts together
+                        on hover/drag — it scales up a touch (see .fd-hero). */}
+                    <Stack
+                      align="center"
+                      gap={8}
+                      className="fd-hero"
+                      data-dragging={dragging || undefined}
+                    >
+                      <Box className="fd-hero-logo">
                         <Logo size={300} cssSize="clamp(120px, 26vw, 300px)" />
                       </Box>
                       <Title
@@ -420,11 +424,11 @@ export default function HomePage() {
                       >
                         {appName}
                       </Title>
+                      <Text c="dimmed" size="sm" ta="center" mt={4}>
+                        {`${t("drop.drag")} · ${t("drop.browse")}`}
+                      </Text>
                     </Stack>
                   </UnstyledButton>
-                  <Text c="dimmed" size="sm" ta="center">
-                    {`${t("drop.drag")} · ${t("drop.browse")}`}
-                  </Text>
                 </Stack>
               )}
             </Transition>
