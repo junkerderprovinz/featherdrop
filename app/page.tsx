@@ -311,40 +311,49 @@ export default function HomePage() {
         }}
       />
 
-      {/* Controls pinned to the viewport top-right so they sit at the exact same
-          spot on every page, independent of each page's Container width. */}
-      <Box pos="fixed" top={24} right={24} style={{ zIndex: 2 }}>
-        <Group gap="xs">
-          <LanguageSwitcher />
-          <Tooltip label={t("theme.toggle")} withArrow>
-            <ActionIcon
-              variant="default"
-              size="lg"
-              aria-label={t("theme.toggle")}
-              onClick={() =>
-                setColorScheme(computedColorScheme === "dark" ? "light" : "dark")
-              }
+      {/* Top band: the tagline is centred, and the language + theme controls sit
+          on the right at the SAME height as the text. Absolutely positioned so it
+          never pushes the feather down — the feather then centres in the FULL
+          viewport (see the stage below). */}
+      <Box style={{ position: "absolute", top: 28, left: 24, right: 24, zIndex: 2 }}>
+        <Box style={{ position: "relative", display: "flex", justifyContent: "center" }}>
+          <Stack align="center" gap={4} px={72} style={{ maxWidth: "100%" }}>
+            <Text
+              fw={500}
+              ta="center"
+              style={{ fontSize: "clamp(1.1rem, 2.4vw, 1.5rem)", letterSpacing: -0.3 }}
             >
-              {computedColorScheme === "dark" ? (
-                <IconSun size={18} />
-              ) : (
-                <IconMoon size={18} />
-              )}
-            </ActionIcon>
-          </Tooltip>
-        </Group>
+              {t("app.tagline")}
+            </Text>
+            <Text c="dimmed" size="sm" ta="center">
+              {t("app.privacy")}
+            </Text>
+          </Stack>
+          <Group
+            gap="xs"
+            align="center"
+            style={{ position: "absolute", right: 0, top: 0, bottom: 0 }}
+          >
+            <LanguageSwitcher />
+            <Tooltip label={t("theme.toggle")} withArrow>
+              <ActionIcon
+                variant="default"
+                size="lg"
+                aria-label={t("theme.toggle")}
+                onClick={() =>
+                  setColorScheme(computedColorScheme === "dark" ? "light" : "dark")
+                }
+              >
+                {computedColorScheme === "dark" ? (
+                  <IconSun size={18} />
+                ) : (
+                  <IconMoon size={18} />
+                )}
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Box>
       </Box>
-
-      {/* Tagline pinned to the VERY TOP, clean — the page text lives up here so
-          the centre belongs entirely to the big, reactive feather. */}
-      <Stack align="center" gap={4} mb={8} mt={8} px="md">
-        <Text fw={500} ta="center" style={{ fontSize: "clamp(1.1rem, 2.4vw, 1.5rem)", letterSpacing: -0.3 }}>
-          {t("app.tagline")}
-        </Text>
-        <Text c="dimmed" size="sm" ta="center">
-          {t("app.privacy")}
-        </Text>
-      </Stack>
 
       {insecure && (
         <Center mb={24}>
@@ -394,14 +403,8 @@ export default function HomePage() {
                   >
                     <Stack align="center" gap={8}>
                       <Box
-                        style={{
-                          transform: dragging ? "scale(1.06)" : "scale(1)",
-                          transition: "transform 180ms ease, filter 180ms ease",
-                          filter: dragging
-                            ? "drop-shadow(0 0 28px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent))"
-                            : "drop-shadow(0 0 0 transparent)",
-                        }}
                         className="fd-hero-logo"
+                        data-dragging={dragging || undefined}
                       >
                         <Logo size={300} cssSize="clamp(120px, 26vw, 300px)" />
                       </Box>
