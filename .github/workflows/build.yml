@@ -133,3 +133,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Mirror the GitHub README to the Docker Hub repo's full description (same
+      # text as on GitHub; relative image/link paths are rewritten to absolute so
+      # they render on Docker Hub). Runs only when the Docker Hub mirror is wired.
+      - name: Sync README to Docker Hub
+        if: ${{ vars.DOCKERHUB_USERNAME != '' && github.event_name != 'pull_request' }}
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/featherdrop
+          enable-url-completion: true
