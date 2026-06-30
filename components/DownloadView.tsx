@@ -1385,7 +1385,6 @@ function PreviewArea({
     >
       {kind === "image" ? (
         // <img> renders raster images AND svg safely (svg = no scripts here).
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={name ?? ""}
@@ -1410,7 +1409,6 @@ function PreviewArea({
           }}
         />
       ) : kind === "audio" ? (
-        // eslint-disable-next-line jsx-a11y/media-has-caption
         <audio
           src={src}
           controls

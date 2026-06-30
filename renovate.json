@@ -16,7 +16,7 @@
     },
     {
       "description": "Group tus packages",
-      "matchPackageNames": ["@tus/server", "@tus/file-store", "tus-js-client"],
+      "matchPackageNames": ["tus-js-client"],
       "groupName": "tus"
     },
     {
