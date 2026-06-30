@@ -155,4 +155,5 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
           repository: ${{ vars.DOCKERHUB_USERNAME }}/featherdrop
+          short-description: "A clean, login-free, self-hosted file sharer. Drop a file, set an expiry, share a link."
           enable-url-completion: true

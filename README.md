@@ -92,35 +92,35 @@ scanning, S3 backends. If you need those, use Pingvin Share — that is the poin
 ## 2. Screenshots
 
 <p align="center">
-  <img src=".github/assets/screenshots/home-light.png" alt="featherdrop home — light theme" width="90%">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/home-light.png" alt="featherdrop home — light theme" width="90%">
   <br><em>The home page — drop a file to share it.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src=".github/assets/screenshots/home-dark.png" alt="featherdrop home — dark theme" width="90%">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/home-dark.png" alt="featherdrop home — dark theme" width="90%">
   <br><em>Light and dark themes, with a flag language picker.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src=".github/assets/screenshots/upload.png" alt="Upload with share options" width="90%">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/upload.png" alt="Upload with share options" width="90%">
   <br><em>Set an expiry, an optional password, and a download limit before sharing.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src=".github/assets/screenshots/result.png" alt="Share link ready, with QR code" width="90%">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/result.png" alt="Share link ready, with QR code" width="90%">
   <br><em>Your link is ready — copy it or save the QR code.</em>
 </p>
 
 <br>
 
 <p align="center">
-  <img src=".github/assets/screenshots/download.png" alt="Recipient download page" width="90%">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/screenshots/download.png" alt="Recipient download page" width="90%">
   <br><em>What the recipient sees: file info and a download button.</em>
 </p>
 
