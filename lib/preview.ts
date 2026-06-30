@@ -43,11 +43,13 @@ const PREVIEW_KINDS: Record<string, PreviewKind> = {
   "image/apng": "image",
   // SVG — safe ONLY via <img> (see SVG SAFETY note above). Never inline/embed it.
   "image/svg+xml": "image",
-  // Video containers the <video> element can play; rendered from a blob: URL.
-  // mkv (Matroska) is included on request, but browsers only DECODE it when the
-  // inner codecs are supported (VP8/VP9/AV1 + Vorbis/Opus); an mkv with
-  // H.264/HEVC+AC3 shows a non-playing <video> (inert, never unsafe). avi stays
-  // omitted (rarely playable). Keep this list to containers browsers can play.
+  // Video containers, rendered from a blob: URL in a <video>. IMPORTANT: a
+  // <video> only PLAYS when the browser can decode the inner codec. mp4(H.264)/
+  // webm(VP8/9/AV1)/ogg/mov reliably play; mkv plays only with VP8/9/AV1+Vorbis/
+  // Opus. The avi/wmv/flv/mpeg/3gp containers below are offered ON REQUEST, but
+  // most browsers can NOT decode them (no codec) and will show a SAFE, inert,
+  // non-playing player rather than nothing. They are never a security risk (the
+  // bytes are decrypted client-side into a blob: and fed to an inert <video>).
   "video/mp4": "video",
   "video/webm": "video",
   "video/ogg": "video",
@@ -55,6 +57,15 @@ const PREVIEW_KINDS: Record<string, PreviewKind> = {
   "video/x-m4v": "video", // .m4v
   "video/x-matroska": "video", // .mkv (plays only with browser-supported codecs)
   "video/mkv": "video", // some uploaders/browsers report .mkv as video/mkv
+  "video/x-msvideo": "video", // .avi (often not browser-decodable)
+  "video/avi": "video", // .avi (alt MIME)
+  "video/msvideo": "video", // .avi (alt MIME)
+  "video/mpeg": "video", // .mpg / .mpeg
+  "video/3gpp": "video", // .3gp
+  "video/3gpp2": "video", // .3g2
+  "video/x-ms-wmv": "video", // .wmv (rarely browser-decodable)
+  "video/x-flv": "video", // .flv (rarely browser-decodable)
+  "video/mp2t": "video", // .ts / .m2ts (MPEG transport stream)
   // Audio containers the <audio> element can play; rendered from a blob: URL.
   "audio/mpeg": "audio",
   "audio/mp4": "audio",

@@ -163,6 +163,8 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
                 color={copied ? "teal" : "fdgold"}
                 onClick={onCopy}
                 aria-label={t("result.copy")}
+                className="fd-icon-btn"
+                data-copied={copied || undefined}
               >
                 {copied ? <IconCheck size={18} /> : <IconCopy size={18} />}
               </ActionIcon>

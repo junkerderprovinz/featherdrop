@@ -932,7 +932,17 @@ export function DownloadView({
   const isV2TextPreview = isV2 && renderKind === "text";
 
   return (
-    <Container size="md" py={60} style={{ position: "relative", minHeight: "100vh" }}>
+    <Container
+      size="md"
+      py={60}
+      style={{
+        position: "relative",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      }}
+    >
       {/* Pinned to the viewport top-right — same spot as the upload page,
           independent of this page's narrower Container width. */}
       <Box pos="fixed" top={24} right={24} style={{ zIndex: 2 }}>
@@ -957,8 +967,10 @@ export function DownloadView({
         </Group>
       </Box>
 
-      {/* Brand at the top, centered, linking home — same as the main page. */}
-      <Center mb={88}>
+      {/* Brand above the card, centered, linking home — same as the main page.
+          The Container centres the whole block vertically (consistent with the
+          home + result windows), so a modest gap to the card is enough. */}
+      <Center mb={32}>
         <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <Group gap="sm" style={{ cursor: "pointer" }}>
             <Logo size={52} />

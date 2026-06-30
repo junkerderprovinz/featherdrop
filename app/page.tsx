@@ -288,7 +288,12 @@ export default function HomePage() {
     <Container
       size="lg"
       py={48}
-      style={{ position: "relative", minHeight: "100vh" }}
+      style={{
+        position: "relative",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
       onDragOver={onPageDragOver}
       onDragLeave={onPageDragLeave}
       onDrop={onPageDrop}
@@ -355,102 +360,74 @@ export default function HomePage() {
         </Center>
       )}
 
-      {status === "done" ? (
-        <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
-      ) : (
-        <Stack align="center" gap="lg">
-          {/* The big, reactive feather IS the upload affordance (Smash-style):
-              clicking it ALWAYS opens the file picker (so it adds or replaces the
-              selection — it never silently discards chosen files); dragging files
-              anywhere on the page drops them. The wordmark sits quietly beneath.
-              Starting over from the "ready" state is just re-picking files. */}
-          <UnstyledButton
-            onClick={openPicker}
-            // NOT settings.upload: that is the real Upload-&-share button's name,
-            // and two buttons sharing it breaks the e2e (strict-mode) + screen-
-            // reader clarity. This is the "choose files" affordance.
-            aria-label={t("drop.drag")}
-            disabled={uploading}
-            style={{ cursor: uploading ? "default" : "pointer" }}
-          >
-            <Stack align="center" gap={8}>
-              <Box
-                style={{
-                  transform: dragging ? "scale(1.06)" : "scale(1)",
-                  transition: "transform 180ms ease, filter 180ms ease",
-                  // Glow uses the accent token (fdgold step 6 = the base accent,
-                  // #d4af37 by default) so a custom ACCENT_COLOR stays consistent;
-                  // color-mix adds the alpha the bare token can't carry.
-                  filter: dragging
-                    ? "drop-shadow(0 0 28px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent))"
-                    : "drop-shadow(0 0 0 transparent)",
-                }}
-                className="fd-hero-logo"
-              >
-                <Logo size={300} cssSize="clamp(120px, 26vw, 300px)" />
-              </Box>
-              <Title
-                order={1}
-                fw={500}
-                style={{
-                  fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
-                  letterSpacing: -1,
-                  fontFamily: "var(--font-bitter), Georgia, serif",
-                  fontStyle: "italic",
-                }}
-              >
-                {appName}
-              </Title>
-            </Stack>
-          </UnstyledButton>
+      {/* The interactive stage fills the space under the tagline and CENTERS its
+          active block in the viewport — so the feather, the options panel and the
+          result card all sit in the middle of the page (consistent across every
+          screen). The feather (idle), the options panel (a file is chosen) and the
+          result share ONE grid cell, so they cross-fade into one another. */}
+      <Box style={{ flex: 1, display: "grid", placeItems: "center", width: "100%" }}>
+        {status === "done" ? (
+          <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
+        ) : (
+          <Box style={{ display: "grid", placeItems: "center", width: "100%" }}>
+            {/* IDLE: the big, reactive feather IS the upload affordance — click
+                opens the picker, dragging anywhere on the page drops files. */}
+            <Transition
+              mounted={!showPanel && !uploadLocked}
+              transition="fade"
+              duration={200}
+            >
+              {(styles) => (
+                <Stack
+                  align="center"
+                  gap={8}
+                  style={{ gridArea: "1 / 1", ...styles }}
+                >
+                  <UnstyledButton
+                    onClick={openPicker}
+                    // NOT settings.upload: that is the real Upload-&-share button's
+                    // name; two buttons sharing it breaks the e2e (strict-mode) +
+                    // screen-reader clarity. This is the "choose files" affordance.
+                    aria-label={t("drop.drag")}
+                    disabled={uploading}
+                    style={{ cursor: uploading ? "default" : "pointer" }}
+                  >
+                    <Stack align="center" gap={8}>
+                      <Box
+                        style={{
+                          transform: dragging ? "scale(1.06)" : "scale(1)",
+                          transition: "transform 180ms ease, filter 180ms ease",
+                          filter: dragging
+                            ? "drop-shadow(0 0 28px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent))"
+                            : "drop-shadow(0 0 0 transparent)",
+                        }}
+                        className="fd-hero-logo"
+                      >
+                        <Logo size={300} cssSize="clamp(120px, 26vw, 300px)" />
+                      </Box>
+                      <Title
+                        order={1}
+                        fw={500}
+                        style={{
+                          fontSize: "clamp(1.5rem, 4vw, 2.25rem)",
+                          letterSpacing: -1,
+                          fontFamily: "var(--font-bitter), Georgia, serif",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        {appName}
+                      </Title>
+                    </Stack>
+                  </UnstyledButton>
+                  <Text c="dimmed" size="sm" ta="center">
+                    {`${t("drop.drag")} · ${t("drop.browse")}`}
+                  </Text>
+                </Stack>
+              )}
+            </Transition>
 
-          {/* Hint under the feather — what clicking/dragging does. In the idle
-              state it explains the upload affordance; once files are chosen it
-              tells the user the feather still opens the picker to replace them, so
-              the prominent click target is never an undiscoverable surprise. */}
-          {!uploading && !uploadLocked && (
-            <Text c="dimmed" size="sm" ta="center">
-              {status === "idle"
-                ? `${t("drop.drag")} · ${t("drop.browse")}`
-                : files.length > 1
-                  ? t("drop.replaceMulti")
-                  : t("drop.replace")}
-            </Text>
-          )}
-
-          {/* Upload progress lives near the logo now that the dropzone box (which
-              used to host the ring) is gone — a clean full-width bar. */}
-          {uploading && (
-            <Stack align="center" gap={6} w="100%" maw={480}>
-              <Progress
-                value={progress}
-                size="lg"
-                radius="xl"
-                w="100%"
-                color="fdgold"
-                striped
-                animated
-                aria-label={t("settings.upload")}
-              />
-              <Text c="dimmed" size="sm" ta="center">
-                {status === "encrypting"
-                  ? t("upload.encrypting")
-                  : `${Math.round(progress)}%`}
-              </Text>
-            </Stack>
-          )}
-
-          {/* When the instance gates uploads (UPLOAD_PASSWORD set) and the user
-              has not entered a valid secret yet, the upload password gate is
-              shown — uploading cannot start until it is unlocked. */}
-          {uploadLocked ? (
-            <Paper radius="lg" p="xl" w="100%" maw={460} className="fd-glass">
-              <Center>
-                <UploadGate onUnlock={unlockUpload} error={gateError} />
-              </Center>
-            </Paper>
-          ) : (
-            <Transition mounted={showPanel} transition="pop" duration={200}>
+            {/* Upload-password gate (UPLOAD_PASSWORD set, not yet unlocked). */}
+            <Transition mounted={uploadLocked} transition="pop" duration={200}>
               {(styles) => (
                 <Paper
                   radius="lg"
@@ -458,39 +435,83 @@ export default function HomePage() {
                   w="100%"
                   maw={460}
                   className="fd-glass"
-                  style={styles}
+                  style={{ gridArea: "1 / 1", ...styles }}
                 >
-                  <Stack gap="md">
-                    {/* Chosen-files summary — replaces the old dropzone's file
-                        list so the user still sees what they picked. */}
-                    {files.length > 0 && (
-                      <Text size="sm" ta="center" c="dimmed">
-                        {files.length === 1
-                          ? `${files[0].name} · ${formatBytes(files[0].size)}`
-                          : `${t("drop.fileCount", {
-                              count: files.length,
-                            })} · ${t("drop.total", {
-                              size: formatBytes(totalSize),
-                            })}`}
-                      </Text>
-                    )}
-                    <SettingsPanel
-                      expiry={expiry}
-                      onExpiryChange={setExpiry}
-                      password={password}
-                      onPasswordChange={setPassword}
-                      maxDownloads={maxDownloads}
-                      onMaxDownloadsChange={setMaxDownloads}
-                      onUpload={startUpload}
-                      uploading={uploading}
-                    />
-                  </Stack>
+                  <Center>
+                    <UploadGate onUnlock={unlockUpload} error={gateError} />
+                  </Center>
                 </Paper>
               )}
             </Transition>
-          )}
-        </Stack>
-      )}
+
+            {/* A file is chosen: the OPTIONS panel REPLACES the feather (same grid
+                cell -> cross-fade + pop). The upload-progress bar sits BELOW the
+                panel, not inside it. */}
+            <Transition
+              mounted={showPanel && !uploadLocked}
+              transition="pop"
+              duration={260}
+            >
+              {(styles) => (
+                <Stack
+                  align="center"
+                  gap="md"
+                  w="100%"
+                  maw={460}
+                  style={{ gridArea: "1 / 1", ...styles }}
+                >
+                  <Paper radius="lg" p="xl" w="100%" className="fd-glass">
+                    <Stack gap="md">
+                      {files.length > 0 && (
+                        <Text size="sm" ta="center" c="dimmed">
+                          {files.length === 1
+                            ? `${files[0].name} · ${formatBytes(files[0].size)}`
+                            : `${t("drop.fileCount", {
+                                count: files.length,
+                              })} · ${t("drop.total", {
+                                size: formatBytes(totalSize),
+                              })}`}
+                        </Text>
+                      )}
+                      <SettingsPanel
+                        expiry={expiry}
+                        onExpiryChange={setExpiry}
+                        password={password}
+                        onPasswordChange={setPassword}
+                        maxDownloads={maxDownloads}
+                        onMaxDownloadsChange={setMaxDownloads}
+                        onUpload={startUpload}
+                        uploading={uploading}
+                      />
+                    </Stack>
+                  </Paper>
+
+                  {/* Progress BELOW the options window. */}
+                  {uploading && (
+                    <Stack align="center" gap={6} w="100%">
+                      <Progress
+                        value={progress}
+                        size="lg"
+                        radius="xl"
+                        w="100%"
+                        color="fdgold"
+                        striped
+                        animated
+                        aria-label={t("upload.encrypting")}
+                      />
+                      <Text c="dimmed" size="sm" ta="center">
+                        {status === "encrypting"
+                          ? t("upload.encrypting")
+                          : `${Math.round(progress)}%`}
+                      </Text>
+                    </Stack>
+                  )}
+                </Stack>
+              )}
+            </Transition>
+          </Box>
+        )}
+      </Box>
     </Container>
   );
 }
