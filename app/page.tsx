@@ -366,7 +366,10 @@ export default function HomePage() {
               Starting over from the "ready" state is just re-picking files. */}
           <UnstyledButton
             onClick={openPicker}
-            aria-label={t("settings.upload")}
+            // NOT settings.upload: that is the real Upload-&-share button's name,
+            // and two buttons sharing it breaks the e2e (strict-mode) + screen-
+            // reader clarity. This is the "choose files" affordance.
+            aria-label={t("drop.drag")}
             disabled={uploading}
             style={{ cursor: uploading ? "default" : "pointer" }}
           >
