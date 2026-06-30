@@ -156,3 +156,21 @@ body {
   color: #1a1a1a;
   transform: translateY(-1px);
 }
+
+/* The home upload feather is the click/drop target and REACTS on mouse-over (and
+   while a file is dragged over the page): it scales up with a soft gold glow —
+   the old drop-zone's interactive feel. Driven by CSS (not inline styles) so the
+   :hover state works; the drag state is mirrored via the data-dragging attribute. */
+.fd-hero-logo {
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+  filter: drop-shadow(0 0 0 transparent);
+}
+.fd-hero-logo:hover,
+.fd-hero-logo[data-dragging] {
+  transform: scale(1.06);
+  filter: drop-shadow(
+    0 0 28px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent)
+  );
+}
