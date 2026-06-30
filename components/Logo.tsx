@@ -27,10 +27,9 @@ export function Logo({
   // numeric width/height attributes remain authoritative.
   const sizeStyle = cssSize ? { width: cssSize, height: cssSize } : undefined;
   if (logoUrl) {
-    // A self-hoster's logo is an arbitrary external/mounted URL; next/image
-    // can't optimize it without per-domain config, so a plain <img> is intended.
+    // A self-hoster's logo is an arbitrary external/mounted URL, so a plain
+    // <img> is intended here.
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={logoUrl}
         width={size}

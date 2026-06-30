@@ -7,9 +7,9 @@
 # stay in TypeScript; only the SERVER is Go. Drop-in on the same /config + /data
 # volumes as the previous Next.js image (same db.sqlite schema, same blob layout).
 #
-# As of v6.0.0 this REPLACED the Next.js/Node server. The previous Next image is
-# preserved at Dockerfile.next for reference/rollback; the Next app source under
-# app/ + custom-server.ts also remains, since the Vite SPA reuses components/lib.
+# As of v6.0.0 this REPLACED the Next.js/Node server (the legacy Next image and
+# its server source have since been removed). The Vite SPA reuses components/,
+# lib/, theme.ts and the shared app/ pages.
 #
 # Multi-stage:
 #   client  — node builds the Vite SPA into server-go/webroot (build:spa)

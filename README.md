@@ -8,7 +8,7 @@
   <a href="https://hub.docker.com/r/junkerderprovinz/featherdrop"><img src="https://img.shields.io/docker/pulls/junkerderprovinz/featherdrop?style=for-the-badge&logo=docker&logoColor=white&label=Pulls&color=1d99f3" alt="Docker Pulls" height="36"></a>&nbsp;
   <a href="https://hub.docker.com/r/junkerderprovinz/featherdrop"><img src="https://img.shields.io/docker/image-size/junkerderprovinz/featherdrop/latest?style=for-the-badge&logo=docker&logoColor=white&label=Size&color=1d99f3" alt="Image Size" height="36"></a>&nbsp;
   <a href="https://github.com/junkerderprovinz/featherdrop/pkgs/container/featherdrop"><img src="https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-success?style=for-the-badge&logo=linux&logoColor=white" alt="Arch" height="36"></a>&nbsp;
-  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" height="36"></a>&nbsp;
+  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" height="36"></a>&nbsp;
   <a href="https://mantine.dev"><img src="https://img.shields.io/badge/Mantine-339af0?style=for-the-badge&logo=mantine&logoColor=white" alt="Mantine" height="36"></a>&nbsp;
   <a href="https://unraid.net"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>
@@ -324,14 +324,15 @@ proxy_request_buffering off;   # stream uploads straight through
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000, data written to ./data
+npm run dev          # Vite dev server for the React SPA (http://localhost:5173)
 ```
 
-Build a production bundle and run it the way the container does:
+Build the static SPA and run it the way the container does — the Go backend
+serves the embedded SPA plus the JSON/file API on port 3000:
 
 ```bash
-npm run build
-npm run start
+npm run build:spa            # build the Vite SPA into server-go/webroot
+cd server-go && go run .     # serve on http://localhost:3000, data under ./data
 ```
 
 Run the test suite (pure-logic assertions, no framework needed):
@@ -340,10 +341,11 @@ Run the test suite (pure-logic assertions, no framework needed):
 npm test
 ```
 
-Stack: Next.js (App Router) + Mantine v7, a small custom Node server
-(`custom-server.ts`) that mounts the tus handler beside Next, `better-sqlite3`
-for metadata, and `react-i18next` for the UI languages. Files live under
-`DATA_DIR` (default `./data` in dev).
+Stack: a Go backend (`server-go/`) that serves a Vite + React + Mantine v7 SPA
+as embedded static assets alongside the JSON/file API, with `react-i18next` for
+the UI languages. The browser keeps all zero-knowledge crypto in TypeScript.
+Files live under `DATA_DIR` (default `./data`). The published image is built from
+`Dockerfile`; the original Next.js server (`Dockerfile.next`) has been retired.
 
 <br>
 

@@ -8,7 +8,6 @@
 //   .github/assets/featherdrop-banner.png  — rendered banner
 //   .github/assets/icon.png                — 512x512 square template icon
 //   app/opengraph-image.png                — 1200x630 social/link-preview card
-//   app/twitter-image.png                  — same card, for Twitter/X
 // Placement is derived from the path's real bounding box, so the feather is
 // positioned correctly regardless of the glyph's internal offset. The banner
 // text is converted to SVG paths (opentype.js) so the SVG is self-contained —
@@ -166,10 +165,10 @@ writeFileSync(
 );
 
 // --- Social card: 1200x630 dark "aurora" card with the medallion on the left
-//     and the wordmark + tagline on the right. Served by Next's
-//     app/opengraph-image.png + app/twitter-image.png file convention, so a
-//     shared link renders a branded preview (kept generic — never the filename).
-//     Text uses a system serif; this card is rendered once and committed. ---
+//     and the wordmark + tagline on the right. Written to app/opengraph-image.png
+//     and copied into the webroot at build time, so a shared link renders a
+//     branded preview (kept generic — never the filename). Text uses a system
+//     serif; this card is rendered once and committed. ---
 const OGW = 1600;
 const OGH = (OGW * 630) / 1200; // keep the 1.91:1 OG aspect, render at 2x
 const ogScale = (OGH * 0.58) / h; // medallion ~58% of card height
@@ -194,10 +193,9 @@ const ogSvg =
   `</svg>\n`;
 const ogPng = renderPng(ogSvg, 1200);
 writeFileSync(new URL("../../app/opengraph-image.png", ASSETS), ogPng);
-writeFileSync(new URL("../../app/twitter-image.png", ASSETS), ogPng);
 
 console.log(`bbox x=${round(x)} y=${round(y)} w=${round(w)} h=${round(h)}`);
 console.log(`banner ${BW}x${BH} white, feather scale=${round(s)} -> ${BW}px png`);
 console.log(`og card 1200x630 (rendered @ ${OGW}px), medallion scale=${round(ogScale)}`);
 console.log("wrote featherdrop-banner.svg, featherdrop-banner.png, icon.png,");
-console.log("      app/opengraph-image.png, app/twitter-image.png");
+console.log("      app/opengraph-image.png");

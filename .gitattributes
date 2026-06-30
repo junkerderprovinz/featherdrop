@@ -1,0 +1,12 @@
+# featherdrop line-ending + linguist hygiene
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+package-lock.json linguist-generated=true -diff
+server-go/go.sum linguist-generated=true -diff
+server-go/webroot/** linguist-generated=true
