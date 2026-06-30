@@ -157,20 +157,26 @@ body {
   transform: translateY(-1px);
 }
 
-/* The home upload feather is the click/drop target and REACTS on mouse-over (and
-   while a file is dragged over the page): it scales up with a soft gold glow —
-   the old drop-zone's interactive feel. Driven by CSS (not inline styles) so the
-   :hover state works; the drag state is mirrored via the data-dragging attribute. */
+/* The WHOLE home hero (feather + wordmark + hint) is the click/drop target and
+   REACTS on mouse-over (and while a file is dragged over the page): the group
+   scales up a touch — fast + snappy — and the feather blooms a soft gold glow.
+   Driven by CSS (not inline styles) so :hover works; the drag state is mirrored
+   via the data-dragging attribute on the group. */
+.fd-hero {
+  transition: transform 110ms ease;
+  will-change: transform;
+}
+.fd-hero:hover,
+.fd-hero[data-dragging] {
+  transform: scale(1.04);
+}
 .fd-hero-logo {
-  transition:
-    transform 180ms ease,
-    filter 180ms ease;
+  transition: filter 110ms ease;
   filter: drop-shadow(0 0 0 transparent);
 }
-.fd-hero-logo:hover,
-.fd-hero-logo[data-dragging] {
-  transform: scale(1.06);
+.fd-hero:hover .fd-hero-logo,
+.fd-hero[data-dragging] .fd-hero-logo {
   filter: drop-shadow(
-    0 0 28px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent)
+    0 0 26px color-mix(in srgb, var(--mantine-color-fdgold-6) 55%, transparent)
   );
 }

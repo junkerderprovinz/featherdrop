@@ -112,7 +112,9 @@ export function SettingsPanel({
       {/* Password — toggle + field (greyed = no password when off). */}
       <Group justify="space-between" wrap="nowrap" gap="md">
         <Switch
-          label={t("settings.password")}
+          // The dedicated toggle already conveys "optional", so strip any trailing
+          // "(optional)" parenthetical from the label across every locale.
+          label={t("settings.password").replace(/\s*\([^)]*\)\s*$/, "")}
           checked={pwEnabled}
           onChange={(e) => {
             const on = e.currentTarget.checked;
@@ -123,7 +125,6 @@ export function SettingsPanel({
         />
         <PasswordInput
           w={CONTROL_W}
-          placeholder={t("settings.passwordPlaceholder")}
           value={password}
           onChange={(e) => onPasswordChange(e.currentTarget.value)}
           disabled={!pwEnabled || uploading}
