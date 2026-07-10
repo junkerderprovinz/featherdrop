@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   regenerates the banner SVG + PNG (the feather and wordmark stay verbatim; only
   the claim is regenerated, set in Lato).
 
+### Fixed
+
+- **Browser-tab favicon restored.** The gold-feather favicon went missing in the
+  v6.0.0 Go/Vite rebuild — the HTML shell no longer linked one and no icon asset
+  was served, so browsers showed a blank tab. The transparent gradient feather is
+  back as `public/favicon.svg`, linked from the app shell (`<link rel="icon"
+  type="image/svg+xml">`) and served at `/favicon.svg` (Go's embedded static
+  server returns it as `image/svg+xml`).
+
 ### Security
 
 - **Zero-knowledge downloads now require proof of key knowledge before
