@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.1] — 2026-07-10
+
 ### Changed
 
 - **New banner claim and a WeTransfer framing for the description.** The README
@@ -43,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a request), and both download paths (button + small-file preview prefetch)
   send the header. Shares uploaded before this change (`key_verifier` NULL) keep
   downloading exactly as before.
+- Pinned the Go toolchain to `go1.26.5`, which carries the standard-library fix
+  for GO-2026-5856 (an Encrypted Client Hello privacy leak in `crypto/tls`).
 
 ## [3.3.0] — 2026-06-09
 
