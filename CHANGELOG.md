@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.2] — 2026-07-12
+
+### Added
+
+- **Startup log banner.** The server now prints the shared "Junker der Provinz"
+  ASCII banner and a loud `FEATHERDROP IS READY` box on boot (to stdout), matching
+  the other own-image containers' logs — so a running instance is obvious at a
+  glance in the Docker/Unraid log.
+
+### Fixed
+
+- **Uploads are now chunked (64 MiB) so they survive size-capped proxies and
+  actually resume.** tus-js-client previously sent the whole (encrypted) blob in
+  one PATCH request, so a CDN with a request-body cap (Cloudflare Free/Pro: 100 MB)
+  rejected any larger upload with `413`, and a dropped upload restarted from zero.
+  Uploads now go in 64 MiB chunks: files of any size pass through Cloudflare, and
+  an interrupted upload resumes from the last completed chunk.
+
+### Changed
+
+- **Reverse-proxy docs (README §8).** Documented the Cloudflare/CDN request-body
+  limit (which overrides `client_max_body_size`), noted the new upload chunking,
+  and added a short comparison of the remote-access options (direct/port-forward
+  vs Cloudflare Tunnel vs a self-hosted tunnel such as Pangolin).
+
 ## [6.0.1] — 2026-07-10
 
 ### Changed

@@ -21,6 +21,7 @@ package main
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -38,6 +39,12 @@ import (
 
 //go:embed all:webroot
 var webroot embed.FS
+
+// brandArt is the shared "Junker der Provinz" house ASCII banner, embedded from
+// banner.txt (a copy of .github/assets/banner-raw.txt), printed at startup.
+//
+//go:embed banner.txt
+var brandArt string
 
 func main() {
 	cfg := config.Load()
@@ -112,7 +119,9 @@ func main() {
 	r.MethodNotAllowed(spaHandler(assets, shell))
 
 	addr := ":" + cfg.Port
-	log.Printf("featherdrop go server listening on %s (data=%s db=%s)", addr, cfg.DataDir, cfg.DBPath)
+	log.Printf("featherdrop: data=%s db=%s", cfg.DataDir, cfg.DBPath)
+	printBanner()
+	printReady("HTTP", cfg.Port)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("listen: %v", err)
 	}
@@ -170,4 +179,39 @@ func serveShell(w http.ResponseWriter, shell []byte) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(shell)
+}
+
+// ---------------------------------------------------------------------------
+// startup banners — the shared "Junker der Provinz" house format, matching the
+// other own-image containers. Printed via fmt to STDOUT so Docker/Unraid never
+// interleaves the stderr log line into the ASCII art.
+// ---------------------------------------------------------------------------
+
+const (
+	bannerSep      = "───────────────────────────────────────────────────────────────────"
+	bannerName     = "featherdrop"
+	bannerSubtitle = "Self-hosted, end-to-end-encrypted file sharing. Drop a file, share a link."
+	readyHashes    = "############################################################"
+)
+
+// printBanner prints the brand ASCII art, then the name + subtitle framed by the
+// ─ rule (mirrors the house print-banner.sh used by all own-image images).
+func printBanner() {
+	sep := "  " + bannerSep
+	fmt.Println()
+	fmt.Println(strings.TrimRight(brandArt, "\n"))
+	fmt.Println()
+	fmt.Println(sep)
+	fmt.Println("  " + bannerName)
+	fmt.Println("  " + bannerSubtitle)
+	fmt.Println(sep)
+	fmt.Println()
+}
+
+// printReady prints the loud "<APP> IS READY" box just before the server listens,
+// in the shared house '#' format (matches the jdownloader/krusader/matrix banners).
+func printReady(scheme, port string) {
+	fmt.Println("  " + readyHashes)
+	fmt.Printf("   FEATHERDROP IS READY  ->  open the WebUI now (%s %s)\n", scheme, port)
+	fmt.Println("  " + readyHashes)
 }

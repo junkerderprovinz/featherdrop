@@ -209,6 +209,12 @@ export default function HomePage() {
         return new Promise<string>((resolve, reject) => {
           const upload = new tus.Upload(scratchFile, {
             endpoint: "/files",
+            // Split the upload into <100 MB PATCH requests. Without this,
+            // tus-js-client sends the whole (encrypted) blob in ONE request,
+            // which a 100 MB-capped proxy/CDN (Cloudflare free/pro, incl. its
+            // Tunnel) rejects with 413 — and a dropped upload would restart from
+            // zero. 64 MiB stays safely under the cap and gives real resume.
+            chunkSize: 64 * 1024 * 1024,
             retryDelays: [0, 1000, 3000, 5000],
             headers: authHeaders,
             // Name/type are encrypted inside the blob — do NOT send them to tus.
