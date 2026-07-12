@@ -312,11 +312,31 @@ Manager, Caddy, Traefik). Two things matter:
   Nginx / NPM advanced config:
 
 ```nginx
-client_max_body_size 0;        # no body-size cap (uploads are chunked anyway)
+client_max_body_size 0;        # no cap here (but a CDN may add one — see below)
 proxy_read_timeout 3600s;
 proxy_send_timeout 3600s;
 proxy_request_buffering off;   # stream uploads straight through
 ```
+
+Uploads are sent in resumable **64 MiB chunks** (tus), so each request stays
+small no matter the file size, and a dropped upload resumes from the last chunk.
+
+**Behind Cloudflare or another CDN:** a proxying CDN enforces its *own*
+request-body limit *before* your reverse proxy, so `client_max_body_size 0`
+cannot override it. Cloudflare's Free and Pro plans cap a request body at
+**100 MB** (Business 200 MB, Enterprise 500 MB) and return **413** above it.
+Because featherdrop chunks at 64 MiB, files of any size still upload through
+Cloudflare — but if you raise `chunkSize` (in `app/page.tsx`) above the cap, or
+front featherdrop with another capped proxy, large uploads will 413.
+
+**Remote-access options** (all keep split-horizon DNS — resolve the host to your
+LAN reverse proxy internally and to the public edge externally):
+
+| Setup | Inbound port | Upload size | Trade-off |
+|---|---|---|---|
+| Direct / port-forward (own Nginx/Caddy/Traefik) | 80/443 open | unlimited | fastest, no third party; exposes your IP, needs a stable inbound path |
+| Cloudflare Tunnel (`cloudflared`) | none (outbound) | 100 MB/request | zero-config edge + DDoS/WAF, hides IP; the cap is dodged by the 64 MiB chunking |
+| Self-hosted tunnel (e.g. Pangolin + a small VPS) | none (outbound) | unlimited | you own the edge + TLS, any size, built-in auth; costs a VPS to run |
 
 <br>
 
