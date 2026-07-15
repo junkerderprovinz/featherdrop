@@ -22,6 +22,8 @@ export const nl: Translation = {
   "settings.passwordPlaceholder": "Laat leeg voor geen",
   "settings.limitDownloads": "Downloads beperken",
   "settings.maxDownloads": "Max. downloads",
+  "settings.stripMetadata": "Fotometadata verwijderen",
+  "settings.stripMetadataHint": "EXIF & GPS, verwijderd vóór versleuteling",
   "settings.upload": "Uploaden en delen",
 
   "result.ready": "Klaar om te delen",

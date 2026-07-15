@@ -28,3 +28,31 @@ export function expiryToTimestamp(value: string, now = Date.now()): number | nul
   if (!opt || opt.ms === 0) return null;
   return now + opt.ms;
 }
+
+/**
+ * The expiry options an instance actually offers, honouring the operator's
+ * MAX_EXPIRY cap (surfaced via /api/config as `maxExpiry`). An empty/unknown
+ * cap or "never" means everything is allowed. With a finite cap, "never" and
+ * every duration above the cap disappear from the menu — EXPIRY_OPTIONS is
+ * ordered ascending, so the cap is a simple index cut.
+ */
+export function allowedExpiryOptions(maxExpiry: string) {
+  if (!maxExpiry || maxExpiry === "never" || !isValidExpiry(maxExpiry)) {
+    return [...EXPIRY_OPTIONS];
+  }
+  const capIdx = EXPIRY_OPTIONS.findIndex((o) => o.value === maxExpiry);
+  return EXPIRY_OPTIONS.slice(0, capIdx + 1);
+}
+
+/**
+ * Clamp a wanted expiry to the instance cap: invalid/over-cap values fall to
+ * the LONGEST still-allowed duration (the closest match to the user's intent;
+ * also what the stored preference degrades to on a stricter instance).
+ */
+export function clampExpiry(value: string, maxExpiry: string): ExpiryValue {
+  const allowed = allowedExpiryOptions(maxExpiry);
+  const hit = allowed.find((o) => o.value === value);
+  if (hit) return hit.value;
+  const finite = allowed.filter((o) => o.value !== "never");
+  return (finite[finite.length - 1] ?? allowed[allowed.length - 1]).value;
+}

@@ -22,6 +22,8 @@ export const fr: Translation = {
   "settings.passwordPlaceholder": "Laisser vide pour aucun",
   "settings.limitDownloads": "Limiter les téléchargements",
   "settings.maxDownloads": "Téléchargements max",
+  "settings.stripMetadata": "Supprimer les métadonnées photo",
+  "settings.stripMetadataHint": "EXIF & GPS, supprimées avant le chiffrement",
   "settings.upload": "Envoyer & partager",
 
   "result.ready": "Prêt à partager",

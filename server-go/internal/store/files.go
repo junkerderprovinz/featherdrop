@@ -256,6 +256,24 @@ func (s *Store) ListExpired(nowMs int64) ([]FileRecord, error) {
 	return ListExpired(s.DB, nowMs)
 }
 
+// TotalStoredSize returns the sum of all stored share sizes in bytes (0 for an
+// empty table). It backs the STORAGE_QUOTA guardrail and is recomputed per call
+// rather than cached: the files table is small (one row per live share) and a
+// single-connection SUM is cheap, whereas a cache would need invalidation on
+// every finalize/burn/expiry. New for v6.1 — no server/db.ts counterpart.
+func TotalStoredSize(db *sql.DB) (int64, error) {
+	var total int64
+	if err := db.QueryRow(`SELECT COALESCE(SUM(size), 0) FROM files`).Scan(&total); err != nil {
+		return 0, fmt.Errorf("total stored size: %w", err)
+	}
+	return total, nil
+}
+
+// TotalStoredSize is the method form of the package function.
+func (s *Store) TotalStoredSize() (int64, error) {
+	return TotalStoredSize(s.DB)
+}
+
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.
 type rowScanner interface {
 	Scan(dest ...any) error

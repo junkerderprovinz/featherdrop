@@ -25,6 +25,8 @@ export const en = {
   "settings.passwordPlaceholder": "Leave empty for none",
   "settings.limitDownloads": "Limit downloads",
   "settings.maxDownloads": "Max downloads",
+  "settings.stripMetadata": "Remove photo metadata",
+  "settings.stripMetadataHint": "EXIF & GPS, removed before encrypting",
   "settings.upload": "Upload & share",
 
   "result.ready": "Your link is ready",

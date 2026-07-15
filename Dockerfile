@@ -63,4 +63,8 @@ ENV DATA_DIR=/data \
     PORT=3000
 EXPOSE 3000
 VOLUME ["/data", "/config"]
+# Distroless ships no shell/wget/curl, so the binary probes itself: -healthcheck
+# GETs /api/healthcheck on $PORT and exits 0/1 (exec form — no shell needed).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/featherdrop", "-healthcheck"]
 ENTRYPOINT ["/featherdrop"]

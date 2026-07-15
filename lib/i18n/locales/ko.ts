@@ -22,6 +22,8 @@ export const ko: Translation = {
   "settings.passwordPlaceholder": "없으면 비워 두세요",
   "settings.limitDownloads": "다운로드 횟수 제한",
   "settings.maxDownloads": "최대 다운로드 횟수",
+  "settings.stripMetadata": "사진 메타데이터 제거",
+  "settings.stripMetadataHint": "EXIF 및 GPS는 암호화 전에 제거됩니다",
   "settings.upload": "업로드 및 공유",
 
   "result.ready": "공유 준비 완료",

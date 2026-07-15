@@ -103,6 +103,37 @@ func TestExpiryToTimestamp(t *testing.T) {
 	}
 }
 
+func TestExpiryWithinCap(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		cap   string
+		want  bool
+	}{
+		{"empty cap allows never", "never", "", true},
+		{"empty cap allows 30d", "30d", "", true},
+		{"never cap allows never", "never", "never", true},
+		{"never cap allows 30d", "30d", "never", true},
+		{"under cap", "1h", "7d", true},
+		{"at cap", "7d", "7d", true},
+		{"over cap", "30d", "7d", false},
+		{"never over finite cap", "never", "7d", false},
+		{"smallest cap only fits itself", "6h", "1h", false},
+		{"cap equals smallest", "1h", "1h", true},
+		// An unknown value would be stored as NULL = never (ExpiryToTimestamp),
+		// so a finite cap must reject it rather than let it slip through.
+		{"unknown value vs finite cap", "99y", "7d", false},
+		{"unknown value vs no cap", "99y", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ExpiryWithinCap(tt.value, tt.cap); got != tt.want {
+				t.Errorf("ExpiryWithinCap(%q, %q) = %v, want %v", tt.value, tt.cap, got, tt.want)
+			}
+		})
+	}
+}
+
 func ptr64(v int64) *int64 { return &v }
 
 func TestParseMaxDownloads(t *testing.T) {

@@ -22,6 +22,8 @@ export const ru: Translation = {
   "settings.passwordPlaceholder": "Оставьте пустым, чтобы без пароля",
   "settings.limitDownloads": "Ограничить число скачиваний",
   "settings.maxDownloads": "Макс. скачиваний",
+  "settings.stripMetadata": "Удалить метаданные фото",
+  "settings.stripMetadataHint": "EXIF и GPS удаляются до шифрования",
   "settings.upload": "Загрузить и поделиться",
 
   "result.ready": "Готово к отправке",

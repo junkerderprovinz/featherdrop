@@ -22,6 +22,8 @@ export const sv: Translation = {
   "settings.passwordPlaceholder": "Lämna tomt för inget",
   "settings.limitDownloads": "Begränsa nedladdningar",
   "settings.maxDownloads": "Max nedladdningar",
+  "settings.stripMetadata": "Ta bort fotometadata",
+  "settings.stripMetadataHint": "EXIF & GPS tas bort före kryptering",
   "settings.upload": "Ladda upp och dela",
 
   "result.ready": "Redo att dela",

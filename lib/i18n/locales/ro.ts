@@ -22,6 +22,8 @@ export const ro: Translation = {
   "settings.passwordPlaceholder": "Lasă gol pentru niciuna",
   "settings.limitDownloads": "Limitează descărcările",
   "settings.maxDownloads": "Descărcări maxime",
+  "settings.stripMetadata": "Elimină metadatele foto",
+  "settings.stripMetadataHint": "EXIF și GPS, eliminate înainte de criptare",
   "settings.upload": "Încarcă și partajează",
 
   "result.ready": "Gata de partajare",

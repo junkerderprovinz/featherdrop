@@ -31,6 +31,15 @@ func writeJSONError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, errorBody{Error: msg})
 }
 
+// setNoIndex marks a response as never-index for crawlers. Every share-facing
+// response (the /d/<slug> HTML shell plus the meta/download APIs) carries it:
+// a share link that leaks into a crawlable page must not end up in a search
+// index. Set unconditionally at the top of the handler so 404/401 responses
+// carry it too (no existence side-channel via the header's presence).
+func setNoIndex(w http.ResponseWriter) {
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+}
+
 // NotFoundHandler responds with a uniform JSON 404 for unmatched API paths.
 // Mount it as the catch-all under /api so a request to a non-existent /api/*
 // route returns application/json 404 instead of falling through to the SPA HTML

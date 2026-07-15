@@ -22,6 +22,8 @@ export const hu: Translation = {
   "settings.passwordPlaceholder": "Hagyd üresen, ha nincs",
   "settings.limitDownloads": "Letöltések korlátozása",
   "settings.maxDownloads": "Max. letöltések",
+  "settings.stripMetadata": "Fotó-metaadatok eltávolítása",
+  "settings.stripMetadataHint": "EXIF és GPS titkosítás előtt eltávolítva",
   "settings.upload": "Feltöltés és megosztás",
 
   "result.ready": "Megosztásra kész",

@@ -22,6 +22,8 @@ export const cs: Translation = {
   "settings.passwordPlaceholder": "Ponechte prázdné pro žádné",
   "settings.limitDownloads": "Omezit stahování",
   "settings.maxDownloads": "Max. stažení",
+  "settings.stripMetadata": "Odstranit metadata fotografií",
+  "settings.stripMetadataHint": "EXIF a GPS odstraněny před šifrováním",
   "settings.upload": "Nahrát a sdílet",
 
   "result.ready": "Připraveno ke sdílení",

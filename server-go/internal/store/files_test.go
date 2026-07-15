@@ -436,6 +436,55 @@ func TestListExpiredEmpty(t *testing.T) {
 	}
 }
 
+func TestTotalStoredSize(t *testing.T) {
+	db := openTestDB(t)
+
+	// Empty table sums to 0 (COALESCE, not NULL/error).
+	total, err := TotalStoredSize(db)
+	if err != nil {
+		t.Fatalf("TotalStoredSize (empty): %v", err)
+	}
+	if total != 0 {
+		t.Errorf("empty total = %d, want 0", total)
+	}
+
+	// Sum tracks inserts…
+	recA := sampleRecord("sizeA")
+	recA.Size = 100
+	recB := sampleRecord("sizeB")
+	recB.ID = "sizeB-id"
+	recB.Size = 250
+	for _, rec := range []FileRecord{recA, recB} {
+		if err := CreateFileRecord(db, rec); err != nil {
+			t.Fatalf("CreateFileRecord(%s): %v", rec.Slug, err)
+		}
+	}
+	total, err = TotalStoredSize(db)
+	if err != nil {
+		t.Fatalf("TotalStoredSize: %v", err)
+	}
+	if total != 350 {
+		t.Errorf("total = %d, want 350", total)
+	}
+
+	// …and deletes (a burned/expired share frees its quota share).
+	if _, ok, err := DeleteFileBySlug(db, "sizeA"); err != nil || !ok {
+		t.Fatalf("DeleteFileBySlug: ok=%v err=%v", ok, err)
+	}
+	total, err = TotalStoredSize(db)
+	if err != nil {
+		t.Fatalf("TotalStoredSize (after delete): %v", err)
+	}
+	if total != 250 {
+		t.Errorf("total after delete = %d, want 250", total)
+	}
+
+	// Method form stays covered.
+	if got, err := New(db).TotalStoredSize(); err != nil || got != 250 {
+		t.Errorf("Store.TotalStoredSize = (%d, %v), want (250, nil)", got, err)
+	}
+}
+
 // TestStoreMethodForms exercises the *Store method wrappers so both call styles
 // stay covered.
 func TestStoreMethodForms(t *testing.T) {

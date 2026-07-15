@@ -1,20 +1,25 @@
 package upload
 
 import (
+	"database/sql"
 	"net/http"
+	"strconv"
 
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
 // BasePath is the URL prefix the tus protocol handler is mounted at. It mirrors
 // server/tus.ts (`path: "/files"`). tusd requires a trailing slash.
 const BasePath = "/files/"
 
-// NewHandler builds the resumable upload (tus) handler, already wrapped with the
-// upload gate so the returned http.Handler is safe to mount directly.
+// NewHandler builds the resumable upload (tus) handler, already wrapped with
+// the upload gate and the storage-quota gate so the returned http.Handler is
+// safe to mount directly. db is the metadata store the quota gate sums stored
+// share sizes from; it may be nil when cfg.StorageQuota is 0 (unlimited).
 //
 // Storage: a tusd filestore writes into cfg.TmpDir. Each upload becomes two
 // artifacts in that directory:
@@ -31,7 +36,7 @@ const BasePath = "/files/"
 // MaxSize is enforced only when cfg.MaxFileSize > 0 (0 = unlimited).
 // RespectForwardedHeaders is enabled because we run behind a reverse proxy, so
 // the Location header in the create response reflects the public URL.
-func NewHandler(cfg config.Config) (http.Handler, error) {
+func NewHandler(cfg config.Config, db *sql.DB) (http.Handler, error) {
 	store := filestore.New(cfg.TmpDir)
 
 	composer := tushandler.NewStoreComposer()
@@ -65,7 +70,9 @@ func NewHandler(cfg config.Config) (http.Handler, error) {
 	//	http.Handle("/files",  http.StripPrefix("/files",  handler))
 	stripped := stripBasePath(h)
 
-	return uploadGate(cfg, stripped), nil
+	// Gate order: auth OUTERMOST so an unauthorized request learns nothing
+	// about the quota state, then the quota gate, then tusd itself.
+	return uploadGate(cfg, quotaGate(cfg, db, stripped)), nil
 }
 
 // stripBasePath removes the "/files" or "/files/" prefix from the request path
@@ -104,6 +111,38 @@ func uploadGate(cfg config.Config, next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte("upload password required\n"))
 			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// quotaGate enforces the optional STORAGE_QUOTA on tus upload creation.
+//
+// Only the create POST is checked: it carries the declared Upload-Length, so a
+// too-large upload is refused BEFORE any byte is accepted, with 507 and the
+// uniform {"error":..} JSON body of internal/api/respond.go. PATCH/HEAD pass
+// through untouched (tusd already caps them at the declared length), and a
+// deferred-length create (no Upload-Length) cannot be judged here — finalize
+// re-checks the ACTUAL on-disk size against the quota, so nothing is published
+// over it either way. The sum counts finalized shares only (the files table);
+// in-flight tmp bytes are not counted, matching "sum of stored share sizes".
+//
+// The gate FAILS OPEN on a store error: blocking every upload on a transient
+// DB hiccup would be worse than momentarily over-admitting, and the finalize
+// re-check still stands between an admitted upload and published storage.
+func quotaGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if cfg.StorageQuota > 0 && db != nil && r.Method == http.MethodPost {
+			length, err := strconv.ParseInt(r.Header.Get("Upload-Length"), 10, 64)
+			if err == nil && length > 0 {
+				used, err := store.TotalStoredSize(db)
+				if err == nil && used+length > cfg.StorageQuota {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusInsufficientStorage)
+					_, _ = w.Write([]byte(`{"error":"storage quota exceeded"}`))
+					return
+				}
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

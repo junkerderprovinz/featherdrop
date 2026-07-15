@@ -22,6 +22,8 @@ export const vi: Translation = {
   "settings.passwordPlaceholder": "Để trống nếu không có",
   "settings.limitDownloads": "Giới hạn lượt tải",
   "settings.maxDownloads": "Số lượt tải tối đa",
+  "settings.stripMetadata": "Xóa siêu dữ liệu ảnh",
+  "settings.stripMetadataHint": "EXIF & GPS được xóa trước khi mã hóa",
   "settings.upload": "Tải lên và chia sẻ",
 
   "result.ready": "Sẵn sàng chia sẻ",
