@@ -121,6 +121,7 @@ func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 		now = time.Now
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
+		setNoIndex(w)
 		slug := chi.URLParam(r, "slug")
 
 		rec, err := store.GetFileBySlug(db, slug)

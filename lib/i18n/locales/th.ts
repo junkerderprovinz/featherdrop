@@ -22,6 +22,8 @@ export const th: Translation = {
   "settings.passwordPlaceholder": "เว้นว่างไว้หากไม่ต้องการ",
   "settings.limitDownloads": "จำกัดจำนวนดาวน์โหลด",
   "settings.maxDownloads": "ดาวน์โหลดสูงสุด",
+  "settings.stripMetadata": "ลบข้อมูลเมตาของภาพถ่าย",
+  "settings.stripMetadataHint": "EXIF และ GPS จะถูกลบก่อนการเข้ารหัส",
   "settings.upload": "อัปโหลดและแชร์",
 
   "result.ready": "พร้อมแชร์",

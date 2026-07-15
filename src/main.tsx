@@ -46,6 +46,10 @@ import { App } from "./App";
 interface AppConfig {
   baseUrl: string;
   uploadProtected: boolean;
+  // Operator expiry policy (v6.1): pre-selected default + hard cap. Optional in
+  // the payload so an older server (or the fallback) still renders fine.
+  defaultExpiry: string;
+  maxExpiry: string;
   branding: {
     appName: string;
     logoUrl: string | null;
@@ -56,6 +60,8 @@ interface AppConfig {
 const FALLBACK_CONFIG: AppConfig = {
   baseUrl: "",
   uploadProtected: false,
+  defaultExpiry: "",
+  maxExpiry: "",
   branding: {
     appName: DEFAULT_BRANDING.appName,
     logoUrl: DEFAULT_BRANDING.logoUrl,
@@ -83,6 +89,8 @@ function Bootstrap() {
           baseUrl: data.baseUrl ?? FALLBACK_CONFIG.baseUrl,
           uploadProtected:
             data.uploadProtected ?? FALLBACK_CONFIG.uploadProtected,
+          defaultExpiry: data.defaultExpiry ?? FALLBACK_CONFIG.defaultExpiry,
+          maxExpiry: data.maxExpiry ?? FALLBACK_CONFIG.maxExpiry,
           branding: {
             appName:
               data.branding?.appName ?? FALLBACK_CONFIG.branding.appName,
@@ -136,6 +144,8 @@ function Bootstrap() {
             config={{
               baseUrl: config.baseUrl,
               uploadProtected: config.uploadProtected,
+              defaultExpiry: config.defaultExpiry,
+              maxExpiry: config.maxExpiry,
             }}
           >
             <BrandingProvider
@@ -157,6 +167,19 @@ function Bootstrap() {
       </MantineProvider>
     </DirectionProvider>
   );
+}
+
+// Register the service worker at BOOT (not just lazily at download time, as
+// lib/e2e/stream-download.ts does): the PWA share target needs a controlling
+// worker before any share-sheet POST arrives, and an early registration also
+// makes the very first streamed download snappier. Same script + scope as the
+// lazy path, so this is a no-op when already registered.
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("/sw-download.js", { scope: "/" })
+    .catch(() => {
+      // Insecure context / private mode: downloads fall back as before.
+    });
 }
 
 const rootEl = document.getElementById("root");

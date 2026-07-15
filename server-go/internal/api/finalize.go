@@ -104,6 +104,15 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
+		// MAX_EXPIRY cap: a valid expiry may still exceed the operator's cap
+		// ("never" only fits under a "never"/absent cap). An empty expiry needs
+		// no check — it resolves to DefaultExpiry, which boot already clamped to
+		// the cap (config.Validate).
+		if body.Expiry != "" && !share.ExpiryWithinCap(body.Expiry, cfg.MaxExpiry) {
+			writeJSONError(w, http.StatusBadRequest, "expiry exceeds the server's maximum")
+			return
+		}
+
 		// keyVerifier: validated whenever the field is PRESENT (including an
 		// explicit JSON null), BEFORE any file is moved, so a 400 has no side
 		// effects and the tus upload survives for a corrected retry. Mirrors the TS
@@ -174,6 +183,24 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			writeJSONError(w, http.StatusBadRequest,
 				"unsupported format (this server is zero-knowledge only)")
 			return
+		}
+
+		// STORAGE_QUOTA gate: refuse to publish when the ACTUAL stored bytes plus
+		// this upload would exceed the quota. The tus create already checked the
+		// DECLARED length, but this re-check is the authoritative one (deferred
+		// lengths carry no Upload-Length, and stored shares may have grown in
+		// between). Placed BEFORE the rename so a 507 has no side effects and the
+		// tmp upload survives (it can be finalized later once space frees up).
+		if cfg.StorageQuota > 0 {
+			used, err := store.TotalStoredSize(db)
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "could not check storage quota")
+				return
+			}
+			if used+size > cfg.StorageQuota {
+				writeJSONError(w, http.StatusInsufficientStorage, "storage quota exceeded")
+				return
+			}
 		}
 
 		// Allocate a unique slug (retry on the astronomically unlikely collision).

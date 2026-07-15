@@ -22,6 +22,8 @@ export const ar: Translation = {
   "settings.passwordPlaceholder": "اتركها فارغة لعدم وجود كلمة مرور",
   "settings.limitDownloads": "حدّ عدد التنزيلات",
   "settings.maxDownloads": "أقصى عدد للتنزيلات",
+  "settings.stripMetadata": "إزالة البيانات الوصفية للصورة",
+  "settings.stripMetadataHint": "تتم إزالة EXIF وGPS قبل التشفير",
   "settings.upload": "ارفع وشارِك",
 
   "result.ready": "جاهز للمشاركة",

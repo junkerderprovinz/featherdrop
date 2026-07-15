@@ -22,6 +22,8 @@ export const zh: Translation = {
   "settings.passwordPlaceholder": "留空表示无密码",
   "settings.limitDownloads": "限制下载次数",
   "settings.maxDownloads": "最大下载次数",
+  "settings.stripMetadata": "移除照片元数据",
+  "settings.stripMetadataHint": "EXIF 和 GPS 在加密前移除",
   "settings.upload": "上传并分享",
 
   "result.ready": "已准备好分享",

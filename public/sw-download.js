@@ -45,6 +45,16 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
+  // PWA share target: Android's share sheet POSTs the shared files to
+  // /share-target (see manifest.webmanifest). Stash them in a Cache and bounce
+  // to the app, which picks them up via lib/share-target.ts. Checked first but
+  // only matches its own POST path — downloads/previews are untouched, and any
+  // failure still lands the user on the normal page.
+  if (url.pathname === "/share-target" && event.request.method === "POST") {
+    event.respondWith(handleShareTarget(event.request));
+    return;
+  }
+
   // Preview interception is checked FIRST and only matches its own /sw-preview/
   // path, so the download matcher below is reached for exactly the same requests
   // as before — the download behavior is unchanged.
@@ -256,4 +266,43 @@ function handlePreviewFetch(event, id) {
           }),
       ),
   );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// PWA share target — /share-target (POST from the OS share sheet)
+//
+// The shared files are stashed in a dedicated Cache (one numbered entry per
+// file, original name/type carried in headers) and the browser is redirected
+// to /?shared=1; the page then collects + clears the stash (lib/share-target.ts)
+// and feeds the files into the normal drop flow. The Cache API is used instead
+// of postMessage because the share POST usually arrives BEFORE any app window
+// exists to message.
+// ───────────────────────────────────────────────────────────────────────────
+
+const SHARE_TARGET_CACHE = "fd-share-target";
+
+async function handleShareTarget(request) {
+  try {
+    const form = await request.formData();
+    const files = form.getAll("files").filter((f) => typeof f === "object");
+    const cache = await caches.open(SHARE_TARGET_CACHE);
+    // Replace any previous stash — a new share supersedes an unclaimed one.
+    for (const key of await cache.keys()) await cache.delete(key);
+    let i = 0;
+    for (const file of files) {
+      const headers = {
+        "Content-Type": file.type || "application/octet-stream",
+        "X-FD-Name": encodeURIComponent(file.name || `shared-${i}`),
+        "Cache-Control": "no-store",
+      };
+      await cache.put(
+        `/fd-share-target/${i}`,
+        new Response(file, { headers }),
+      );
+      i += 1;
+    }
+  } catch {
+    // Parsing/stash failure → just land on the app without files.
+  }
+  return Response.redirect("/?shared=1", 303);
 }

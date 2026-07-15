@@ -12,9 +12,15 @@ import (
 // shape. The upload password, master key and any token NEVER appear here — only
 // the uploadProtected flag is derived from UPLOAD_PASSWORD. Mirrors the props
 // app/layout.tsx passes to ServerConfigProvider and BrandingProvider.
+// maxExpiry (v6.1) is the operator's MAX_EXPIRY cap token ("" = no cap) so the
+// UI can hide expiry options the server would reject at finalize; defaultExpiry
+// (v6.1) is the operator's DEFAULT_EXPIRY (already clamped to the cap at boot)
+// pre-selected by the UI when the visitor has no stored preference.
 type configResponse struct {
 	BaseURL         string          `json:"baseUrl"`
 	UploadProtected bool            `json:"uploadProtected"`
+	MaxExpiry       string          `json:"maxExpiry"`
+	DefaultExpiry   string          `json:"defaultExpiry"`
 	Branding        config.Branding `json:"branding"`
 }
 
@@ -26,6 +32,8 @@ func ConfigHandler(cfg config.Config) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, configResponse{
 			BaseURL:         cfg.BaseURL,
 			UploadProtected: cfg.UploadProtected,
+			MaxExpiry:       cfg.MaxExpiry,
+			DefaultExpiry:   cfg.DefaultExpiry,
 			Branding:        cfg.Branding(),
 		})
 	}

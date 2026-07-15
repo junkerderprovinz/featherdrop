@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.1.0] — 2026-07-15
+
+### Added
+
+- **Paste to upload** — Ctrl/Cmd+V drops clipboard files (e.g. screenshots) into the selection.
+- **Remembered options** — last-used expiry/limit/metadata choice restored per browser (never the password); the operator's `DEFAULT_EXPIRY` is honoured again.
+- **Photo metadata removal** — EXIF/GPS/IPTC stripped from JPEGs in the browser before encryption (default on, opt-out switch; unparseable files pass through untouched).
+- **PWA + Android share target** — installable; "Share → featherdrop" feeds shared files into the upload flow.
+- **Operator guardrails** — `MAX_EXPIRY`, `STORAGE_QUOTA` (507 on over-quota), `RATE_LIMIT` (per-IP, default on), `TRUST_PROXY`.
+- **Healthcheck** — `GET /api/healthcheck` + Dockerfile `HEALTHCHECK` (self-check flag, distroless-safe).
+
+### Changed
+
+- Share pages opt out of search engines (`robots.txt` + uniform `X-Robots-Tag: noindex, nofollow`).
+- Boot-time config validation with clear messages; `BASE_URL`/`UPLOAD_PASSWORD` sanity warnings.
+
+### Security
+
+- Path audit (delete/finalize/download): constant-time token comparisons, uniform 404s, no unauthenticated mutation surface; rate limiter now covers key-verifier guessing.
+
 ## [6.0.2] — 2026-07-12
 
 ### Added

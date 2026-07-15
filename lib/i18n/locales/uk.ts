@@ -22,6 +22,8 @@ export const uk: Translation = {
   "settings.passwordPlaceholder": "Залиште порожнім, щоб без пароля",
   "settings.limitDownloads": "Обмежити завантаження",
   "settings.maxDownloads": "Макс. завантажень",
+  "settings.stripMetadata": "Видалити метадані фото",
+  "settings.stripMetadataHint": "EXIF і GPS видаляються перед шифруванням",
   "settings.upload": "Завантажити та поділитися",
 
   "result.ready": "Готово до надсилання",

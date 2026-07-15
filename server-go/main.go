@@ -19,19 +19,23 @@
 package main
 
 import (
+	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/ratelimit"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/static"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
@@ -47,7 +51,27 @@ var webroot embed.FS
 var brandArt string
 
 func main() {
+	// -healthcheck: probe the running server and exit (the Dockerfile
+	// HEALTHCHECK runs the binary against itself — distroless has no shell or
+	// curl). Handled before any config side effects so the probe never touches
+	// the data dirs or the DB.
+	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
+		os.Exit(healthcheckMain())
+	}
+
 	cfg := config.Load()
+
+	// Boot-time validation: log every warning (clamped DEFAULT_EXPIRY, ignored
+	// BASE_URL, short UPLOAD_PASSWORD), then refuse to start on a fatally
+	// misconfigured guardrail variable — a clear error beats limping along with
+	// a guessed value.
+	warnings, err := cfg.Validate()
+	for _, warning := range warnings {
+		log.Printf("config: WARNING: %s", warning)
+	}
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
 
 	if err := cfg.EnsureDataDirs(); err != nil {
 		log.Fatalf("ensure data dirs: %v", err)
@@ -76,13 +100,29 @@ func main() {
 	}
 
 	// Resumable upload endpoint (tus protocol). The returned handler is already
-	// wrapped with the optional upload gate (UPLOAD_PASSWORD); bytes land in
-	// cfg.TmpDir for a later finalize phase to move into cfg.UploadsDir.
-	tusHandler, err := upload.NewHandler(cfg)
+	// wrapped with the optional upload gate (UPLOAD_PASSWORD) and the
+	// storage-quota gate; bytes land in cfg.TmpDir for a later finalize phase to
+	// move into cfg.UploadsDir.
+	tusHandler, err := upload.NewHandler(cfg, db)
 	if err != nil {
 		log.Fatalf("build tus handler: %v", err)
 	}
 
+	r := newRouter(cfg, db, tusHandler, assets, shell)
+
+	addr := ":" + cfg.Port
+	log.Printf("featherdrop: data=%s db=%s", cfg.DataDir, cfg.DBPath)
+	printBanner()
+	printReady("HTTP", cfg.Port)
+	if err := http.ListenAndServe(addr, r); err != nil {
+		log.Fatalf("listen: %v", err)
+	}
+}
+
+// newRouter wires every route exactly as the server serves them. Extracted from
+// main so tests can exercise the REAL routing (rate-limit wrapping, catch-all
+// precedence, header behaviour) against an httptest server.
+func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs.FS, shell []byte) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -90,20 +130,55 @@ func main() {
 		_, _ = w.Write([]byte("ok"))
 	})
 
+	// Liveness probe for the Docker HEALTHCHECK (via -healthcheck) + monitors.
+	// Registered OUTSIDE the rate-limit wrapping below and before the /api/*
+	// catch-all: no auth, no limit, always {"ok":true}.
+	r.Get("/api/healthcheck", api.HealthcheckHandler())
+
+	// The whole instance is private by nature (every page either uploads or
+	// serves a secret link), so robots are told to keep out entirely.
+	r.Get("/robots.txt", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("User-agent: *\nDisallow: /\n"))
+	})
+
+	// JSON/file API handlers.
+	//   POST   /api/finalize    publish a completed tus upload -> {slug}
+	//   GET    /api/d/{slug}     download the ciphertext (Range/?preview, burn)
+	files := tusHandler
+	finalize := api.FinalizeHandler(cfg, db, nil)
+	download := api.DownloadHandler(cfg, db, nil)
+	meta := api.MetaHandler(db, nil)
+
+	// RATE_LIMIT (default on): per-client-IP token buckets over the abusable
+	// endpoints. Upload creations 30/min (burst 10) — only the tus create POST;
+	// PATCH/HEAD resumes stay unthrottled. Finalize 60/min (burst 10). The
+	// download-meta + key-verifier surface shares ONE 20/min (burst 10) bucket,
+	// so a slug/verifier guesser cannot double its budget by alternating
+	// endpoints. /api/config, /healthz and /api/healthcheck stay unlimited.
+	if cfg.RateLimit {
+		createLimiter := ratelimit.NewLimiter(30, 10, nil)
+		finalizeLimiter := ratelimit.NewLimiter(60, 10, nil)
+		downloadLimiter := ratelimit.NewLimiter(20, 10, nil)
+		files = ratelimit.Middleware(createLimiter, cfg.TrustProxy, http.MethodPost, files)
+		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustProxy, "", finalize)
+		download = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", download)
+		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", meta)
+	}
+
 	// Mount the tus handler so both "/files" (create/OPTIONS) and "/files/*"
 	// (PATCH/HEAD/DELETE on a specific upload) reach it. chi preserves the full
 	// request path for the sub-handler, which tusd matches against its BasePath
 	// "/files/".
-	r.Handle("/files", tusHandler)
-	r.Handle("/files/*", tusHandler)
+	r.Handle("/files", files)
+	r.Handle("/files/*", files)
 
 	// JSON/file API. Registered BEFORE the SPA catch-all so these exact routes
 	// win over the static fallback.
-	//   POST   /api/finalize   publish a completed tus upload -> {slug}
-	//   GET    /api/d/{slug}    download the ciphertext (Range/?preview, burn)
-	r.Post("/api/finalize", api.FinalizeHandler(cfg, db, nil))
-	r.Get("/api/d/{slug}", api.DownloadHandler(cfg, db, nil))
-	r.Get("/api/d/{slug}/meta", api.MetaHandler(db, nil))
+	r.Post("/api/finalize", finalize)
+	r.Get("/api/d/{slug}", download)
+	r.Get("/api/d/{slug}/meta", meta)
 
 	// Client-visible runtime configuration for the static SPA (non-secret only).
 	r.Get("/api/config", api.ConfigHandler(cfg))
@@ -118,13 +193,30 @@ func main() {
 	r.NotFound(spaHandler(assets, shell))
 	r.MethodNotAllowed(spaHandler(assets, shell))
 
-	addr := ":" + cfg.Port
-	log.Printf("featherdrop: data=%s db=%s", cfg.DataDir, cfg.DBPath)
-	printBanner()
-	printReady("HTTP", cfg.Port)
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("listen: %v", err)
+	return r
+}
+
+// healthcheckMain implements the -healthcheck self-flag: GET the running
+// server's /api/healthcheck on the configured PORT and exit 0 (healthy) or 1.
+// The Dockerfile HEALTHCHECK invokes the binary this way because the distroless
+// runtime ships no shell, wget or curl.
+func healthcheckMain() int {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
 	}
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("http://127.0.0.1:" + port + "/api/healthcheck")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck: %v\n", err)
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintf(os.Stderr, "healthcheck: status %d, want 200\n", resp.StatusCode)
+		return 1
+	}
+	return 0
 }
 
 // renderShell reads the embedded webroot/index.html placeholder and substitutes
@@ -154,6 +246,12 @@ func renderShell(assets fs.FS, cfg config.Config) ([]byte, error) {
 func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
 	fileServer := http.FileServer(http.FS(assets))
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Share pages must never land in a search index: a crawled /d/<slug>
+		// link would expose the share to anyone searching. The meta/download
+		// APIs set the same header (see internal/api/respond.go setNoIndex).
+		if strings.HasPrefix(r.URL.Path, "/d/") {
+			w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+		}
 		upath := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		if upath == "" || upath == "index.html" {
 			// Root or an explicit index.html request: serve the templated shell.

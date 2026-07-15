@@ -204,6 +204,9 @@ func TestConfig_DefaultsShape(t *testing.T) {
 	if resp.UploadProtected {
 		t.Fatalf("uploadProtected = true, want false")
 	}
+	if resp.MaxExpiry != "" {
+		t.Fatalf("maxExpiry = %q, want empty (no cap)", resp.MaxExpiry)
+	}
 	if resp.Branding.AppName != "featherdrop" {
 		t.Fatalf("branding.appName = %q, want featherdrop (default)", resp.Branding.AppName)
 	}
@@ -244,6 +247,29 @@ func TestConfig_CustomBrandingAndBaseURL(t *testing.T) {
 	}
 }
 
+func TestConfig_MaxExpiryExposed(t *testing.T) {
+	// A configured MAX_EXPIRY cap is surfaced as maxExpiry so the UI can hide
+	// expiry options above it.
+	e := newTestEnv(t)
+	e.cfg.MaxExpiry = "7d"
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	rec := httptest.NewRecorder()
+	ConfigHandler(e.cfg).ServeHTTP(rec, req)
+
+	var resp configResponse
+	decodeJSON(t, rec, &resp)
+	if resp.MaxExpiry != "7d" {
+		t.Fatalf("maxExpiry = %q, want 7d", resp.MaxExpiry)
+	}
+	// The raw JSON must carry the documented key name.
+	var m map[string]any
+	decodeJSON(t, rec, &m)
+	if v, ok := m["maxExpiry"]; !ok || v != "7d" {
+		t.Fatalf("maxExpiry key = %v (present=%v), want \"7d\"", v, ok)
+	}
+}
+
 func TestConfig_UploadProtectedReflectsPassword(t *testing.T) {
 	e := newTestEnv(t)
 	e.cfg.UploadPassword = "s3cret"
@@ -280,7 +306,7 @@ func TestConfig_NoSecretsLeak(t *testing.T) {
 	// fields like uploadPassword/masterKey/token).
 	var m map[string]any
 	decodeJSON(t, rec, &m)
-	allowed := map[string]bool{"baseUrl": true, "uploadProtected": true, "branding": true}
+	allowed := map[string]bool{"baseUrl": true, "uploadProtected": true, "maxExpiry": true, "defaultExpiry": true, "branding": true}
 	for k := range m {
 		if !allowed[k] {
 			t.Fatalf("unexpected top-level config field %q (possible secret leak)", k)

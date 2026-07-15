@@ -38,3 +38,23 @@ func ExpiryToTimestamp(value string, nowMs int64) (ts int64, ok bool) {
 	}
 	return nowMs + ms, true
 }
+
+// ExpiryWithinCap reports whether value's lifetime fits under the operator's
+// MAX_EXPIRY cap (capValue). An empty or "never" cap allows everything.
+// Against a finite cap, "never" is treated as the LONGEST lifetime (it exceeds
+// every finite cap), and an unknown value is rejected too — an unknown key
+// would be stored as NULL = never (see ExpiryToTimestamp), so letting it
+// through would silently bypass the cap.
+func ExpiryWithinCap(value, capValue string) bool {
+	capMs, capFound := expiryMs[capValue]
+	if capValue == "" || !capFound || capMs == 0 {
+		// No cap configured, or the cap itself is "never" -> everything fits.
+		// (An unknown capValue is rejected at boot; treat it as no cap here.)
+		return true
+	}
+	ms, found := expiryMs[value]
+	if !found || ms == 0 {
+		return false // "never"/unknown -> stored as no expiry -> exceeds a finite cap
+	}
+	return ms <= capMs
+}

@@ -22,6 +22,8 @@ export const fi: Translation = {
   "settings.passwordPlaceholder": "Jätä tyhjäksi, jos ei salasanaa",
   "settings.limitDownloads": "Rajoita latauksia",
   "settings.maxDownloads": "Latauksia enintään",
+  "settings.stripMetadata": "Poista kuvan metatiedot",
+  "settings.stripMetadataHint": "EXIF ja GPS poistetaan ennen salausta",
   "settings.upload": "Lataa ja jaa",
 
   "result.ready": "Valmis jaettavaksi",

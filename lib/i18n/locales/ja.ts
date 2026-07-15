@@ -22,6 +22,8 @@ export const ja: Translation = {
   "settings.passwordPlaceholder": "なしの場合は空欄",
   "settings.limitDownloads": "ダウンロード回数を制限",
   "settings.maxDownloads": "最大ダウンロード回数",
+  "settings.stripMetadata": "写真のメタデータを削除",
+  "settings.stripMetadataHint": "EXIF・GPS は暗号化前に削除されます",
   "settings.upload": "アップロードして共有",
 
   "result.ready": "共有の準備完了",

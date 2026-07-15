@@ -22,6 +22,8 @@ export const he: Translation = {
   "settings.passwordPlaceholder": "השאירו ריק עבור ללא",
   "settings.limitDownloads": "הגבלת הורדות",
   "settings.maxDownloads": "מקסימום הורדות",
+  "settings.stripMetadata": "הסרת מטא-נתונים מהתמונה",
+  "settings.stripMetadataHint": "EXIF ו-GPS מוסרים לפני ההצפנה",
   "settings.upload": "העלאה ושיתוף",
 
   "result.ready": "מוכן לשיתוף",

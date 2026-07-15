@@ -22,6 +22,8 @@ export const el: Translation = {
   "settings.passwordPlaceholder": "Άφησέ το κενό για κανέναν",
   "settings.limitDownloads": "Όριο λήψεων",
   "settings.maxDownloads": "Μέγιστες λήψεις",
+  "settings.stripMetadata": "Αφαίρεση μεταδεδομένων φωτογραφίας",
+  "settings.stripMetadataHint": "EXIF και GPS αφαιρούνται πριν την κρυπτογράφηση",
   "settings.upload": "Μεταφόρτωση & κοινή χρήση",
 
   "result.ready": "Έτοιμο για κοινή χρήση",

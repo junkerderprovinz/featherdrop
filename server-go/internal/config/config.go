@@ -8,9 +8,13 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 )
 
 // Config holds the resolved runtime configuration. Values are read once from
@@ -30,9 +34,32 @@ type Config struct {
 	// MaxFileSize is the max upload size in bytes. 0 = unlimited.
 	MaxFileSize int64
 	// DefaultExpiry applied when the uploader does not pick one (default "7d").
+	// Validate clamps it to MaxExpiry when a cap is configured.
 	DefaultExpiry string
 	// BaseURL is the public base URL used to build share links (default "").
+	// Validate clears it (with a warning) when it is not an absolute http(s) URL.
 	BaseURL string
+
+	// MaxExpiry caps the uploader-selectable expiry (MAX_EXPIRY, same tokens as
+	// DEFAULT_EXPIRY; "" = no cap). Validated by Validate.
+	MaxExpiry string
+	// StorageQuota caps the total stored share bytes (STORAGE_QUOTA, bytes;
+	// 0 = unlimited). Parsed by Validate.
+	StorageQuota int64
+	// RateLimit toggles the per-client-IP token buckets (RATE_LIMIT, default
+	// true). Parsed by Validate.
+	RateLimit bool
+	// TrustProxy: when true the client IP is taken from the FIRST entry of
+	// X-Forwarded-For (TRUST_PROXY, default false — never trust XFF unless the
+	// operator says a trusted proxy sets it). Parsed by Validate.
+	TrustProxy bool
+
+	// Raw (unparsed) env values for the strictly-validated v6.1 guardrail
+	// variables. Load stores them verbatim; Validate parses them into the typed
+	// fields above and returns a fatal error for an invalid value.
+	rawStorageQuota string
+	rawRateLimit    string
+	rawTrustProxy   string
 
 	// UploadPassword is the optional upload gate secret (default "").
 	UploadPassword string
@@ -84,6 +111,16 @@ func Load() Config {
 		DefaultExpiry: getenv("DEFAULT_EXPIRY", "7d"),
 		BaseURL:       getenv("BASE_URL", ""),
 
+		// Guardrail envs: defaults here, strict parsing/validation in Validate
+		// (an invalid value must abort boot with a clear error, which Load —
+		// error-free by design — cannot do).
+		MaxExpiry:       getenv("MAX_EXPIRY", ""),
+		RateLimit:       true,
+		TrustProxy:      false,
+		rawStorageQuota: getenv("STORAGE_QUOTA", ""),
+		rawRateLimit:    getenv("RATE_LIMIT", ""),
+		rawTrustProxy:   getenv("TRUST_PROXY", ""),
+
 		UploadPassword:  uploadPassword,
 		UploadProtected: len(uploadPassword) > 0,
 
@@ -93,6 +130,89 @@ func Load() Config {
 
 		Port: getenv("PORT", "3000"),
 	}
+}
+
+// expiryTokens is the accepted-values list used in MAX_EXPIRY error messages.
+const expiryTokens = `"1h", "6h", "1d", "7d", "30d" or "never"`
+
+// Validate applies the boot-time configuration validation and finishes parsing
+// the strictly-validated guardrail envs (MAX_EXPIRY, STORAGE_QUOTA, RATE_LIMIT,
+// TRUST_PROXY). It mutates the receiver: DEFAULT_EXPIRY is clamped to the
+// MAX_EXPIRY cap and a non-absolute BASE_URL is cleared — each with a warning.
+//
+// warnings are human-readable, non-fatal findings the caller should log; a
+// non-nil err means the server must refuse to boot (the message names the
+// offending variable and the accepted values). Returned as data rather than
+// logged here so main owns all logging and tests stay log-free.
+func (c *Config) Validate() (warnings []string, err error) {
+	// MAX_EXPIRY: must be one of the expiry tokens ("" = no cap).
+	if c.MaxExpiry != "" && !share.IsValidExpiry(c.MaxExpiry) {
+		return warnings, fmt.Errorf(
+			"MAX_EXPIRY=%q is invalid: accepted values are %s (empty = no cap)",
+			c.MaxExpiry, expiryTokens)
+	}
+
+	// STORAGE_QUOTA: a non-negative integer byte count ("" / 0 = unlimited).
+	if c.rawStorageQuota != "" {
+		n, perr := strconv.ParseInt(c.rawStorageQuota, 10, 64)
+		if perr != nil || n < 0 {
+			return warnings, fmt.Errorf(
+				"STORAGE_QUOTA=%q is invalid: accepted values are a non-negative integer byte count (empty or 0 = unlimited)",
+				c.rawStorageQuota)
+		}
+		c.StorageQuota = n
+	}
+
+	// RATE_LIMIT / TRUST_PROXY: booleans ("" = their defaults: true / false).
+	if c.rawRateLimit != "" {
+		v, perr := strconv.ParseBool(c.rawRateLimit)
+		if perr != nil {
+			return warnings, fmt.Errorf(
+				`RATE_LIMIT=%q is invalid: accepted values are "true" and "false" (default true)`,
+				c.rawRateLimit)
+		}
+		c.RateLimit = v
+	}
+	if c.rawTrustProxy != "" {
+		v, perr := strconv.ParseBool(c.rawTrustProxy)
+		if perr != nil {
+			return warnings, fmt.Errorf(
+				`TRUST_PROXY=%q is invalid: accepted values are "true" and "false" (default false)`,
+				c.rawTrustProxy)
+		}
+		c.TrustProxy = v
+	}
+
+	// DEFAULT_EXPIRY vs the cap: clamp rather than refuse, so a stricter
+	// MAX_EXPIRY never breaks an existing install that kept its old default.
+	// An unknown DEFAULT_EXPIRY token counts as "never" (ExpiryToTimestamp
+	// stores NULL for it), so it is clamped too rather than bypassing the cap.
+	if c.MaxExpiry != "" && !share.ExpiryWithinCap(c.DefaultExpiry, c.MaxExpiry) {
+		warnings = append(warnings, fmt.Sprintf(
+			"DEFAULT_EXPIRY=%q exceeds MAX_EXPIRY=%q; clamping the default expiry to the cap",
+			c.DefaultExpiry, c.MaxExpiry))
+		c.DefaultExpiry = c.MaxExpiry
+	}
+
+	// BASE_URL: when set it must be an absolute http(s) URL. A bad value is
+	// ignored (share links fall back to the request origin) — warn, don't refuse.
+	if c.BaseURL != "" {
+		u, perr := url.Parse(c.BaseURL)
+		if perr != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			warnings = append(warnings, fmt.Sprintf(
+				"BASE_URL=%q is not an absolute http(s) URL; ignoring it", c.BaseURL))
+			c.BaseURL = ""
+		}
+	}
+
+	// UPLOAD_PASSWORD: a very short secret still works, but is trivially
+	// guessable — surface it. (The value itself is never logged.)
+	if c.UploadProtected && len(c.UploadPassword) < 8 {
+		warnings = append(warnings,
+			"UPLOAD_PASSWORD is shorter than 8 characters; consider a longer secret")
+	}
+
+	return warnings, nil
 }
 
 // EnsureDataDirs creates the data sub-directories; safe to call repeatedly.

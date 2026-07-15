@@ -29,9 +29,12 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { ResultPanel } from "@/components/ResultPanel";
 import { UploadGate } from "@/components/UploadGate";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
-import { EXPIRY_OPTIONS } from "@/lib/expiry";
+import { EXPIRY_OPTIONS, clampExpiry } from "@/lib/expiry";
 import { filesFromDropEvent } from "@/lib/dropped-files";
 import { formatBytes } from "@/lib/format";
+import { loadPrefs, savePrefs } from "@/lib/prefs";
+import { isStrippableType, stripFileMetadata } from "@/lib/exif";
+import { collectSharedFiles, isShareTargetLaunch } from "@/lib/share-target";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
 
@@ -59,7 +62,16 @@ type Status = "idle" | "ready" | "encrypting" | "uploading" | "done";
 export default function HomePage() {
   const { t } = useTranslation();
   const { appName } = useBranding();
-  const { baseUrl, uploadProtected } = useServerConfig();
+  const { baseUrl, uploadProtected, defaultExpiry, maxExpiry } =
+    useServerConfig();
+  // The expiry used when nothing else is chosen: the visitor's remembered
+  // preference, else the operator's DEFAULT_EXPIRY, else "7d" — always clamped
+  // to the operator's MAX_EXPIRY cap.
+  const initialPrefs = useRef(loadPrefs());
+  const baseExpiry = clampExpiry(
+    initialPrefs.current.expiry ?? defaultExpiry ?? "7d",
+    maxExpiry,
+  );
   const { setColorScheme } = useMantineColorScheme();
   // Resolve "auto" to the actually-displayed scheme so the first click always
   // flips what the user sees (using the raw colorScheme, which starts as "auto",
@@ -70,10 +82,21 @@ export default function HomePage() {
   const [status, setStatus] = useState<Status>("idle");
   const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState(0);
-  const [expiry, setExpiry] = useState("7d");
+  const [expiry, setExpiry] = useState<string>(baseExpiry);
   const [password, setPassword] = useState("");
-  const [maxDownloads, setMaxDownloads] = useState<number | null>(null);
+  const [maxDownloads, setMaxDownloads] = useState<number | null>(
+    initialPrefs.current.maxDownloads,
+  );
+  // Photo-metadata scrub (EXIF/GPS): remembered, default ON — privacy-first.
+  const [stripMetadata, setStripMetadata] = useState(
+    initialPrefs.current.stripMetadata ?? true,
+  );
   const [shareUrl, setShareUrl] = useState<string>("");
+
+  // Remember the last-used options (never the password) for the next visit.
+  useEffect(() => {
+    savePrefs({ expiry, maxDownloads, stripMetadata });
+  }, [expiry, maxDownloads, stripMetadata]);
 
   // Hidden file input — the ONLY <input type="file"> on the page. The big Logo
   // is the visible affordance and forwards its click here; e2e drives uploads by
@@ -133,6 +156,18 @@ export default function HomePage() {
     setInsecure(typeof window !== "undefined" && !window.isSecureContext);
   }, []);
 
+  // PWA share-target launch: the SW stashed the shared files and redirected to
+  // /?shared=1 — collect them into the normal selection flow and clean the URL.
+  useEffect(() => {
+    if (!isShareTargetLaunch()) return;
+    void collectSharedFiles().then((shared) => {
+      if (shared.length > 0) onDrop(shared);
+      // Drop the ?shared marker so a reload doesn't look like a new share.
+      window.history.replaceState(null, "", "/");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onDrop = (dropped: File[]) => {
     if (dropped.length === 0) return;
     setFiles(dropped);
@@ -144,8 +179,9 @@ export default function HomePage() {
     setShareUrl("");
     setProgress(0);
     setPassword("");
-    setExpiry("7d");
-    setMaxDownloads(null);
+    // Back to the resolved default (remembered preference / DEFAULT_EXPIRY) —
+    // NOT a hardcoded value; the whole point of remembering options.
+    setExpiry(baseExpiry);
     setStatus("idle");
     // Clear the native input so re-picking the same file fires `change` again.
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -191,10 +227,46 @@ export default function HomePage() {
     }
   };
 
-  const startUpload = () => {
+  // Paste-to-upload: Ctrl/Cmd+V anywhere on the page drops the clipboard's
+  // files (e.g. a screenshot) into the normal selection flow. Guards: never
+  // while an upload runs or the gate is locked, and never when the user is
+  // pasting INTO a text field (share password!). Uses document-level listening
+  // because the paste target is wherever focus happens to be.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (uploading || uploadLocked || status === "done") return;
+      const el = document.activeElement;
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        (el instanceof HTMLElement && el.isContentEditable)
+      ) {
+        return;
+      }
+      const pasted = Array.from(e.clipboardData?.files ?? []);
+      if (pasted.length === 0) return;
+      e.preventDefault();
+      onDrop(pasted);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploading, uploadLocked, status]);
+
+  const hasJpeg = files.some((f) => isStrippableType(f.type));
+
+  const startUpload = async () => {
     if (files.length === 0) return;
     setStatus("encrypting");
     setProgress(0);
+
+    // Photo-metadata scrub BEFORE encryption (browser-side by necessity — the
+    // server only ever sees ciphertext). Failures fall back to the original
+    // file inside stripFileMetadata; this never blocks an upload.
+    let toUpload = files;
+    if (stripMetadata && hasJpeg) {
+      toUpload = await Promise.all(files.map((f) => stripFileMetadata(f)));
+    }
 
     // When the instance gates uploads, attach the operator's secret to both
     // write paths via the `x-fd-upload-token` header. Empty when not protected,
@@ -246,7 +318,7 @@ export default function HomePage() {
     };
 
     uploadEncrypted(
-      files,
+      toUpload,
       { expiry, maxDownloads, password: password || undefined },
       deps,
       (phase, fraction) => {
@@ -500,8 +572,13 @@ export default function HomePage() {
                         onPasswordChange={setPassword}
                         maxDownloads={maxDownloads}
                         onMaxDownloadsChange={setMaxDownloads}
-                        onUpload={startUpload}
+                        onUpload={() => void startUpload()}
                         uploading={uploading}
+                        maxExpiry={maxExpiry}
+                        defaultExpiry={baseExpiry}
+                        showMetadataStrip={hasJpeg}
+                        stripMetadata={stripMetadata}
+                        onStripMetadataChange={setStripMetadata}
                       />
                     </Stack>
                   </Paper>

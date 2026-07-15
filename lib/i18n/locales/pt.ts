@@ -22,6 +22,8 @@ export const pt: Translation = {
   "settings.passwordPlaceholder": "Deixe vazio para nenhuma",
   "settings.limitDownloads": "Limitar transferências",
   "settings.maxDownloads": "Transferências máx.",
+  "settings.stripMetadata": "Remover metadados da foto",
+  "settings.stripMetadataHint": "EXIF e GPS, removidos antes da criptografia",
   "settings.upload": "Carregar e partilhar",
 
   "result.ready": "Pronto para partilhar",

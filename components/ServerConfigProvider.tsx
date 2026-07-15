@@ -14,11 +14,19 @@ interface ServerConfig {
   // leaves the server. When true, the UI prompts for the password before
   // uploading; when false, uploading is open (the default).
   uploadProtected: boolean;
+  // Operator's DEFAULT_EXPIRY — pre-selected when the user has no stored
+  // preference. Empty = the built-in "7d".
+  defaultExpiry: string;
+  // Operator's MAX_EXPIRY cap — the UI hides expiry options above it and the
+  // server rejects them. Empty/"never" = no cap.
+  maxExpiry: string;
 }
 
 const ServerConfigContext = createContext<ServerConfig>({
   baseUrl: "",
   uploadProtected: false,
+  defaultExpiry: "",
+  maxExpiry: "",
 });
 
 export function ServerConfigProvider({

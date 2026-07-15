@@ -786,7 +786,7 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 	e := newTestEnv(t)
 
 	// 1. Real upload through the Phase-2 tus handler.
-	tusHandler, err := upload.NewHandler(e.cfg)
+	tusHandler, err := upload.NewHandler(e.cfg, e.db)
 	if err != nil {
 		t.Fatal(err)
 	}

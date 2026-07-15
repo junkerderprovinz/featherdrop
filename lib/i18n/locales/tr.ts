@@ -22,6 +22,8 @@ export const tr: Translation = {
   "settings.passwordPlaceholder": "Hiçbiri için boş bırakın",
   "settings.limitDownloads": "İndirmeleri sınırla",
   "settings.maxDownloads": "Maks. indirme",
+  "settings.stripMetadata": "Fotoğraf meta verilerini kaldır",
+  "settings.stripMetadataHint": "EXIF ve GPS şifrelemeden önce kaldırılır",
   "settings.upload": "Yükle ve paylaş",
 
   "result.ready": "Paylaşıma hazır",
