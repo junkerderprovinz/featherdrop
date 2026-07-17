@@ -55,7 +55,7 @@ jobs:
 
       - name: Create release (manual changelog)
         if: steps.notes.outputs.has_notes == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           body_path: ${{ steps.notes.outputs.notes_file }}
@@ -63,7 +63,7 @@ jobs:
 
       - name: Create release (auto-generated)
         if: steps.notes.outputs.has_notes == 'false'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           generate_release_notes: true
