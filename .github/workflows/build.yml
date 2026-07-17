@@ -72,7 +72,7 @@ jobs:
       # *builds* — this proves it actually *starts* (catches a custom-server /
       # native-addon / standalone-trace crash that would otherwise reach :latest).
       - name: Build amd64 image for smoke test
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
@@ -83,7 +83,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build arm64 image for smoke test
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/arm64
@@ -124,7 +124,7 @@ jobs:
           smoke featherdrop:smoke-arm64 linux/arm64 150
 
       - name: Build & push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64

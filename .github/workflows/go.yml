@@ -109,7 +109,7 @@ jobs:
       # Build the full multi-stage image (Vite SPA -> embedded webroot -> static
       # binary). amd64 only here; arm64 is exercised at swap time in build.yml.
       - name: Build image (amd64, no push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
