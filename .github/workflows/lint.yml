@@ -26,7 +26,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
 
       # --ignore-scripts skips the better-sqlite3 native build — not needed to
       # lint or type-check, and keeps the job fast.
@@ -49,7 +49,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
 
       # Full install (native better-sqlite3 build) so the DB schema/migration
       # tests run for real, not skipped.
