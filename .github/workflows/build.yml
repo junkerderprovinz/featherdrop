@@ -19,6 +19,7 @@ on:
 permissions:
   contents: read
   packages: write
+  security-events: write
 
 env:
   IMAGE_NAME: ghcr.io/junkerderprovinz/featherdrop
@@ -123,6 +124,26 @@ jobs:
           smoke featherdrop:smoke-amd64 linux/amd64 40
           smoke featherdrop:smoke-arm64 linux/arm64 150
 
+      # Non-blocking CVE scan of the locally-built amd64 image. Reports HIGH/CRITICAL
+      # (fixable only) to the Security tab; exit-code stays 0 so it never fails the
+      # build — a fresh advisory should surface, not block a release.
+      - name: Scan image for CVEs (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: featherdrop:smoke-amd64
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Upload Trivy results to the Security tab
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
       - name: Build & push
         uses: docker/build-push-action@v7
         with:
@@ -131,6 +152,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
