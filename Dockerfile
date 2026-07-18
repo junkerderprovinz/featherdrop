@@ -51,7 +51,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/feather
 # -----------------------------------------------------------------------------
 # Stage 3 — minimal runtime (distroless static: tiny, no shell, ca-certs + tmp)
 # -----------------------------------------------------------------------------
-FROM gcr.io/distroless/static-debian12 AS runtime
+FROM gcr.io/distroless/static-debian12:latest@sha256:61b7ccecebc7c474a531717de80a94709d20547cdcdaf740c25876f2a8e38b44 AS runtime
 LABEL org.opencontainers.image.source="https://github.com/junkerderprovinz/featherdrop"
 LABEL org.opencontainers.image.description="featherdrop — self-hosted zero-knowledge file sharer (Go backend)"
 LABEL org.opencontainers.image.licenses="MIT"
