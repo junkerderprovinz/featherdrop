@@ -16,7 +16,7 @@
 #   gobuild — CGO-free `go build` embedding that webroot via //go:embed
 #   runtime — distroless static: just the ~15 MB binary, no Node, no shell
 # =============================================================================
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 ARG GO_VERSION=1.26
 
 # -----------------------------------------------------------------------------
