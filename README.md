@@ -21,10 +21,10 @@
 
 <p align="center">
 featherdrop is a <b>sleek, feather-light</b>, self-hosted drop zone for your files — think
-<b>WeTransfer</b> or <b>Smash</b>, but it runs on your own server with no size paywall. Drop a
-file, set how long it lives (plus an optional password or download limit), and share a short
-link or QR code. End-to-end encrypted, resumable uploads, one small container. No accounts,
-no clouds, no tracking, no nonsense.
+<b>WeTransfer</b> or <b>Smash</b>, but it runs on your own server with no size paywall. Drop your
+files (one or a whole batch), set how long they live (plus an optional password or download
+limit), and share a short link or QR code. Zero-knowledge end-to-end encryption, resumable
+uploads, inline previews, one tiny container. No accounts, no clouds, no tracking, no nonsense.
 </p>
 
 <br>
@@ -61,11 +61,12 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 **single container** with **no login** and **no separate database**:
 
 - Open the page → a central **drop zone** is right there.
-- Drop a file → a settings panel slides in (**expiry**, optional **password**,
-  optional **download limit**), and a progress ring overlays the drop zone while
-  it uploads.
+- Drop a file — or several at once, or just **Ctrl+V** a screenshot → a settings
+  panel slides in (**expiry**, optional **password**, optional **download
+  limit**), and a progress ring overlays the drop zone while it uploads.
 - You get a **shareable link** plus a **QR code** you can save as a PNG. The
-  recipient downloads it any time until it expires.
+  recipient can **preview** the files right on the share page and download them
+  any time until the share expires.
 - Pasting the link into a chat shows a **clean preview card** — your branding,
   never the file's name.
 - A light/dark toggle and a **flag language picker** sit in the header — the UI
@@ -76,14 +77,26 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 - 🔒 **Zero-knowledge** — files are **end-to-end encrypted in your browser**
   before upload (libsodium XChaCha20-Poly1305); the server only ever stores
   opaque ciphertext and never sees your files, their names, or the key.
+- 🗂️ **Multi-file shares** — drop several files and they travel as **one
+  encrypted bundle** under a single link; the recipient gets the originals back
+  individually (**Download all**, or **Save to folder** on Chromium), no zip.
 - ⏳ **Self-destructing** — expiry from 1 hour to 30 days (or never), plus an
   optional **burn-after-N-downloads**.
-- 🖼️ **Inline image/PDF preview** and a savable **QR code** on the share page,
-  with **clean link previews** that never leak the file's name.
+- 🖼️ **Inline preview** for **images, video, audio, text & PDF** before
+  downloading (large videos stream with true seeking), a savable **QR code**,
+  and **clean link previews** that never leak the file's name.
+- 🧼 **Sheds metadata like feathers** — JPEGs can be scrubbed of **EXIF/GPS**
+  data in the browser, before encryption (on by default, one switch to keep it).
+- 📲 **Installable PWA** — paste to upload with **Ctrl/Cmd+V**, and on Android
+  featherdrop registers as a **share target** ("Share → featherdrop").
 - 🌍 **26 languages** (right-to-left for Arabic & Hebrew), light/dark, and
   **custom branding** (name, logo, accent colour) via env vars.
-- 📦 **One container** — resumable uploads ([tus](https://tus.io)), a single
-  SQLite file, separate data/config volumes, multi-arch (amd64 + arm64).
+- 📦 **One container** — resumable chunked uploads ([tus](https://tus.io)), a
+  single SQLite file, separate data/config volumes, a built-in healthcheck,
+  multi-arch (amd64 + arm64) on a distroless base.
+- 🚦 **Operator guardrails** — per-IP rate limiting, a storage quota, an expiry
+  cap, and an optional upload password make an internet-facing instance a
+  reasonable thing to run.
 - 🧹 **Private by design** — no accounts, no telemetry, no third-party calls at
   runtime; your files stay on your server.
 
@@ -151,8 +164,11 @@ volumes**, so you can keep uploads on array storage and the database on a fast
 SSD. `CONFIG_DIR` defaults to `DATA_DIR`, so a single-volume setup still works.
 
 Uploads are **resumable**: a dropped connection on a multi-GB transfer resumes
-instead of starting over. Passwords are **scrypt-hashed**, never stored in plain
-text, and large downloads **stream natively** (no in-browser buffering).
+instead of starting over. Share passwords **never reach the server at all** —
+the key is derived from them in your browser (Argon2id) — and large downloads
+**stream natively** (no in-browser buffering). The container ships a built-in
+**healthcheck** (the binary probes its own `/api/healthcheck` — distroless has
+no shell), so Docker and Unraid show a real health state.
 
 <br>
 
@@ -176,7 +192,16 @@ only on your server, and the app talks to nobody else.
   removed automatically, no manual cleanup needed.
 - **Minimal attack surface.** No login to brute-force, no user database to leak;
   share slugs are unguessable, and share pages and link previews never expose the
-  file's name.
+  file's name. Uploads and download/password attempts are **rate-limited per IP**
+  out of the box, and share pages tell search engines to stay away (`robots.txt`
+  plus `X-Robots-Tag: noindex` on every share response).
+- **Photos travel light.** JPEGs can be scrubbed of **EXIF/GPS/IPTC** metadata —
+  in the browser, *before* encryption, the only place it can happen (on by
+  default, one switch to keep it).
+- **Hardened supply chain.** The image is a single static Go binary on a
+  **distroless** base — no shell, no package manager, digest-pinned — and every
+  build ships **SBOM + provenance attestations** and gets a **Trivy** CVE scan
+  in CI.
 
 > Provided under the MIT licence **without warranty** — you run it, you own the
 > data and the responsibility. **HTTPS is recommended** (see
@@ -218,10 +243,10 @@ service worker, so multi-GB files are never buffered in memory. Over plain HTTP
 with a 500 MB cap — use **HTTPS** for larger files. Inline image/PDF previews are
 produced entirely in the browser from the decrypted bytes.
 
-> **Upgrading from v3 or earlier?** Shares created before v4 used at-rest
-> encryption (age) and stay readable with their original links until they expire.
-> The `MASTER_KEY` / `ENCRYPT_UPLOADS` settings only affect those legacy shares
-> and no longer apply to new uploads.
+> **Still have pre-v4 shares?** Shares created before v4 used server-side
+> at-rest encryption (age). Since the v6 Go rewrite the server is zero-knowledge
+> **only** and no longer serves that legacy format — those links return 404, and
+> the old `MASTER_KEY` / `ENCRYPT_UPLOADS` settings are ignored.
 
 <br>
 
@@ -230,8 +255,8 @@ produced entirely in the browser from the decrypted bytes.
 featherdrop's interface ships in **26 languages**. On a visitor's first load the
 language is taken from their **browser**; a flag picker beside the light/dark
 toggle (in the header *and* on the download page) switches it, and the choice is
-remembered. Detection runs on the server, so the page is already translated
-before any JavaScript loads. Arabic and Hebrew render **right-to-left**.
+remembered. Detection happens right in the browser before the first paint, so
+there is no English flash. Arabic and Hebrew render **right-to-left**.
 
 > 🇬🇧 English · 🇩🇪 Deutsch · 🇫🇷 Français · 🇪🇸 Español · 🇮🇹 Italiano ·
 > 🇵🇹 Português · 🇳🇱 Nederlands · 🇵🇱 Polski · 🇷🇺 Русский · 🇺🇦 Українська ·
@@ -294,8 +319,6 @@ the `/config` mount and map just `-v …:/data` — the database then lives in
 | `RATE_LIMIT` | `true` | Built-in per-IP rate limiting on uploads, finalize and download/password attempts (429 + `Retry-After`). Set `false` to disable, e.g. behind your own limiter. |
 | `TRUST_PROXY` | `false` | Set `true` ONLY behind a reverse proxy: rate limits then key on the first `X-Forwarded-For` address instead of the proxy's. Never enable it on a directly-reachable instance. |
 | `UPLOAD_PASSWORD` | *(empty)* | Optional upload lock. Empty = anyone can upload (the default). Set it and **creating** a share requires this password (entered once per browser session); **downloading** an existing share link stays open to everyone. The server checks it constant-time on both write paths and never stores or logs it — only a "this instance is protected" flag reaches the browser, never the password. Send over HTTPS. |
-| `MASTER_KEY` | *(empty)* | **Legacy.** Only decrypts pre-v4 server-mode shares until they expire; has no effect on new uploads, which are end-to-end encrypted in the browser (see [Zero-knowledge encryption](#zero-knowledge-encryption)). |
-| `ENCRYPT_UPLOADS` | `true` | **Legacy.** Applies to the old at-rest path only; new uploads are always end-to-end encrypted client-side. |
 | `PORT` | `3000` | Port the server listens on. |
 | `DATA_DIR` | `/data` | Where the uploaded files live (bulk). Map this to a volume. |
 | `CONFIG_DIR` | *(= `DATA_DIR`)* | Where the SQLite database lives. Defaults to `DATA_DIR` (single volume). Set it (the Unraid template uses `/config`) to keep the small database on a separate, faster volume. |
@@ -368,11 +391,13 @@ Run the test suite (pure-logic assertions, no framework needed):
 npm test
 ```
 
-Stack: a Go backend (`server-go/`) that serves a Vite + React + Mantine v7 SPA
+Stack: a Go backend (`server-go/`) that serves a Vite + React + Mantine SPA
 as embedded static assets alongside the JSON/file API, with `react-i18next` for
-the UI languages. The browser keeps all zero-knowledge crypto in TypeScript.
-Files live under `DATA_DIR` (default `./data`). The published image is built from
-`Dockerfile`; the original Next.js server (`Dockerfile.next`) has been retired.
+the UI languages. The browser keeps all zero-knowledge crypto in TypeScript
+(libsodium). Files live under `DATA_DIR` (default `./data`). The published image
+is built from `Dockerfile` — a three-stage build: Vite SPA → static Go binary
+with the webroot embedded → distroless runtime. The old Next.js server was
+retired in v6.0.0; the Go backend is the only server.
 
 <br>
 
