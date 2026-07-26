@@ -2,6 +2,12 @@
 // AsyncIterable<Uint8Array> convention used by the pipeline modules.
 // Browser-compatible; no Node.js-specific APIs.
 
+// Runtime feature probe kept out of the caller so its `boolean` return does not
+// narrow the argument (a type guard would flag the fallback branch as `never`).
+function supportsAsyncIterator(rs: ReadableStream<Uint8Array>): boolean {
+  return Symbol.asyncIterator in rs;
+}
+
 /**
  * Wrap a ReadableStream<Uint8Array> as an AsyncIterable<Uint8Array>.
  * Uses the stream's built-in async iterator if available (Chromium ≥ 124),
@@ -11,9 +17,12 @@ export function streamToAsyncIterable(
   rs: ReadableStream<Uint8Array>,
 ): AsyncIterable<Uint8Array> {
   // The ReadableStream async iterator is defined in the Streams spec and
-  // available in modern browsers; TS's lib.dom may not yet declare it on
-  // the type so we probe at runtime via the well-known symbol.
-  if (Symbol.asyncIterator in rs) {
+  // available in modern browsers. lib.dom now declares it unconditionally on the
+  // type, so an inline `Symbol.asyncIterator in rs` check would narrow `rs` to
+  // `never` in the fallback branch. We probe through a plain boolean-returning
+  // helper (not a type guard) so the reader-loop fallback below stays typed for
+  // the older browsers that still need it.
+  if (supportsAsyncIterator(rs)) {
     return rs as unknown as AsyncIterable<Uint8Array>;
   }
   // Fallback: reader loop.
