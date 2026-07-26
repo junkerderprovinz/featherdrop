@@ -38,7 +38,6 @@ export function stripJpegMetadataBytes(bytes: Uint8Array): StripResult {
     if (marker === SOS) {
       // Image data starts; copy the rest verbatim and stop walking.
       keep.push([pos, bytes.length]);
-      pos = bytes.length;
       break;
     }
     const segLen = view.getUint16(pos + 2); // includes the 2 length bytes

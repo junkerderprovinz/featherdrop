@@ -39,8 +39,16 @@ Frontend (repo root):
 - `npm run build:client` — `vite build` → `client-dist/`.
 - `npm run build:webroot` — `node scripts/build-client.mjs` → `server-go/webroot/`.
 - `npm run build:spa` — `build:client` + `build:webroot` (what the image does).
-- `npm run lint` — `eslint src components lib app --ext .ts,.tsx --max-warnings 0`.
-- `npx tsc --noEmit` — TypeScript typecheck.
+- `npm run lint` — `eslint src components lib app --max-warnings 0` (flat config in
+  `eslint.config.js`; ESLint 10 dropped `.eslintrc` + `--ext`).
+- `npx tsc --noEmit` — TypeScript typecheck (the **TS 7 native** compiler).
+
+  TypeScript is installed side-by-side (per the official TS 7 migration): the
+  `typescript` dependency is aliased to `@typescript/typescript6` (the TS 6 JS API
+  that `typescript-eslint` still needs — TS 7 dropped the classic compiler API from
+  its main entry), while `@typescript/native` is the real `typescript@7` and owns
+  the `tsc` binary. So `npx tsc` runs TS 7; ESLint parses via TS 6. `tsc6` is the
+  TS 6 binary if ever needed.
 - `npm test` — logic tests: `node --import tsx --test "test/**/*.test.ts"`.
 - `npm run test:browser` — Playwright browser round-trips.
 
