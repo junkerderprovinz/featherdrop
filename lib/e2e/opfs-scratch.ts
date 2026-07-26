@@ -6,14 +6,10 @@
 
 const PREFIX = "fd-scratch-";
 
-// Some TS lib.dom versions omit the async-iterator helpers on
-// FileSystemDirectoryHandle; declare the slice we rely on.
-interface ScratchDir extends FileSystemDirectoryHandle {
-  entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
-}
-
-async function opfsRoot(): Promise<ScratchDir> {
-  return (await navigator.storage.getDirectory()) as ScratchDir;
+// FileSystemDirectoryHandle.entries() (the async iterator we rely on) is part
+// of TS's lib.dom now, so the handle is used directly.
+async function opfsRoot(): Promise<FileSystemDirectoryHandle> {
+  return await navigator.storage.getDirectory();
 }
 
 /**

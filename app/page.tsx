@@ -165,7 +165,6 @@ export default function HomePage() {
       // Drop the ?shared marker so a reload doesn't look like a new share.
       window.history.replaceState(null, "", "/");
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onDrop = (dropped: File[]) => {
@@ -250,7 +249,6 @@ export default function HomePage() {
     };
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploading, uploadLocked, status]);
 
   const hasJpeg = files.some((f) => isStrippableType(f.type));

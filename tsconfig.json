@@ -2,6 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["dom", "dom.iterable", "ES2022"],
+    // TS 7 (and the 6.0 bridge) no longer auto-include every @types/* package
+    // the way TS 5 did, so the Node globals (process, Buffer, node:* modules)
+    // used by test/ and lib/config.ts must be requested explicitly. React and
+    // the other @types are still picked up through their imports.
+    "types": ["node"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
