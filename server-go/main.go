@@ -286,23 +286,19 @@ func serveShell(w http.ResponseWriter, shell []byte) {
 // ---------------------------------------------------------------------------
 
 const (
-	bannerSep      = "───────────────────────────────────────────────────────────────────"
 	bannerName     = "featherdrop"
 	bannerSubtitle = "Self-hosted, end-to-end-encrypted file sharing. Drop a file, share a link."
 	readyHashes    = "############################################################"
 )
 
-// printBanner prints the brand ASCII art, then the name + subtitle framed by the
-// ─ rule (mirrors the house print-banner.sh used by all own-image images).
+// printBanner prints the brand ASCII art, then a clean name + subtitle block with
+// no rules (mirrors the house print-banner.sh used by all own-image images).
 func printBanner() {
-	sep := "  " + bannerSep
 	fmt.Println()
 	fmt.Println(strings.TrimRight(brandArt, "\n"))
 	fmt.Println()
-	fmt.Println(sep)
 	fmt.Println("  " + bannerName)
 	fmt.Println("  " + bannerSubtitle)
-	fmt.Println(sep)
 	fmt.Println()
 }
 
