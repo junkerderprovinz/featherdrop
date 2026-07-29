@@ -14,7 +14,7 @@
   <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" height="36"></a>&nbsp;
   <a href="https://mantine.dev"><img src="https://img.shields.io/badge/Mantine-339af0?style=for-the-badge&logo=mantine&logoColor=white" alt="Mantine" height="36"></a>&nbsp;
   <a href="https://unraid.net"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative&logoColor=white" alt="License" height="36"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=for-the-badge&logo=gnu&logoColor=white" alt="License: AGPL-3.0" height="36"></a>
 </p>
 
 <br>
@@ -50,6 +50,7 @@ uploads, inline previews, one tiny container. No accounts, no clouds, no trackin
 9. [Local Development](#9-local-development)
 10. [Contributing / License](#10-contributing--license)
 11. [Support this project](#11-support-this-project)
+12. [License](#12-license)
 <br>
 
 ## 1. What is this?
@@ -203,7 +204,7 @@ only on your server, and the app talks to nobody else.
   build ships **SBOM + provenance attestations** and gets a **Trivy** CVE scan
   in CI.
 
-> Provided under the MIT licence **without warranty** — you run it, you own the
+> Provided under the AGPL-3.0 licence **without warranty** — you run it, you own the
 > data and the responsibility. **HTTPS is recommended** (see
 > [Reverse Proxy](#8-reverse-proxy)) — the clipboard, streaming downloads, and
 > large (>500 MB) uploads need a secure context; smaller uploads work over plain
@@ -406,7 +407,7 @@ retired in v6.0.0; the Go backend is the only server.
 Issues and pull requests welcome:
 <https://github.com/junkerderprovinz/featherdrop/issues>
 
-Licensed under the [MIT License](LICENSE).
+Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0); see [section 12](#12-license).
 
 <br>
 
@@ -419,3 +420,13 @@ If featherdrop saves you a trip to a third-party file host, consider buying me a
     <img src=".github/assets/button-buy-me-a-coffee.svg" alt="Buy me a coffee" width="220">
   </a>
 </p>
+
+<br>
+
+## 12. License
+
+**Copyright (C) 2026 Junker der Provinz.**
+
+featherdrop is free software under the **GNU Affero General Public License v3.0** (AGPL-3.0); see [LICENSE](LICENSE). You may run, study, share and modify it. If you distribute it, or run a modified version as a network service, you must release your source under the same AGPL-3.0 terms and keep the existing copyright and attribution notices intact.
+
+**Name and branding are not licensed.** The AGPL covers the source code only. "featherdrop", its logo and its branding remain reserved: a fork or derivative must use its own distinct name and branding, and may not present itself as featherdrop. This keeps it unambiguous which project is the original.
