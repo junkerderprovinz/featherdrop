@@ -49,8 +49,8 @@ uploads, inline previews, one tiny container. No accounts, no clouds, no trackin
 8. [Reverse Proxy](#8-reverse-proxy)
 9. [Local Development](#9-local-development)
 10. [Contributing / License](#10-contributing--license)
-11. [Support this project](#11-support-this-project)
-12. [License](#12-license)
+11. [License](#11-license)
+12. [Support this project](#12-support-this-project)
 <br>
 
 ## 1. What is this?
@@ -73,7 +73,8 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
 - A light/dark toggle and a **flag language picker** sit in the header — the UI
   speaks [26 languages](#5-languages) and picks yours from the browser.
 
-**Highlights**
+<details>
+<summary><b>Highlights</b></summary>
 
 - 🔒 **Zero-knowledge** — files are **end-to-end encrypted in your browser**
   before upload (libsodium XChaCha20-Poly1305); the server only ever stores
@@ -100,6 +101,8 @@ Where Pingvin ships a full backend, database, and accounts, featherdrop is a
   reasonable thing to run.
 - 🧹 **Private by design** — no accounts, no telemetry, no third-party calls at
   runtime; your files stay on your server.
+
+</details>
 
 What it deliberately does **not** have: user accounts, OIDC/LDAP, email, malware
 scanning, S3 backends. If you need those, use Pingvin Share — that is the point.
@@ -407,11 +410,21 @@ retired in v6.0.0; the Go backend is the only server.
 Issues and pull requests welcome:
 <https://github.com/junkerderprovinz/featherdrop/issues>
 
-Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0); see [section 12](#12-license).
+Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0); see [section 11](#11-license).
 
 <br>
 
-## 11. Support this project
+## 11. License
+
+**Copyright (C) 2026 Junker der Provinz.**
+
+featherdrop is free software under the **GNU Affero General Public License v3.0** (AGPL-3.0); see [LICENSE](LICENSE). You may run, study, share and modify it. If you distribute it, or run a modified version as a network service, you must release your source under the same AGPL-3.0 terms and keep the existing copyright and attribution notices intact.
+
+**Name and branding are not licensed.** The AGPL covers the source code only. "featherdrop", its logo and its branding remain reserved: a fork or derivative must use its own distinct name and branding, and may not present itself as featherdrop. This keeps it unambiguous which project is the original.
+
+<br>
+
+## 12. Support this project
 
 If featherdrop saves you a trip to a third-party file host, consider buying me a coffee:
 
@@ -420,13 +433,3 @@ If featherdrop saves you a trip to a third-party file host, consider buying me a
     <img src=".github/assets/button-buy-me-a-coffee.svg" alt="Buy me a coffee" width="220">
   </a>
 </p>
-
-<br>
-
-## 12. License
-
-**Copyright (C) 2026 Junker der Provinz.**
-
-featherdrop is free software under the **GNU Affero General Public License v3.0** (AGPL-3.0); see [LICENSE](LICENSE). You may run, study, share and modify it. If you distribute it, or run a modified version as a network service, you must release your source under the same AGPL-3.0 terms and keep the existing copyright and attribution notices intact.
-
-**Name and branding are not licensed.** The AGPL covers the source code only. "featherdrop", its logo and its branding remain reserved: a fork or derivative must use its own distinct name and branding, and may not present itself as featherdrop. This keeps it unambiguous which project is the original.
