@@ -54,7 +54,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/feather
 FROM gcr.io/distroless/static-debian12:latest@sha256:a9fcaedd4c9b59e12dd65d954f0b5044f19b0647a8a3712e77205df9e7b102cd AS runtime
 LABEL org.opencontainers.image.source="https://github.com/junkerderprovinz/featherdrop"
 LABEL org.opencontainers.image.description="featherdrop — self-hosted zero-knowledge file sharer (Go backend)"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 COPY --from=gobuild /out/featherdrop /featherdrop
 # DATA_DIR holds the bulk blobs + in-progress tus uploads; CONFIG_DIR holds the
 # SQLite metadata DB. Defaults match lib/config.ts / the Unraid template mounts.
