@@ -86,6 +86,8 @@ emit("featherdrop-banner", lightSvg, LIGHT.bg);
 // Dark: derived from the light SVG — background + claim colour only.
 let darkSvg = swapOnce(lightSvg, /fill="#ffffff"/, `fill="${DARK.bg}"`, "background fill");
 darkSvg = swapOnce(darkSvg, /fill="#5a5d5e"/, `fill="${DARK.claim}"`, "claim fill");
+// Wordmark = foreground colour (was a gold gradient); flip it light on the dark banner.
+darkSvg = swapOnce(darkSvg, /fill="#1f2328"/, `fill="#e6edf3"`, "wordmark fill");
 emit("featherdrop-banner-dark", darkSvg, DARK.bg);
 
 console.log(`claim: "${CLAIM}"`);
