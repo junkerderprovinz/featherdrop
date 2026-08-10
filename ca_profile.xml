@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>
+    junkerderprovinz. This repository (featherdrop) was the first template
+    submitted to Community Applications; all current apps and templates have
+    since moved to the unraid-apps repository. Browse the full catalog there:
+    own-image containers (BombVault, featherdrop, JDownloader, Krusader,
+    PrusaSlicer, Stellarium, Matrix, OpenCloud), upstream-image wrappers
+    (CouchDB, OpenHands, Standard Notes Server, Standard Notes Web UI, n8n),
+    and the ShipLog and FireSquire plugins. Support via the per-app Unraid
+    forum threads.
+  </Profile>
+  <Icon>https://raw.githubusercontent.com/junkerderprovinz/unraid-apps/main/.github/assets/icon.png</Icon>
+  <WebPage>https://github.com/junkerderprovinz/unraid-apps</WebPage>
+</CommunityApplications>
