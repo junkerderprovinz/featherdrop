@@ -30,6 +30,12 @@ uploads, inline previews, one tiny container. No accounts, no clouds, no trackin
 <br>
 
 <p align="center">
+A solo, free-time project. Bugs and ideas via <a href="https://github.com/junkerderprovinz/featherdrop/issues">GitHub issues</a>; if it's useful to you, a coffee is always welcome.
+</p>
+
+<br>
+
+<p align="center">
   <a href="https://buymeacoffee.com/junkerderprovinz">
     <img src=".github/assets/button-buy-me-a-coffee.svg" alt="Buy me a coffee" width="220">
   </a>
@@ -427,6 +433,10 @@ featherdrop is free software under the **GNU Affero General Public License v3.0*
 ## 12. Support this project
 
 If featherdrop saves you a trip to a third-party file host, consider buying me a coffee:
+
+featherdrop is a one-person project. I write, test, and support it myself, in whatever free time is left after work. Found a bug or have an idea? Please [open a GitHub issue](https://github.com/junkerderprovinz/featherdrop/issues) so it doesn't get lost.
+
+If you'd like to support the time that goes into it, you're welcome to buy me a coffee. Genuinely appreciated either way.
 
 <p align="center">
   <a href="https://buymeacoffee.com/junkerderprovinz">
