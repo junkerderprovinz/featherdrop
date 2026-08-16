@@ -30,7 +30,7 @@ uploads, inline previews, one tiny container. No accounts, no clouds, no trackin
 <br>
 
 <p align="center">
-Maintained solo, in whatever spare time there is. Bugs, ideas and feature requests via <a href="https://github.com/junkerderprovinz/featherdrop/issues">GitHub issues</a>. If it's useful to you, a coffee is always welcome.
+Maintained solo, in whatever spare time there is. Questions via the <a href="https://forums.unraid.net/topic/199203-support-junkerderprovinz-featherdrop/">support thread</a>, bugs, ideas and feature requests via <a href="https://github.com/junkerderprovinz/featherdrop/issues">GitHub issues</a>. If it's useful to you, a coffee is always welcome.
 </p>
 
 <br>
@@ -432,7 +432,7 @@ featherdrop is free software under the **GNU Affero General Public License v3.0*
 
 ## 12. Support this project
 
-Questions, bugs, ideas or feature requests? Please [open a GitHub issue](https://github.com/junkerderprovinz/featherdrop/issues).
+Questions? Check the [support thread](https://forums.unraid.net/topic/199203-support-junkerderprovinz-featherdrop/). Bugs, ideas or feature requests? Please [open a GitHub issue](https://github.com/junkerderprovinz/featherdrop/issues).
 
 This is a one-person project. I put a lot of time and effort into building and maintaining it, in whatever free time I have. If it's helped you, I'd genuinely appreciate the support: you're welcome to buy me a coffee.
 
