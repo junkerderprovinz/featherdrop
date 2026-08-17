@@ -288,24 +288,25 @@ func serveShell(w http.ResponseWriter, shell []byte) {
 const (
 	bannerName     = "featherdrop"
 	bannerSubtitle = "Self-hosted, end-to-end-encrypted file sharing. Drop a file, share a link."
-	readyHashes    = "############################################################"
 )
 
-// printBanner prints the brand ASCII art, then a clean name + subtitle block with
-// no rules (mirrors the house print-banner.sh used by all own-image images).
+// printBanner prints the brand ASCII art, then a clean name + subtitle line
+// (mirrors the house print-banner.sh used by all own-image images: name and
+// subtitle joined onto ONE line, house look, no rules).
 func printBanner() {
 	fmt.Println()
 	fmt.Println(strings.TrimRight(brandArt, "\n"))
 	fmt.Println()
-	fmt.Println("  " + bannerName)
-	fmt.Println("  " + bannerSubtitle)
+	fmt.Println("  " + bannerName + " · " + bannerSubtitle)
 	fmt.Println()
 }
 
-// printReady prints the loud "<APP> IS READY" box just before the server listens,
-// in the shared house '#' format (matches the jdownloader/krusader/matrix banners).
+// printReady prints the loud "<APP> IS READY" line just before the server
+// listens, in the shared house one-line format (matches
+// jdownloader/krusader/matrix/handbrake/bombvault). The banner + this line
+// are always the LAST thing this process prints before it blocks on
+// ListenAndServe.
 func printReady(scheme, port string) {
-	fmt.Println("  " + readyHashes)
-	fmt.Printf("   FEATHERDROP IS READY  ->  open the WebUI now (%s %s)\n", scheme, port)
-	fmt.Println("  " + readyHashes)
+	fmt.Printf("  \033[0;32m✓ FEATHERDROP IS READY\033[0m - Open the WebUI now (%s %s)\n", scheme, port)
+	fmt.Println()
 }
