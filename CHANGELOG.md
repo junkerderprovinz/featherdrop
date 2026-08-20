@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
+
 ## [6.1.0] — 2026-07-15
 
 ### Added
