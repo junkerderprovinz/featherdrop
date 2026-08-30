@@ -18,7 +18,7 @@
 // TypeScript note: the project type-checks with the TS 7 native compiler
 // (devDependency `@typescript/native`, which provides the `tsc` binary), while
 // typescript-eslint parses with the TS 6 JS API (the `typescript` devDependency
-// is aliased to `@typescript/typescript6`). See CLAUDE.md > Build / test / lint.
+// is aliased to `@typescript/typescript6`).
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';

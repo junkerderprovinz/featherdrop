@@ -4,7 +4,7 @@
 // static assets plus a small JSON/file API. The browser zero-knowledge crypto
 // and UI stay in TypeScript.
 //
-// Phased rollout (see docs/superpowers/specs/2026-06-29-featherdrop-go-backend-design.md):
+// Phased rollout (see the design notes):
 //  1. (this phase) skeleton: chi router + embedded static + config + SQLite
 //     (modernc) + schema/migrations.
 //  2. tusd integration (upload + UPLOAD_PASSWORD/MAX_FILE_SIZE hooks).
