@@ -16,13 +16,13 @@
 #   gobuild — CGO-free `go build` embedding that webroot via //go:embed
 #   runtime — distroless static: just the ~15 MB binary, no Node, no shell
 # =============================================================================
-ARG NODE_VERSION=24
+ARG NODE_VERSION=24-slim
 ARG GO_VERSION=1.26
 
 # -----------------------------------------------------------------------------
 # Stage 1 — build the static SPA client (Vite) into server-go/webroot
 # -----------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-slim AS client
+FROM node:${NODE_VERSION} AS client
 WORKDIR /app
 # Install deps first for layer caching. postinstall copies the libsodium ESM
 # wrapper the browser bundle needs (see package.json), so it must run.
