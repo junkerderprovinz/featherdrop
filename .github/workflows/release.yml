@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -55,7 +55,7 @@ jobs:
 
       - name: Create release (manual changelog)
         if: steps.notes.outputs.has_notes == 'true'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           body_path: ${{ steps.notes.outputs.notes_file }}
@@ -63,7 +63,7 @@ jobs:
 
       - name: Create release (auto-generated)
         if: steps.notes.outputs.has_notes == 'false'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           generate_release_notes: true
