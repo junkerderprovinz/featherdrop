@@ -4,28 +4,64 @@
     "config:recommended",
     "helpers:pinGitHubActionDigests",
     ":semanticCommits",
-    ":dependencyDashboard"
+    ":dependencyDashboard",
+    "docker:pinDigests"
   ],
   "timezone": "Europe/Vienna",
-  "schedule": ["before 6am on monday"],
-  "labels": ["dependencies"],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Group Mantine packages — they must move together",
-      "matchPackageNames": ["@mantine/core", "@mantine/hooks", "@mantine/dropzone", "@mantine/notifications"],
+      "matchPackageNames": [
+        "@mantine/core",
+        "@mantine/hooks",
+        "@mantine/dropzone",
+        "@mantine/notifications"
+      ],
       "groupName": "Mantine"
     },
     {
       "description": "Group tus packages",
-      "matchPackageNames": ["tus-js-client"],
+      "matchPackageNames": [
+        "tus-js-client"
+      ],
       "groupName": "tus"
     },
     {
       "description": "Auto-merge minor/patch for GitHub Actions",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
       "automerge": true,
       "automergeType": "branch"
+    },
+    {
+      "description": "Docker: auto-merge digest pins and digest refreshes (same tag, new build). Major/minor stay open for review.",
+      "matchManagers": [
+        "dockerfile",
+        "docker-compose"
+      ],
+      "matchUpdateTypes": [
+        "pinDigest",
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "commitMessagePrefix": "ci:",
+      "labels": [
+        "docker"
+      ]
     }
   ]
 }
