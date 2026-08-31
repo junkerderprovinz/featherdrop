@@ -1,0 +1,7 @@
+# Test fixture, not a credential. `key_verifier` in test/db-records.test.ts was a dummy
+# value in a database-record test; the file itself was removed with the Next.js path in
+# e801119 and exists only in history. gitleaks' generic-api-key rule still matches it on
+# every push, which blocked pushes to this repo entirely. Ignored by fingerprint rather
+# than rewriting history over a test constant.
+d947c075e7a1407290425ea6b8c3922217a00051:test/db-records.test.ts:generic-api-key:147
+c0e8a78798ce59a35b1e226650cf077ebd572c1a:test/db-records.test.ts:generic-api-key:147
