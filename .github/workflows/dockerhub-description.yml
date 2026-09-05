@@ -29,7 +29,7 @@ jobs:
         uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ vars.DOCKERHUB_USERNAME }}/featherdrop
           short-description: "A clean, login-free, self-hosted file sharer. Drop a file, set an expiry, share a link."
           enable-url-completion: true
