@@ -48,7 +48,7 @@ alive. Three ways below, whichever suits you.
   </a>
   &nbsp;
   <a href="https://junkerderprovinz.github.io/junkerderprovinz/">
-    <img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-crypto.png" alt="Donate with crypto" width="160">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-crypto-live.svg" alt="Donate with crypto" width="160">
   </a>
 </p>
 
@@ -457,6 +457,6 @@ This is a one-person project. I put a lot of work into building it, keeping it r
   </a>
   &nbsp;
   <a href="https://junkerderprovinz.github.io/junkerderprovinz/">
-    <img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-crypto.png" alt="Donate with crypto" width="160">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/junkerderprovinz/main/donate/buttons/button-crypto-live.svg" alt="Donate with crypto" width="160">
   </a>
 </p>
