@@ -1,18 +1,14 @@
-// One-off asset renderer (run manually; @resvg/resvg-js + opentype.js come from
-// the GLOBAL npm root, not project dependencies). Produces:
-//   .github/assets/featherdrop-banner.svg  — canonical README banner: a white
-//                                            1600x500 card, feather on the left,
-//                                            "featherdrop" in Bitter Italic (the
-//                                            app wordmark) + a claim below (house
-//                                            banner convention, as on BombVault)
-//   .github/assets/featherdrop-banner.png  — rendered banner
-//   .github/assets/icon.png                — 512x512 square template icon
-//   app/opengraph-image.png                — 1200x630 social/link-preview card
-// Placement is derived from the path's real bounding box, so the feather is
-// positioned correctly regardless of the glyph's internal offset. The banner
-// text is converted to SVG paths (opentype.js) so the SVG is self-contained —
-// the Bitter (OFL) variable fonts are fetched at runtime to the OS temp dir and
-// are NOT committed to the repo.
+// Renders the image assets, run by hand with @resvg/resvg-js and opentype.js
+// from the global npm root:
+//   .github/assets/featherdrop-banner.svg  README banner, a white 1600x500 card
+//                                          with the feather, the wordmark in
+//                                          Bitter Italic and a claim below
+//   .github/assets/featherdrop-banner.png  the rendered banner
+//   .github/assets/icon.png                512x512 template icon
+//   app/opengraph-image.png                1200x630 link preview card
+// The feather is placed by its real bounding box, whatever the path's own
+// offset. The text becomes SVG paths so the SVG needs no font; Bitter is
+// downloaded to the OS temp dir and not committed.
 //
 // Usage:  npm i -g @resvg/resvg-js opentype.js && node scripts/render-assets.mjs
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -29,17 +25,15 @@ const opentype = require(`${gRoot}/opentype.js`);
 const ASSETS = new URL("../.github/assets/", import.meta.url);
 const logoSvg = readFileSync(new URL("featherdrop-logo.svg", ASSETS), "utf8");
 
-// Bitter (OFL) — the app's wordmark font. Italic 500 carries the wordmark
-// (matching the app's fw=500), upright 400 carries the claim.
-// NOTE: the google/fonts repo only ships Bitter as a VARIABLE font, and
-// opentype.js ignores gvar deltas — it would render the thinnest master as
-// hairline outlines. So fetch STATIC single-weight instances via the Google
-// Fonts CSS API instead: a legacy User-Agent makes it return plain TTF URLs.
+// Bitter Italic 500 for the wordmark as in the app, upright 400 for the claim.
+// google/fonts only ships Bitter as a variable font, and opentype.js ignores
+// gvar deltas and would draw the thinnest master, so static instances come from
+// the Google Fonts CSS API, which returns plain TTF URLs to a legacy User-Agent.
 async function loadFont(spec, cacheName) {
   const path = join(tmpdir(), `featherdrop-${cacheName}.ttf`);
   if (!existsSync(path)) {
     const cssRes = await fetch(`https://fonts.googleapis.com/css2?family=${spec}`, {
-      headers: { "User-Agent": "curl/8" }, // legacy UA → static TTF, no subsets
+      headers: { "User-Agent": "curl/8" },
     });
     if (!cssRes.ok) throw new Error(`font css ${spec}: ${cssRes.status}`);
     const css = await cssRes.text();
@@ -55,8 +49,7 @@ async function loadFont(spec, cacheName) {
 const bitterItalic = await loadFont("Bitter:ital,wght@1,500", "Bitter-Italic-500");
 const bitterRegular = await loadFont("Bitter:wght@400", "Bitter-Regular-400");
 
-// Inner content (defs + path) without the outer <svg> wrapper, so we can re-wrap
-// it in arbitrary viewBoxes.
+// The logo without its <svg> wrapper, to re-wrap in other viewBoxes.
 const inner = logoSvg.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 
 const round = (n) => Math.round(n * 100) / 100;
@@ -74,25 +67,22 @@ function renderPng(svg, widthPx) {
     .asPng();
 }
 
-// Real bounding box of the rendered feather.
 const probe = new Resvg(logoSvg, { background: "rgba(0,0,0,0)" });
 const bb = probe.getBBox();
 if (!bb) throw new Error("could not compute bbox");
 const { x, y, width: w, height: h } = bb;
 
-// --- Banner: canonical 1600x500 white card — feather on the left, the
-//     "featherdrop" wordmark (Bitter Italic, the app's wordmark style incl. its
-//     negative letter-spacing, filled with the logo's gold gradient) and a grey
-//     claim below it (house banner convention, as on BombVault). ---
+// The banner: the wordmark in the logo's gold with the app's negative letter
+// spacing, and a grey claim below.
 const BW = 1600;
 const BH = 500;
 const NAME = "featherdrop";
 const CLAIM = "Drop it like it's hot.";
-const CLAIM_FILL = "#5a5d5e"; // house claim grey (BombVault banner)
-// The app wordmark uses letterSpacing -1px at 32px → -0.03125 em.
+const CLAIM_FILL = "#5a5d5e"; // the house claim grey
+// The app wordmark uses -1px letter spacing at 32px.
 const NAME_SPACING = -0.031;
 
-const LH = 410; // feather height (by real bbox)
+const LH = 410; // feather height by its bounding box
 const s = LH / h;
 const logoW = w * s;
 let nameSize = 140;
@@ -104,7 +94,7 @@ const nameWidth = () =>
   bitterItalic.getAdvanceWidth(NAME, nameSize, { kerning: true, letterSpacing: NAME_SPACING });
 const claimWidth = () =>
   bitterRegular.getAdvanceWidth(CLAIM, claimSize, { kerning: true });
-// Keep the whole group inside the card with breathing room; shrink text if needed.
+// Shrinks the text until the group fits the card with some margin.
 while (logoW + gap + Math.max(nameWidth(), claimWidth()) > BW - 120 && nameSize > 80) {
   nameSize -= 4;
   claimSize = Math.max(30, claimSize - 1);
@@ -135,8 +125,8 @@ const bannerSvg =
   `<?xml version="1.0" encoding="UTF-8"?>\n` +
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BW} ${BH}" width="${BW}" height="${BH}" role="img" aria-label="featherdrop">\n` +
   `  <defs>\n` +
-  // Same gold ramp as the feather (fd-gold), respanned vertically across the
-  // wordmark's em box so the gradient runs top-light → bottom-dark on the text.
+  // The feather's gold ramp, spanned across the wordmark's em box so it runs
+  // light to dark from top to bottom.
   `    <linearGradient id="fd-gold-name" x1="0" y1="${round(nameBaseline - nameAsc)}" x2="0" y2="${round(nameBaseline + nameDesc)}" gradientUnits="userSpaceOnUse">\n` +
   `      <stop offset="0" stop-color="#E0B53A"/>\n` +
   `      <stop offset="0.5" stop-color="#D4AF37"/>\n` +
@@ -151,10 +141,9 @@ const bannerSvg =
 writeFileSync(new URL("featherdrop-banner.svg", ASSETS), bannerSvg);
 writeFileSync(new URL("featherdrop-banner.png", ASSETS), renderPng(bannerSvg, BW));
 
-// --- Icon: square, feather centered with 10% padding, 512x512, on a solid
-//     #121212 background so the Community Applications tile matches Unraid's dark
-//     theme (this PNG is the CA <Icon>; the favicon and in-app logo stay
-//     transparent/gradient and are unaffected). ---
+// The icon is the Community Applications <Icon>, so its #121212 background
+// matches Unraid's dark theme. The favicon and the in-app logo stay
+// transparent.
 const side = Math.max(w, h) * 1.2;
 const iconSvg = wrap(x - (side - w) / 2, y - (side - h) / 2, side, side);
 writeFileSync(
@@ -164,14 +153,11 @@ writeFileSync(
     .asPng(),
 );
 
-// --- Social card: 1200x630 dark "aurora" card with the medallion on the left
-//     and the wordmark + tagline on the right. Written to app/opengraph-image.png
-//     and copied into the webroot at build time, so a shared link renders a
-//     branded preview (kept generic — never the filename). Text uses a system
-//     serif; this card is rendered once and committed. ---
+// The link preview card is generic, never the file name. It uses a system
+// serif and is rendered once and committed.
 const OGW = 1600;
-const OGH = (OGW * 630) / 1200; // keep the 1.91:1 OG aspect, render at 2x
-const ogScale = (OGH * 0.58) / h; // medallion ~58% of card height
+const OGH = (OGW * 630) / 1200; // the 1.91:1 OG aspect
+const ogScale = (OGH * 0.58) / h;
 const ogLogoW = w * ogScale;
 const ogLeftPad = OGW * 0.075;
 const ogTx = ogLeftPad - x * ogScale;
