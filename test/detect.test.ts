@@ -38,6 +38,6 @@ test("ignores empty / malformed entries", () => {
 });
 
 test("prefers an exact region-specific match over a base fallback when both candidates exist", () => {
-  // pt-BR not supported, but pt is — region strips to base
+  // pt-BR is not supported, so the region falls back to pt.
   assert.equal(resolveLanguage(["pt-BR"], ["en", "pt"], FALLBACK), "pt");
 });

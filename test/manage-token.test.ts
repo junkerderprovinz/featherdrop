@@ -9,10 +9,6 @@ import {
   newManageToken,
 } from "../lib/manage-token";
 
-// ---------------------------------------------------------------------------
-// newManageToken — a fresh, well-formed 32-byte base64url token
-// ---------------------------------------------------------------------------
-
 test("newManageToken is a 43-char unpadded base64url string", () => {
   const tok = newManageToken();
   assert.equal(tok.length, 43, "32 bytes base64url-unpadded is 43 chars");
@@ -26,10 +22,6 @@ test("newManageToken returns a fresh value each call", () => {
   for (let i = 0; i < 100; i++) seen.add(newManageToken());
   assert.equal(seen.size, 100, "all 100 tokens must be distinct");
 });
-
-// ---------------------------------------------------------------------------
-// hashManageToken — base64url(SHA-256(token)), one-way and stable
-// ---------------------------------------------------------------------------
 
 test("hashManageToken is base64url(SHA-256(token))", () => {
   const tok = newManageToken();
@@ -50,10 +42,6 @@ test("the hash is not the raw token (server stores only the hash)", () => {
   assert.notEqual(hashManageToken(tok), tok);
 });
 
-// ---------------------------------------------------------------------------
-// isValidManageToken / isValidManageTokenHash — shape checks
-// ---------------------------------------------------------------------------
-
 test("isValidManageToken accepts a 43-char base64url string", () => {
   assert.equal(isValidManageToken("Aa0-_".repeat(8) + "Aa0"), true);
 });
@@ -73,10 +61,6 @@ test("isValidManageTokenHash accepts a 43-char base64url string", () => {
   assert.equal(isValidManageTokenHash("A".repeat(42)), false);
 });
 
-// ---------------------------------------------------------------------------
-// manageTokenMatches — constant-time check of raw token vs stored hash
-// ---------------------------------------------------------------------------
-
 test("manageTokenMatches accepts the token whose hash was stored", () => {
   const tok = newManageToken();
   const stored = hashManageToken(tok);
@@ -88,7 +72,7 @@ test("manageTokenMatches rejects a different token", () => {
   assert.equal(manageTokenMatches(newManageToken(), stored), false);
 });
 
-test("manageTokenMatches rejects a NULL/empty stored hash (legacy share)", () => {
+test("manageTokenMatches rejects a null or empty stored hash", () => {
   const tok = newManageToken();
   assert.equal(manageTokenMatches(tok, null), false, "legacy null hash");
   assert.equal(manageTokenMatches(tok, ""), false, "empty hash");
@@ -102,8 +86,8 @@ test("manageTokenMatches rejects a missing/empty provided token", () => {
 
 test("manageTokenMatches does not throw on a length mismatch", () => {
   const stored = hashManageToken(newManageToken());
-  // The provided value hashes to 43 chars regardless, but feed a stored hash of
-  // the wrong length to exercise the dummy-compare branch (no throw, returns false).
+  // The provided token always hashes to 43 characters, so the stored hash
+  // carries the wrong length.
   assert.equal(manageTokenMatches(newManageToken(), "A".repeat(10)), false);
   assert.equal(manageTokenMatches(newManageToken(), "A".repeat(80)), false);
 });

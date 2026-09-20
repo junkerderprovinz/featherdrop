@@ -2,9 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { copyText } from "../lib/clipboard";
 
-// The bug: on plain-HTTP LAN access (e.g. http://192.168.x.x:3000) the page is
-// not a secure context, so navigator.clipboard is undefined and the modern copy
-// silently fails. copyText must fall back to a legacy execCommand path.
+// Over plain HTTP, such as http://192.168.x.x:3000, navigator.clipboard is
+// undefined, so copyText has to fall back to execCommand.
 
 test("uses the modern clipboard API when available (secure context)", async () => {
   let written: string | undefined;

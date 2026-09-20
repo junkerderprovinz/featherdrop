@@ -2,10 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { filesFromDropEvent } from "../lib/dropped-files";
 
-// Guards the fix for #4: the drop path must read dataTransfer.files directly and
-// never touch the DataTransferItemList / webkitGetAsEntry() path that crashes
-// Chromium (RESULT_CODE_KILLED_BAD_MESSAGE). The file picker (target.files) must
-// keep working through the same helper.
+// A drop reads dataTransfer.files and never the webkitGetAsEntry() path that
+// crashes Chromium (#4); the picker's target.files goes through the same helper.
 const mk = (name: string) => new File(["x"], name, { type: "text/plain" });
 
 test("reads files from a drag-and-drop event (dataTransfer.files)", () => {

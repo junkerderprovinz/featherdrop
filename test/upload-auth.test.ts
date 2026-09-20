@@ -4,22 +4,13 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
-// lib/upload-auth imports lib/config, which reads UPLOAD_PASSWORD from
-// process.env at IMPORT time. The env value therefore binds to the module graph
-// once per process and can't be toggled by a query-string cache-bust (the bust
-// would not re-evaluate the statically-imported config). So:
-//   - the constant-time helper `uploadTokenMatches` is pure (no env) → tested
-//     directly in this process;
-//   - the env-driven gate `isUploadAuthorized` is exercised in a child process
-//     per scenario, with UPLOAD_PASSWORD set/unset before import. This mirrors
-//     the env-before-import pattern used by finalize-route.test.ts.
+// lib/config reads UPLOAD_PASSWORD at import time, so the value is fixed once
+// per process. uploadTokenMatches needs no environment and runs here; each
+// isUploadAuthorized scenario runs in a child process with its own environment.
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "..");
 
-/**
- * Evaluate `isUploadAuthorized(<token>)` in a fresh process with a given
- * UPLOAD_PASSWORD env, returning the boolean it produced.
- */
+/** Runs isUploadAuthorized(<token>) in a fresh process with the given password. */
 function authInChild(
   uploadPassword: string | undefined,
   tokenLiteral: string,
@@ -39,10 +30,6 @@ function authInChild(
   return out.trim() === "true";
 }
 
-// ---------------------------------------------------------------------------
-// uploadTokenMatches — the constant-time comparison (pure, env-independent)
-// ---------------------------------------------------------------------------
-
 const { uploadTokenMatches, UPLOAD_TOKEN_HEADER } = await import(
   "../lib/upload-auth"
 );
@@ -56,8 +43,7 @@ test("uploadTokenMatches rejects a same-length different value", () => {
 });
 
 test("uploadTokenMatches rejects on length mismatch without throwing", () => {
-  // timingSafeEqual throws on unequal lengths; the helper must burn a dummy
-  // comparison and return false (no exception, no early length shortcut).
+  // timingSafeEqual throws on unequal lengths.
   assert.equal(uploadTokenMatches("", "secret"), false);
   assert.equal(uploadTokenMatches("se", "secret"), false);
   assert.equal(uploadTokenMatches("secretsecret", "secret"), false);
@@ -71,17 +57,13 @@ test("UPLOAD_TOKEN_HEADER is the documented header name", () => {
   assert.equal(UPLOAD_TOKEN_HEADER, "x-fd-upload-token");
 });
 
-// ---------------------------------------------------------------------------
-// isUploadAuthorized — the request gate (env-driven, per-process)
-// ---------------------------------------------------------------------------
-
-test("isUploadAuthorized is OPEN when UPLOAD_PASSWORD is unset (no regression)", () => {
+test("isUploadAuthorized is open when UPLOAD_PASSWORD is unset", () => {
   assert.equal(authInChild(undefined, "undefined"), true, "no header → allowed");
   assert.equal(authInChild(undefined, '"anything"'), true, "any header → allowed");
   assert.equal(authInChild(undefined, '""'), true, "empty header → allowed");
 });
 
-test("isUploadAuthorized is OPEN when UPLOAD_PASSWORD is empty string", () => {
+test("isUploadAuthorized is open when UPLOAD_PASSWORD is empty", () => {
   assert.equal(authInChild("", "undefined"), true);
   assert.equal(authInChild("", '"whatever"'), true);
 });
@@ -94,8 +76,7 @@ test("isUploadAuthorized requires the matching token when protected", () => {
 });
 
 test("isUploadAuthorized rejects array header values when protected", () => {
-  // Node can deliver a repeated header as string[]; only a single matching
-  // string may pass.
+  // Node delivers a repeated header as string[].
   assert.equal(authInChild("topsecret", '["topsecret"]'), false);
   assert.equal(authInChild("topsecret", '["topsecret","topsecret"]'), false);
 });

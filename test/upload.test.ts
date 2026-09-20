@@ -2,12 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { isUploadComplete } from "../lib/upload";
 
-// The tus file-store sidecar keeps `offset` frozen at 0 (it tracks progress via
-// the live file size, not the sidecar), so completeness must be judged from the
-// ACTUAL bytes on disk vs the declared total — never the sidecar offset.
+// The tus file store leaves the sidecar offset at 0, so completeness is judged
+// by the bytes on disk against the declared total.
 
 test("a fully received upload is complete (actual == declared)", () => {
-  // The regression: a complete 3100-byte upload must NOT be rejected.
   assert.equal(isUploadComplete(3100, 3100), true);
 });
 

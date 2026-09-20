@@ -42,7 +42,6 @@ test("enc_meta does not leak the filename in cleartext", () => {
   assert.ok(!hay.includes("secret-name"));
 });
 
-// helpers
 async function* one(bytes: Uint8Array) {
   yield bytes;
 }
@@ -81,8 +80,7 @@ test("decrypt with the wrong key throws", async () => {
 });
 
 test("decrypt multi-frame ciphertext with the wrong key throws (no undefined chunks)", async () => {
-  // > 1 frame, so the while-loop pull path is exercised: a wrong key must throw,
-  // never yield an undefined chunk before the final-frame check.
+  // More than one frame, so the loop's pull fails before the final-frame check.
   const cipher = await collect(encryptChunks(one(bytes(PT_CHUNK * 2 + 10)), generateKey()));
   await assert.rejects(() => collect(decryptChunks(one(cipher), generateKey())));
 });
@@ -96,9 +94,9 @@ test("a flipped ciphertext byte throws", async () => {
 
 test("truncation (missing final frame) throws", async () => {
   const key = generateKey();
-  // 2 full chunks + a final → drop the last (final) frame entirely
   const cipher = await collect(encryptChunks(one(bytes(PT_CHUNK * 2 + 10)), key));
-  const truncated = cipher.subarray(0, 24 + (PT_CHUNK + 17) * 2); // header + 2 full frames, no final
+  // The header and two full frames, without the final one.
+  const truncated = cipher.subarray(0, 24 + (PT_CHUNK + 17) * 2);
   await assert.rejects(() => collect(decryptChunks(one(truncated), key)));
 });
 
@@ -128,12 +126,7 @@ test("wrapped key does not contain the bare key", () => {
   assert.ok(!hay.includes(new TextDecoder("latin1").decode(key)));
 });
 
-// ---------------------------------------------------------------------------
-// computeKeyVerifier — download-authorization proof (base64url(SHA-256(K)))
-// ---------------------------------------------------------------------------
-
 test("computeKeyVerifier: deterministic vector for the all-zero key", () => {
-  // SHA-256 of 32 zero bytes, base64url without padding (43 chars).
   const v = computeKeyVerifier(new Uint8Array(32));
   assert.equal(v, "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU");
   assert.equal(v.length, 43);
@@ -163,7 +156,6 @@ test("computeKeyVerifier: different keys give different verifiers", () => {
 });
 
 test("the verifier does not reveal the key (one-way)", () => {
-  // Trivial sanity: the verifier string must not embed the key bytes.
   const key = generateKey();
   const v = computeKeyVerifier(key);
   assert.ok(!v.includes(encodeKey(key).slice(0, 8)));

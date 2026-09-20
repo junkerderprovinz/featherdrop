@@ -1,8 +1,6 @@
-// Browser test for the upload-download orchestration modules.
-// Bundles lib/e2e/upload-flow.ts + lib/e2e/download-flow.ts together as ESM,
-// serves from localhost (OPFS + crypto need a secure context), and runs real
-// encrypt→upload→download→decrypt round-trips in Chromium via Playwright.
-// Exit 0 = pass, 1 = fail.
+// Browser test for the upload and download flows: real encrypt, upload,
+// download and decrypt round trips in Chromium, served from localhost because
+// OPFS needs a secure context.
 import { createServer } from "node:http";
 import { build } from "esbuild";
 import { chromium } from "playwright";
@@ -12,10 +10,8 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..", "..");
 
-// ── Bundle both flow modules as an ESM (required: libsodium uses top-level
-//    await which is incompatible with the IIFE format). ─────────────────────
-// We need the functions accessible from page.evaluate; the trick is to inject
-// them as an ESM module and expose via globalThis inside the module body.
+// ESM rather than IIFE, because libsodium uses top-level await. The module puts
+// the functions on globalThis for page.evaluate.
 const entryCode = `
 import { uploadEncrypted } from "./lib/e2e/upload-flow.ts";
 import { downloadDecrypted } from "./lib/e2e/download-flow.ts";
@@ -35,7 +31,6 @@ const bundleResult = await build({
 });
 const clientBundle = bundleResult.outputFiles[0].text;
 
-// ── Minimal HTTP server ──────────────────────────────────────────────────────
 const HTML = `<!doctype html><html><head><meta charset="utf-8"></head><body>flow test</body></html>`;
 const server = createServer((req, res) => {
   if (req.url === "/bundle.mjs") {
@@ -50,7 +45,6 @@ await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const { port } = server.address();
 console.log(`Test server at http://127.0.0.1:${port}/`);
 
-// ── Playwright ───────────────────────────────────────────────────────────────
 const browser = await chromium.launch();
 const page = await browser.newPage();
 const pageErrors = [];
@@ -60,25 +54,21 @@ page.on("console", (m) => consoleMsgs.push(`[${m.type()}] ${m.text()}`));
 
 await page.goto(`http://127.0.0.1:${port}/`);
 
-// Inject ESM bundle via <script type="module"> tag and wait for it to assign
-// globalThis.__FlowModules before we run the page.evaluate below.
 await page.addScriptTag({
   url: `/bundle.mjs`,
   type: "module",
 });
 
-// Wait until the module has finished initialising (libsodium WASM loads async).
+// The libsodium WASM loads asynchronously.
 await page.waitForFunction(() => typeof globalThis.__FlowModules !== "undefined", {
   timeout: 30_000,
 });
 
-// ── Run tests inside the page ─────────────────────────────────────────────────
 const result = await page.evaluate(async () => {
   const { uploadEncrypted, downloadDecrypted } = globalThis.__FlowModules;
 
-  // ── Pattern helpers ────────────────────────────────────────────────────────
   const CHUNK = 64 * 1024;
-  const FRAMES = 32; // 2 MiB
+  const FRAMES = 32;
 
   function makePattern(seed = 0) {
     const buf = new Uint8Array(CHUNK * FRAMES);
@@ -94,7 +84,6 @@ const result = await page.evaluate(async () => {
     return null;
   }
 
-  /** Collect a ReadableStream into a Uint8Array. */
   async function collectStream(rs) {
     const reader = rs.getReader();
     const parts = [];
@@ -111,9 +100,8 @@ const result = await page.evaluate(async () => {
     return out;
   }
 
-  // ── In-memory fake server store ────────────────────────────────────────────
-  // upload() reads the File into memory; finalize() hands back a slug.
-  // The download side reads directly from the store.
+  // A fake server: upload() keeps the file in memory, finalize() hands back a
+  // slug, and downloads read from the store.
   const blobStore = new Map(); // uploadId -> Uint8Array
   const metaStore = new Map(); // slug -> finalizeBody
 
@@ -143,7 +131,6 @@ const result = await page.evaluate(async () => {
     if (!bytes) throw new Error("No blob for " + uploadId);
     return new ReadableStream({
       start(controller) {
-        // Serve in 64 KiB chunks to exercise the stream path.
         let offset = 0;
         function pump() {
           if (offset >= bytes.length) { controller.close(); return; }
@@ -157,7 +144,6 @@ const result = await page.evaluate(async () => {
     });
   }
 
-  // ── Helper: base64 decode (atob → Uint8Array) ──────────────────────────────
   function b64decode(s) {
     const bin = atob(s);
     const out = new Uint8Array(bin.length);
@@ -167,9 +153,7 @@ const result = await page.evaluate(async () => {
 
   const failures = [];
 
-  // ========================================================================
-  // Test 1: LINK MODE round-trip (2 MiB)
-  // ========================================================================
+  // Link mode round trip.
   try {
     const original = makePattern(0);
     const file = new File([original], "My Photo.png", { type: "image/png" });
@@ -183,7 +167,6 @@ const result = await page.evaluate(async () => {
       (phase, frac) => phases.push({ phase, frac }),
     );
 
-    // shareUrl must contain #k=
     const hashIdx = shareUrl.indexOf("#k=");
     if (hashIdx === -1) {
       failures.push("link mode: shareUrl missing #k= fragment: " + shareUrl);
@@ -192,7 +175,6 @@ const result = await page.evaluate(async () => {
       const slug = shareUrl.slice("https://x/d/".length, hashIdx);
       const body = metaStore.get(slug);
 
-      // finalize body must carry the key verifier (43-char base64url).
       if (!/^[A-Za-z0-9_-]{43}$/.test(body.keyVerifier || "")) {
         failures.push("link mode: finalize body missing/invalid keyVerifier: " + body.keyVerifier);
       }
@@ -212,8 +194,7 @@ const result = await page.evaluate(async () => {
         },
       );
 
-      // The proof sent on download must equal what finalize stored — otherwise
-      // the real server would 401 before counting the download.
+      // Anything other than what finalize stored gets a 401.
       if (sentVerifier !== body.keyVerifier) {
         failures.push(`link mode: download verifier ${sentVerifier} != finalize keyVerifier ${body.keyVerifier}`);
       }
@@ -230,7 +211,6 @@ const result = await page.evaluate(async () => {
       const mismatch = patternsEqual(original, recoveredBytes);
       if (mismatch) failures.push("link mode: byte mismatch: " + mismatch);
 
-      // Phases sanity
       const hasEncrypt = phases.some((p) => p.phase === "encrypting");
       const hasUpload = phases.some((p) => p.phase === "uploading");
       if (!hasEncrypt) failures.push("link mode: no encrypting phase reported");
@@ -240,9 +220,7 @@ const result = await page.evaluate(async () => {
     failures.push("link mode threw: " + String(err) + "\n" + (err && err.stack ? err.stack : ""));
   }
 
-  // ========================================================================
-  // Test 2: PASSWORD MODE round-trip (2 MiB)
-  // ========================================================================
+  // Password mode round trip.
   let passwordSlug;
   let passwordUploadId;
   try {
@@ -256,9 +234,8 @@ const result = await page.evaluate(async () => {
       deps,
     );
 
-    // Password mode: NO #k= in the URL
     if (shareUrl.includes("#k=")) {
-      failures.push("password mode: shareUrl must NOT contain #k=: " + shareUrl);
+      failures.push("password mode: shareUrl must not contain #k=: " + shareUrl);
     }
 
     const slug = shareUrl.slice("https://x/d/".length);
@@ -266,7 +243,6 @@ const result = await page.evaluate(async () => {
     const body = metaStore.get(slug);
     passwordUploadId = body.uploadId;
 
-    // finalize body must carry wrappedKey + kdfSalt + keyVerifier
     if (!body.wrappedKey) failures.push("password mode: finalize body missing wrappedKey");
     if (!body.kdfSalt) failures.push("password mode: finalize body missing kdfSalt");
     if (body.format !== 2) failures.push("password mode: format must be 2, got " + body.format);
@@ -309,9 +285,7 @@ const result = await page.evaluate(async () => {
     failures.push("password mode threw: " + String(err) + "\n" + (err && err.stack ? err.stack : ""));
   }
 
-  // ========================================================================
-  // Test 3: WRONG PASSWORD rejects
-  // ========================================================================
+  // A wrong password rejects.
   try {
     if (passwordSlug && passwordUploadId) {
       const body = metaStore.get(passwordSlug);
@@ -338,9 +312,7 @@ const result = await page.evaluate(async () => {
     failures.push("wrong password check threw unexpectedly: " + String(err));
   }
 
-  // ========================================================================
-  // Test 4: maxDownloads: null preserved in finalize body
-  // ========================================================================
+  // maxDownloads: null reaches the finalize body.
   try {
     const file = new File([new Uint8Array(100)], "tiny.bin", { type: "application/octet-stream" });
     const deps = makeDeps();

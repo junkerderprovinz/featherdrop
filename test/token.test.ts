@@ -18,15 +18,14 @@ test("tokenMatches rejects a missing cookie", () => {
   assert.equal(tokenMatches("", HASH), false);
 });
 
-test("tokenMatches rejects an arbitrary forged value (the bypass)", () => {
-  // The vulnerability was authorizing on presence alone: any non-empty cookie
-  // passed. A forged value must be rejected.
+test("tokenMatches rejects an arbitrary forged value", () => {
+  // The presence of a cookie alone must not authorize.
   assert.equal(tokenMatches("x", HASH), false);
   assert.equal(tokenMatches("1", HASH), false);
   assert.equal(tokenMatches("anything", HASH), false);
 });
 
-test("tokenMatches rejects the public slug (the original forgery vector)", () => {
+test("tokenMatches rejects the public slug", () => {
   assert.equal(tokenMatches("k7Mx9qT2", HASH), false);
 });
 

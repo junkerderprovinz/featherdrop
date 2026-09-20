@@ -17,10 +17,10 @@ test("a finite cap cuts the list after the cap (and drops 'never')", () => {
 });
 
 test("clampExpiry keeps allowed values and clamps the rest to the cap", () => {
-  assert.equal(clampExpiry("6h", "1d"), "6h"); // allowed → unchanged
-  assert.equal(clampExpiry("30d", "1d"), "1d"); // over cap → the cap
-  assert.equal(clampExpiry("never", "7d"), "7d"); // never under a finite cap → the cap
-  assert.equal(clampExpiry("never", ""), "never"); // no cap → never stays
-  assert.equal(clampExpiry("bogus", "1d"), "1d"); // invalid wanted → the cap
-  assert.equal(clampExpiry("bogus", ""), "30d"); // invalid, no cap → longest finite
+  assert.equal(clampExpiry("6h", "1d"), "6h");
+  assert.equal(clampExpiry("30d", "1d"), "1d");
+  assert.equal(clampExpiry("never", "7d"), "7d");
+  assert.equal(clampExpiry("never", ""), "never");
+  assert.equal(clampExpiry("bogus", "1d"), "1d");
+  assert.equal(clampExpiry("bogus", ""), "30d"); // the longest finite option
 });

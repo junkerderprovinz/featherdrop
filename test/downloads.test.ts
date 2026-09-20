@@ -2,9 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { downloadsLeft, isExhausted, parseMaxDownloads } from "../lib/downloads";
 
-// Optional download limit / burn-after-download. max_downloads is null for
-// "unlimited"; a positive integer caps the number of downloads, after which the
-// file + its row are deleted (the atomic part lives in server/db.ts).
+// max_downloads is null for unlimited; otherwise the share is deleted after
+// that many downloads.
 
 test("downloadsLeft: null max means unlimited", () => {
   assert.equal(downloadsLeft(5, null), null);

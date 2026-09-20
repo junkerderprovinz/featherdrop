@@ -100,12 +100,11 @@ test("downloadDecrypted (password mode) sends the same verifier the upload store
     },
   );
 
-  // The downloader's proof must equal what finalize stored — or the server's
-  // constant-time compare would 401 the request.
+  // Anything other than what finalize stored gets a 401.
   assert.equal(seenVerifier, keyVerifier);
 });
 
-test("a wrong password rejects BEFORE fetchBlob is ever called", async () => {
+test("a wrong password rejects before fetchBlob is called", async () => {
   const { blob, wrapped } = await encryptForUpload(one(bytes(500)), META, {
     password: "right",
   });

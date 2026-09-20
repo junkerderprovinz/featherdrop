@@ -2,10 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildShareUrl } from "../lib/share-url";
 
-// Share links must use the operator's configured BASE_URL when set (behind a
-// reverse proxy / custom domain), regardless of how the uploader reached the
-// page (internal IP, DNS name, tailnet address). When BASE_URL is empty the
-// link falls back to the browser's current origin.
+// BASE_URL wins over however the uploader reached the page; without it the
+// link uses the browser's origin.
 
 test("uses BASE_URL when set, ignoring the browser origin", () => {
   assert.equal(

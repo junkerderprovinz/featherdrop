@@ -20,7 +20,6 @@ test("falls back to the header when there is no cookie", () => {
 });
 
 test("an unsupported cookie does not block a supported header language", () => {
-  // cookie "xx" is unsupported -> skipped, header de wins
   assert.equal(pickLanguage("xx", "de", SUPPORTED, FALLBACK), "de");
 });
 

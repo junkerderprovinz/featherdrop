@@ -1,11 +1,6 @@
-// Unit tests for the streaming large-video preview's range-slicing core.
-//
-// The browser plumbing (service worker, MessagePort, <video>) can only be
-// exercised in a real browser/CI. What IS pure and load-bearing is sliceRange():
-// given the SEQUENTIAL decrypted plaintext stream, it must hand back EXACTLY the
-// bytes for an inclusive [start, end] byte range, without buffering. These tests
-// drive it through the REAL zero-knowledge encrypt → decrypt pipeline so a
-// regression in either the crypto framing or the slice math is caught.
+// The service worker, MessagePort and <video> plumbing needs a real browser;
+// these tests cover the range math, partly through the real encrypt and
+// decrypt pipeline so a change in the framing shows up too.
 
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
@@ -29,9 +24,7 @@ async function* one(b: Uint8Array) {
   yield b;
 }
 
-// Re-chunk a byte array into many small async chunks so sliceRange has to handle
-// arbitrary chunk boundaries (the real decrypt stream emits PT_CHUNK-sized frames,
-// but the slice math must not depend on any particular chunking).
+// The slice math must not depend on the PT_CHUNK framing of the real stream.
 async function* inChunks(data: Uint8Array, chunk: number): AsyncGenerator<Uint8Array> {
   for (let i = 0; i < data.length; i += chunk) {
     yield data.subarray(i, Math.min(i + chunk, data.length));
@@ -59,8 +52,6 @@ function bytes(n: number): Uint8Array {
 }
 
 const META = { name: "clip.mp4", type: "video/mp4" };
-
-// ── sliceRange over a plain (already-plaintext) source ──────────────────────
 
 test("sliceRange returns the whole file for [0, size-1]", async () => {
   const data = bytes(10_000);
@@ -94,7 +85,6 @@ test("sliceRange handles a suffix range (tail of the file)", async () => {
 
 test("sliceRange is robust to chunk boundaries straddling start/end", async () => {
   const data = bytes(8192);
-  // Many different chunk sizes — the window must come out identical each time.
   for (const cs of [1, 7, 64, 100, 999, 4096, 8192]) {
     const start = 1000;
     const end = 6000;
@@ -112,23 +102,19 @@ test("sliceRange stops early and does not over-read the source", async () => {
       yield data.subarray(i, Math.min(i + 100, data.length));
     }
   }
-  // Want only the first 250 bytes — should stop after ~3 chunks, not drain all 100.
+  // 250 bytes need three chunks, not all hundred.
   const out = await collect(sliceRange(counting(), 0, 249));
   assert.deepEqual(out, data.subarray(0, 250));
   assert.ok(pulled <= 4, `expected an early stop, but pulled ${pulled} chunks`);
 });
 
-// ── sliceRange over the REAL decrypted zero-knowledge stream ────────────────
-
 test("sliceRange over a real decrypted video stream yields exact range bytes", async () => {
-  // A payload spanning several 64 KiB secretstream frames.
   const data = bytes(PT_CHUNK * 3 + 1234);
   const { blob, keyForUrl } = await encryptForUpload(one(data), META);
   const cipher = await collect(blob);
 
   const key = await deriveContentKey({ keyFromUrl: keyForUrl });
 
-  // Several ranges, including ones crossing frame boundaries and the final frame.
   const ranges: [number, number][] = [
     [0, data.length - 1], // whole file
     [0, 0], // first byte
@@ -138,7 +124,7 @@ test("sliceRange over a real decrypted video stream yields exact range bytes", a
   ];
 
   for (const [start, end] of ranges) {
-    // Each range re-decrypts from 0 (the accepted sequential-cipher limitation).
+    // cf=1 is sequential, so each range decrypts from 0.
     const { plaintext } = await decryptWithKey(one(cipher), key);
     const out = await collect(sliceRange(plaintext, start, end));
     assert.deepEqual(
@@ -150,7 +136,7 @@ test("sliceRange over a real decrypted video stream yields exact range bytes", a
 });
 
 test("concatenating sequential ranges reconstructs the whole file", async () => {
-  // Simulate a player pulling the file in successive Range requests.
+  // Like a player pulling the file in successive Range requests.
   const data = bytes(PT_CHUNK * 2 + 4096);
   const { blob, keyForUrl } = await encryptForUpload(one(data), META);
   const cipher = await collect(blob);
@@ -176,8 +162,6 @@ test("concatenating sequential ranges reconstructs the whole file", async () => 
   assert.deepEqual(total, data);
 });
 
-// ── C1: plaintext size embedded in the encrypted FileMeta round-trips ────────
-
 test("FileMeta.size (plaintext length) round-trips through encrypt → decrypt", async () => {
   const data = bytes(PT_CHUNK + 4242);
   const meta = { name: "clip.mp4", type: "video/mp4", size: data.length };
@@ -188,9 +172,7 @@ test("FileMeta.size (plaintext length) round-trips through encrypt → decrypt",
   assert.equal(out.name, "clip.mp4");
   assert.equal(out.type, "video/mp4");
   assert.equal(out.size, data.length, "plaintext size must survive the round trip");
-  // And it stays INSIDE the ciphertext (zero-knowledge): the number must not be
-  // recoverable from the opaque blob bytes. (A loose check: the little-endian /
-  // ASCII forms of the size should not appear verbatim in the ciphertext.)
+  // A loose check that the size stays inside the ciphertext.
   const hay = new TextDecoder("latin1").decode(cipher);
   assert.ok(!hay.includes(String(data.length)), "plaintext size leaked into blob");
 });
@@ -207,15 +189,11 @@ test("FileMeta without size still decrypts (older shares omit it)", async () => 
   assert.equal(meta.size, undefined, "absent size must stay undefined (fallback path)");
 });
 
-// ── M3: ciphertext-prefix bound for the per-range fetch ─────────────────────
-
 test("cipherPrefixEnd: a near-start range fetches only a small prefix", () => {
-  const plaintextSize = 200 * 1024 * 1024; // 200 MB video
-  const ciphertextSize = plaintextSize + 60_000; // ~crypto overhead
-  // Want plaintext [0, 1000] — frame 0 only.
+  const plaintextSize = 200 * 1024 * 1024;
+  const ciphertextSize = plaintextSize + 60_000;
   const end = cipherPrefixEnd(1000, plaintextSize, ciphertextSize);
   assert.notEqual(end, null, "a non-tail range must use a bounded prefix");
-  // The bound must cover at least frame 0's ciphertext, and be far below the file.
   assert.ok((end as number) >= PT_CHUNK, "must cover at least the first frame");
   assert.ok(
     (end as number) < ciphertextSize / 2,
@@ -226,8 +204,6 @@ test("cipherPrefixEnd: a near-start range fetches only a small prefix", () => {
 test("cipherPrefixEnd: a tail range returns null (fetch through EOF for TAG_FINAL)", () => {
   const plaintextSize = 200 * 1024 * 1024;
   const ciphertextSize = plaintextSize + 60_000;
-  // A range in the LAST plaintext frame must fetch the whole ciphertext so the
-  // final TAG_FINAL frame is present.
   const end = cipherPrefixEnd(plaintextSize - 1, plaintextSize, ciphertextSize);
   assert.equal(end, null, "tail range must fetch through EOF");
 });
@@ -241,10 +217,7 @@ test("cipherPrefixEnd: a mid-file range grows monotonically with offset", () => 
   assert.ok((b as number) > (a as number), "later offset must need a longer prefix");
 });
 
-// The prefix bound must be CORRECT: fetching exactly cipherPrefixEnd ciphertext
-// bytes and decrypting must yield at least through the requested plaintext `end`.
 test("cipherPrefixEnd prefix is sufficient to decrypt the requested range", async () => {
-  // A multi-frame payload; request a non-tail range and decrypt only the prefix.
   const data = bytes(PT_CHUNK * 8 + 777);
   const meta = { name: "v.mp4", type: "video/mp4", size: data.length };
   const { blob, keyForUrl } = await encryptForUpload(one(data), meta);
@@ -252,10 +225,9 @@ test("cipherPrefixEnd prefix is sufficient to decrypt the requested range", asyn
   const key = await deriveContentKey({ keyFromUrl: keyForUrl });
 
   const start = PT_CHUNK * 2;
-  const end = PT_CHUNK * 3 + 100; // safely NOT in the last frame
+  const end = PT_CHUNK * 3 + 100; // well before the last frame
   const cEnd = cipherPrefixEnd(end, data.length, cipher.length);
   assert.notEqual(cEnd, null, "this mid-file range should use a bounded prefix");
-  // Slice the ciphertext to the computed prefix and decrypt only that.
   const prefix = cipher.subarray(0, (cEnd as number) + 1);
   const { plaintext } = await decryptWithKey(one(prefix), key);
   const out = await collect(sliceRange(plaintext, start, end));
@@ -266,16 +238,14 @@ test("cipherPrefixEnd prefix is sufficient to decrypt the requested range", asyn
   );
 });
 
-// ── cf=2 SEEKABLE preview: plaintext→absolute-ciphertext byte mapping ─────────
-
 const VIDEO_META = { name: "clip.mp4", type: "video/mp4" };
 
 test("seekCipherByteRange maps plaintext→absolute blob bytes (offset + chunk math)", () => {
   const size = PT_CHUNK * 5 + 1234;
-  const contentOffset = 137; // arbitrary [varint(metaLen)][enc_meta] length
+  const contentOffset = 137; // any header length
   const cipherLen = cipherLengthForSize(size);
 
-  // A range fully inside chunk 2 → only chunk 2's cipher bytes, shifted by offset.
+  // A range inside chunk 2 maps to chunk 2's bytes shifted by the offset.
   const r = seekCipherByteRange(PT_CHUNK * 2 + 10, PT_CHUNK * 2 + 50, size, contentOffset);
   assert.ok(r);
   const { first, last } = chunksForPlaintextRange(PT_CHUNK * 2 + 10, PT_CHUNK * 2 + 50);
@@ -284,20 +254,17 @@ test("seekCipherByteRange maps plaintext→absolute blob bytes (offset + chunk m
   assert.equal(r!.start, contentOffset + chunkByteRange(2).start);
   assert.equal(r!.end, contentOffset + chunkByteRange(2).end);
 
-  // A tail range is clamped to the (short) final chunk's real end, never past EOF.
+  // A tail range ends at the short final chunk's real end.
   const tail = seekCipherByteRange(size - 5, size - 1, size, contentOffset);
   assert.ok(tail);
   assert.equal(tail!.end, contentOffset + cipherLen - 1, "tail clamps to cipher EOF");
 
-  // Empty / inverted ranges fetch nothing.
   assert.equal(seekCipherByteRange(0, -1, size, contentOffset), null);
   assert.equal(seekCipherByteRange(0, 0, 0, contentOffset), null);
 });
 
-// The full cf=2 preview pipe, minus the network: take a cf=2 blob, learn its
-// content offset from the header, and prove that decrypting ONLY the covering
-// chunks' bytes (as the SW factory would Range-fetch them) yields exact plaintext
-// AND that the fetched span lies within the covering chunks (not the whole file).
+// The cf=2 preview path without the network: the content offset comes from the
+// header, and only the covering chunks are fetched.
 test("cf=2 preview: a covering-chunk fetch yields exact plaintext, fetching only those bytes", async () => {
   const data = bytes(PT_CHUNK * 6 + 777);
   const meta = { ...VIDEO_META, size: data.length };
@@ -307,23 +274,20 @@ test("cf=2 preview: a covering-chunk fetch yields exact plaintext, fetching only
   const cipher = await collect(blob);
   const key = await deriveContentKey({ keyFromUrl: keyForUrl });
 
-  // The download mount reads the header from a prefix to get the content offset.
   const { contentOffset } = peekBlobHeader(cipher);
   const { meta: dec } = await decryptWithKey(one(cipher), key);
   assert.equal(dec.cf, 2);
   const baseNonce = fromBase64(dec.baseNonce!);
   const size = dec.size!;
 
-  // Record every ABSOLUTE byte span the factory would Range-fetch. The injected
-  // fetch is given CONTENT-relative spans; we translate via contentOffset exactly
-  // like makeFormat2SeekRangeFactory does in the browser.
+  // Records the absolute spans, translated as makeFormat2SeekRangeFactory does.
   const absoluteFetched: [number, number][] = [];
   const fetchCipherRange = async (cStart: number, cEnd: number): Promise<Uint8Array> => {
     absoluteFetched.push([contentOffset + cStart, contentOffset + cEnd]);
     return cipher.subarray(contentOffset + cStart, contentOffset + cEnd + 1);
   };
 
-  // A range living entirely in chunk 3.
+  // A range inside chunk 3.
   const start = PT_CHUNK * 3 + 100;
   const end = PT_CHUNK * 3 + 4000;
   const out = await collect(
@@ -331,8 +295,6 @@ test("cf=2 preview: a covering-chunk fetch yields exact plaintext, fetching only
   );
   assert.deepEqual(out, data.subarray(start, end + 1), "exact plaintext for the range");
 
-  // Only chunk 3's bytes were fetched — and they map to absolute blob offsets via
-  // contentOffset. Assert the fetched ciphertext span is exactly chunk 3's.
   const expected = seekCipherByteRange(start, end, size, contentOffset);
   assert.ok(expected);
   assert.equal(absoluteFetched.length, 1, "one covering fetch");

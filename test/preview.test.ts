@@ -6,12 +6,10 @@ import {
   previewKind,
 } from "../lib/preview";
 
-// Only INERTLY-renderable types may be previewed. The CLIENT decrypts to a blob:
-// URL rendered in an inert element (<img>/<video>/<audio>/<embed>/<pre>), so it
-// can also safely preview SVG via <img> (no scripts run there). The SERVER inline
-// route is rendered as a top-level document, so it uses the STRICTER
-// isServerInlineMime, which excludes SVG. HTML and unknown types are never
-// previewable on either surface.
+// The client renders previews in inert elements and can show SVG through an
+// <img>. A server inline response renders as a top-level document, so
+// isServerInlineMime also excludes SVG. HTML and unknown types preview on
+// neither.
 
 test("inert raster images and PDF are previewable", () => {
   for (const m of [
@@ -82,16 +80,14 @@ test("text/code types are previewable", () => {
   }
 });
 
-test("SVG is client-previewable ONLY because we render it via <img> (no scripts)", () => {
-  // image/svg+xml now maps to the "image" kind — but this is SAFE only because
-  // PreviewArea renders it via an inert <img>. It is documented here so a future
-  // change that adds an <embed>/<iframe>/inline SVG path is caught as a regression.
+test("SVG is client-previewable as an image, which renders through <img>", () => {
+  // Safe only while PreviewArea renders the image kind through an inert <img>.
   assert.equal(previewKind("image/svg+xml"), "image");
   assert.equal(isPreviewableMime("image/svg+xml"), true);
   assert.equal(previewKind("image/svg+xml; charset=utf-8"), "image");
 });
 
-test("HTML-ish and unknown types are NOT previewable (XSS vectors / unknown)", () => {
+test("HTML-ish and unknown types are not previewable", () => {
   for (const m of [
     "text/html",
     "application/xhtml+xml",
@@ -199,13 +195,8 @@ test("previewKind is case-insensitive and parameter-tolerant", () => {
   assert.equal(previewKind("Application/JSON; charset=utf-8"), "text");
 });
 
-// ---------------------------------------------------------------------------
-// Server inline gate (stricter): SVG must NEVER be served inline by the server.
-// ---------------------------------------------------------------------------
-
 test("isServerInlineMime excludes SVG even though it is client-previewable", () => {
-  // The single most important difference from isPreviewableMime: an inline server
-  // response is a top-level document, and SVG can carry <script> = stored XSS.
+  // As a top-level document an SVG can run scripts, which is stored XSS.
   assert.equal(isPreviewableMime("image/svg+xml"), true);
   assert.equal(isServerInlineMime("image/svg+xml"), false);
   assert.equal(isServerInlineMime("image/svg+xml; charset=utf-8"), false);

@@ -2,10 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveBranding, normalizeHex, accentTuple } from "../lib/branding";
 
-// Custom branding for self-hosters: APP_NAME (wordmark + title), APP_LOGO (URL
-// replacing the feather), ACCENT_COLOR (hex driving the primary palette). Each
-// falls back to the default featherdrop branding when unset or invalid.
-
 test("defaults when no env is set", () => {
   const b = resolveBranding({});
   assert.equal(b.appName, "featherdrop");
@@ -48,8 +44,7 @@ test("accentTuple builds 10 valid hex shades, base in the middle", () => {
   const t = accentTuple("#d4af37");
   assert.equal(t.length, 10);
   for (const shade of t) assert.match(shade, /^#[0-9a-f]{6}$/);
-  // step 6 is the base colour (Mantine's default filled shade)
+  // Step 6 is Mantine's default filled shade.
   assert.equal(t[6], "#d4af37");
-  // lighter steps come first, darker steps last
   assert.ok(t[0] > t[9], "step 0 (light) should be a larger hex than step 9 (dark)");
 });

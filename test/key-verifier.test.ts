@@ -3,17 +3,12 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { isValidKeyVerifier, verifierMatches } from "../lib/key-verifier";
 
-// A real verifier: base64url(SHA-256(32-byte key)) — always 43 chars, unpadded.
+// A real verifier, base64url(SHA-256) of a 32-byte key.
 const GOOD = createHash("sha256").update(Buffer.alloc(32, 0)).digest("base64url");
-
-// ---------------------------------------------------------------------------
-// isValidKeyVerifier — the finalize-body validation rule
-// ---------------------------------------------------------------------------
 
 test("isValidKeyVerifier accepts a 43-char base64url string", () => {
   assert.equal(GOOD.length, 43, "sanity: SHA-256 base64url-unpadded is 43 chars");
   assert.equal(isValidKeyVerifier(GOOD), true);
-  // All base64url alphabet classes, including '-' and '_'.
   assert.equal(isValidKeyVerifier("Aa0-_".repeat(8) + "Aa0"), true);
 });
 
@@ -30,17 +25,13 @@ test("isValidKeyVerifier rejects wrong lengths", () => {
 });
 
 test("isValidKeyVerifier rejects non-base64url characters", () => {
-  // '+' and '/' are standard-base64-only; '=' is padding; others are junk.
+  // '+' and '/' belong to standard base64 and '=' is padding.
   for (const ch of ["+", "/", "=", " ", ".", "!", "\n"]) {
     const s = GOOD.slice(0, 42) + ch;
     assert.equal(s.length, 43);
     assert.equal(isValidKeyVerifier(s), false, `must reject ${JSON.stringify(ch)}`);
   }
 });
-
-// ---------------------------------------------------------------------------
-// verifierMatches — the constant-time comparison used by the download GET
-// ---------------------------------------------------------------------------
 
 test("verifierMatches accepts the exact stored value", () => {
   assert.equal(verifierMatches(GOOD, GOOD), true);
@@ -55,8 +46,7 @@ test("verifierMatches rejects a same-length different value", () => {
 });
 
 test("verifierMatches rejects on length mismatch without throwing", () => {
-  // timingSafeEqual throws on unequal-length buffers; the helper must instead
-  // burn a dummy comparison and return false (no exception, no timing shortcut).
+  // timingSafeEqual throws on unequal lengths.
   assert.equal(verifierMatches("", GOOD), false);
   assert.equal(verifierMatches(GOOD.slice(0, 10), GOOD), false);
   assert.equal(verifierMatches(GOOD + GOOD, GOOD), false);

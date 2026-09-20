@@ -2,8 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mimeFromName } from "../lib/mime";
 
-// Extension fallback used when the uploader's browser sends no content type, so
-// image/PDF previews still work. Must mirror the lib/preview.ts allowlist.
+// The extension fallback has to mirror the allowlist in lib/preview.ts.
 test("maps known previewable extensions (case-insensitive)", () => {
   assert.equal(mimeFromName("photo.png"), "image/png");
   assert.equal(mimeFromName("photo.PNG"), "image/png");
@@ -15,7 +14,7 @@ test("maps known previewable extensions (case-insensitive)", () => {
   assert.equal(mimeFromName("doc.pdf"), "application/pdf");
 });
 
-test("maps new image extensions", () => {
+test("maps the remaining image extensions", () => {
   assert.equal(mimeFromName("a.bmp"), "image/bmp");
   assert.equal(mimeFromName("a.ico"), "image/x-icon");
   assert.equal(mimeFromName("a.apng"), "image/apng");

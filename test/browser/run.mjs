@@ -1,8 +1,6 @@
-// Browser test harness for the OPFS modules (run: `npm run test:browser`).
-// esbuild-bundles a module to an IIFE, serves it from a localhost origin (OPFS
-// needs a secure context — not about:blank), drives real Chromium via Playwright,
-// and runs assertions inside the page. Kept out of `npm test` because it needs a
-// browser. Exit code 0 = pass, 1 = fail.
+// Browser test for the OPFS scratch module, run with `npm run test:browser`.
+// The bundle is served from localhost because OPFS needs a secure context,
+// which about:blank is not. It needs a browser, so it stays out of `npm test`.
 import { createServer } from "node:http";
 import { build } from "esbuild";
 import { chromium } from "playwright";
@@ -50,7 +48,6 @@ const result = await page.evaluate(async () => {
     }
   }
 
-  // writeScratch: size + slice read-back
   const { file, cleanup } = await writeScratch(gen());
   const sizeOk = file.size === CHUNK * FRAMES;
   const buf = new Uint8Array(await file.slice(CHUNK, CHUNK * 2).arrayBuffer());
@@ -59,7 +56,6 @@ const result = await page.evaluate(async () => {
     if (buf[j] !== (1 + j) % 251) sliceOk = false;
   }
 
-  // cleanup removes it
   await cleanup();
   const root = await navigator.storage.getDirectory();
   const countScratch = async () => {
@@ -71,7 +67,6 @@ const result = await page.evaluate(async () => {
   };
   const cleanupOk = (await countScratch()) === 0;
 
-  // sweepStaleScratch removes an old planted file
   const old = await root.getFileHandle("fd-scratch-1000-deadbeef.bin", { create: true });
   const w = await old.createWritable();
   await w.write(new Uint8Array(10));

@@ -91,8 +91,6 @@ test("a wrong password fails to decrypt", async () => {
   );
 });
 
-// Key verifier (download authorization) --------------------------------------
-
 test("link mode: keyVerifier is SHA-256 of the key in the URL fragment", async () => {
   const { keyForUrl, keyVerifier } = await encryptForUpload(one(bytes(100)), META);
   assert.match(keyVerifier, /^[A-Za-z0-9_-]{43}$/);
