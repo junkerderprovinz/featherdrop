@@ -1,14 +1,10 @@
-# featherdrop — task runner. Run `just` (or `just --list`) to see recipes.
-# Frontend: Vite + React SPA. Backend: Go (server-go/). Image: distroless static.
+# featherdrop task runner; `just --list` shows the recipes.
+# Frontend: Vite and React SPA. Backend: Go in server-go/. Image: distroless.
 set shell := ["sh", "-cu"]
 
 # Show all recipes
 default:
     @just --list
-
-# ---------------------------------------------------------------------------
-# Frontend (repo root)
-# ---------------------------------------------------------------------------
 
 # Install node deps (runs the libsodium postinstall workaround)
 install:
@@ -38,10 +34,6 @@ test:
 test-browser:
     npm run test:browser
 
-# ---------------------------------------------------------------------------
-# Backend (server-go/)
-# ---------------------------------------------------------------------------
-
 # Format Go code in place
 go-fmt:
     cd server-go && gofmt -w .
@@ -66,16 +58,8 @@ go-vuln:
 go-run:
     cd server-go && go run .
 
-# ---------------------------------------------------------------------------
-# Format everything
-# ---------------------------------------------------------------------------
-
 # Format Go (frontend is checked by ESLint, not auto-formatted here)
 fmt: go-fmt
-
-# ---------------------------------------------------------------------------
-# Container
-# ---------------------------------------------------------------------------
 
 # Build the full multi-stage image for the local platform
 docker-build:
@@ -87,10 +71,6 @@ docker-smoke:
     docker run -d --name fd-smoke -p 3000:3000 featherdrop:smoke
     sh -c 'for i in $(seq 1 40); do curl -fsS -o /dev/null http://localhost:3000/ && break || sleep 1; done'
     docker rm -f fd-smoke
-
-# ---------------------------------------------------------------------------
-# Aggregate + security
-# ---------------------------------------------------------------------------
 
 # Full local check: frontend lint/typecheck/test + Go fmt/vet/test
 check: lint typecheck test go-fmt-check go-vet go-test

@@ -1,16 +1,8 @@
-// NOTE: do NOT add "use client" here. createAppTheme() is called from the server
-// component app/layout.tsx; a "use client" export imported into a Server Component
-// becomes a non-callable client reference ("u is not a function" at render). Theme
-// creation is pure data (createTheme returns a plain object), so this module is
-// isomorphic and runs on the server, producing a serializable theme for the
-// client <MantineProvider>.
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
 import { accentTuple, DEFAULT_BRANDING } from "@/lib/branding";
 
-// featherdrop visual identity — calm, airy, a single accent that matches the
-// logo's gold by default. Self-hosters can override the accent colour; the
-// 10-step Mantine scale is derived from the chosen hex so buttons, rings and
-// active states echo it (step 6 = base, lighter below, darker above).
+// One accent colour, the logo's gold unless the operator picks another. The
+// 10-step Mantine scale is derived from it, with step 6 as the base.
 export function createAppTheme(
   accentColor: string = DEFAULT_BRANDING.accentColor,
 ) {
@@ -20,8 +12,7 @@ export function createAppTheme(
     primaryColor: "fdgold",
     primaryShade: { light: 7, dark: 6 },
     defaultRadius: "md",
-    // Sansation (self-hosted via @fontsource/sansation, see app/layout.tsx) is the
-    // UI typeface for all text; the wordmark stays in Bitter.
+    // Sansation for all UI text; the wordmark uses Bitter.
     fontFamily:
       "Sansation, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
     headings: {
@@ -32,5 +23,4 @@ export function createAppTheme(
   });
 }
 
-// Default theme for imports that don't override the accent.
 export const theme = createAppTheme();

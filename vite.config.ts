@@ -2,18 +2,9 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Decoupled Vite SPA that REUSES the existing React app (components/, lib/, app/)
-// so the Go backend can embed + serve it as static assets. The Next.js app keeps
-// working unchanged — Next ignores this file, and this build never touches the
-// Next config or the existing sources (only the aliases below redirect imports).
-//
-// Aliases:
-//   "@"        -> repo root, so the components' "@/components", "@/lib", "@/app",
-//                 "@/theme" path imports resolve exactly as they do under Next
-//                 (tsconfig paths "@/*": ["./*"]).
-//   "next/link" -> src/shims/next-link.tsx, the ONLY next-specific import in the
-//                 component tree (DownloadView), rendered via react-router-dom in
-//                 the SPA.
+// Builds the React app in components/, lib/ and app/ into the static SPA the Go
+// server embeds. "@/x" resolves to the repo root as in tsconfig, and next/link
+// goes to a react-router shim.
 const repoRoot = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
@@ -21,26 +12,20 @@ export default defineConfig({
   base: "/",
   resolve: {
     alias: [
-      // Most specific first: redirect next/link before the generic "@" mapping.
+      // Before the generic "@" mapping.
       {
         find: "next/link",
         replacement: fileURLToPath(
           new URL("./src/shims/next-link.tsx", import.meta.url),
         ),
       },
-      // "@/x" -> "<repoRoot>/x". A trailing-slash-aware regex so "@/components"
-      // maps to "<repoRoot>/components" (and never collides with a bare "@").
+      // Anchored on "@/" so a bare "@" package scope never matches.
       { find: /^@\//, replacement: `${repoRoot}/` },
     ],
   },
-  // The repo's postcss.config.cjs (postcss-preset-mantine + postcss-simple-vars)
-  // exists ONLY for Next's Mantine CSS-module authoring; it is not needed at CSS
-  // CONSUMPTION time (all imported CSS — Mantine, dropzone, notifications,
-  // flag-icons, fontsource, globals.css — is plain/pre-compiled, and the app uses
-  // no Mantine CSS-module mixins). Vite would otherwise auto-load that file and
-  // run postcss-simple-vars over third-party CSS, which throws on the "$…" tokens
-  // inside flag-icons.min.css. An empty inline config makes Vite skip the file
-  // entirely without touching it (Next still uses it).
+  // Vite would otherwise load postcss.config.cjs, whose postcss-simple-vars
+  // throws on the "$" tokens in flag-icons.min.css. All imported CSS is
+  // precompiled, so no PostCSS plugins are needed.
   css: {
     postcss: {},
   },
