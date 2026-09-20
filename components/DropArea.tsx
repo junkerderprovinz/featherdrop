@@ -11,16 +11,13 @@ import { Logo } from "@/components/Logo";
 interface DropAreaProps {
   onDrop: (files: File[]) => void;
   uploading: boolean;
-  progress: number; // 0–100
-  /** The currently-selected files (empty when nothing has been chosen yet). */
+  progress: number; // 0 to 100
   files: File[];
-  /** Optional label shown beneath the progress ring (e.g. "Encrypting…"). */
+  /** Shown beneath the progress ring, such as "Encrypting…". */
   phaseLabel?: string;
 }
 
-// The central, always-visible drop target — a frosted-glass panel with the
-// feather mark crowning the top. While an upload runs, a translucent overlay
-// with a progress ring shows directly on the zone.
+// While an upload runs, an overlay with a progress ring covers the zone.
 export function DropArea({
   onDrop,
   uploading,
@@ -34,9 +31,8 @@ export function DropArea({
     <Box pos="relative" style={{ flex: 1, minWidth: rem(280) }}>
       <Dropzone
         onDrop={(dropped) => dropped.length > 0 && onDrop(dropped)}
-        // Bypass react-dropzone's webkitGetAsEntry() directory walk, which
-        // crashes Chromium/Edge renderers on some setups (issue #4). Read the
-        // flat FileList straight from the event — no directory traversal.
+        // react-dropzone's webkitGetAsEntry() walk crashes Chromium and Edge
+        // renderers on some setups (#4).
         getFilesFromEvent={(event) => Promise.resolve(filesFromDropEvent(event))}
         disabled={uploading}
         multiple
@@ -51,7 +47,6 @@ export function DropArea({
         }}
       >
         <Stack align="center" gap="md" style={{ pointerEvents: "none" }}>
-          {/* Logo (no wordmark) crowning the drop zone. */}
           <Logo size={48} />
 
           <Dropzone.Accept>
@@ -62,7 +57,6 @@ export function DropArea({
           </Dropzone.Reject>
 
           {files.length === 1 ? (
-            // Single file: keep the original compact name + size look.
             <Stack align="center" gap={2}>
               <Group gap={8} wrap="nowrap">
                 <IconFile size={20} stroke={1.4} />
@@ -75,8 +69,6 @@ export function DropArea({
               </Text>
             </Stack>
           ) : files.length > 1 ? (
-            // Several files: a compact scrollable list of names + sizes, plus a
-            // count/total summary line.
             <Stack align="center" gap={6} w="100%" maw={rem(260)}>
               <ScrollArea.Autosize mah={rem(132)} type="auto" w="100%">
                 <Stack gap={2} px="xs">

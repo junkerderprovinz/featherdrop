@@ -6,12 +6,8 @@ import { I18nextProvider } from "react-i18next";
 import { initI18n } from "@/lib/i18n/config";
 import { isRtl } from "@/lib/i18n/locales";
 
-// Wraps the app in the i18next context. The initial language is resolved on the
-// server and passed in, so i18next starts in that language and the first client
-// render matches the server HTML (no hydration mismatch, content renders without
-// JS). On later switches it keeps <html lang> and Mantine's direction in sync —
-// Mantine's setDirection updates the <html dir> attribute and re-mirrors RTL
-// components.
+// On a language switch <html lang> follows, and Mantine's setDirection updates
+// <html dir> and mirrors the components for right-to-left languages.
 export function I18nProvider({
   initialLanguage,
   children,

@@ -2,9 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-// Client-side branding context. The server resolves the operator's branding
-// (lib/config BRANDING) and passes the display-facing parts down as plain props;
-// client components read them via useBranding to render the wordmark and logo.
+// The operator's wordmark and logo, loaded from /api/config.
 interface BrandingContextValue {
   appName: string;
   logoUrl: string | null;

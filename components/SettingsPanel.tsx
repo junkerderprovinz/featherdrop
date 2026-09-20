@@ -15,7 +15,7 @@ import { IconSend } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { allowedExpiryOptions, clampExpiry } from "@/lib/expiry";
 
-// One width for every right-hand control so the option rows line up exactly.
+// One width for every control so the option rows line up.
 const CONTROL_W = 156;
 
 interface SettingsPanelProps {
@@ -27,23 +27,20 @@ interface SettingsPanelProps {
   onMaxDownloadsChange: (value: number | null) => void;
   onUpload: () => void;
   uploading: boolean;
-  // Operator's MAX_EXPIRY cap ("" = none): options above it are hidden and the
-  // expiry toggle can't reach "never" when a cap exists.
+  // MAX_EXPIRY, "" for none. With a cap, longer options are hidden and the
+  // expiry cannot be switched off.
   maxExpiry: string;
-  // Finite expiry selected when the expiry toggle is switched on (the page's
-  // resolved default — stored preference or the server's DEFAULT_EXPIRY).
+  // Selected when the expiry is switched on.
   defaultExpiry: string;
-  // Photo-metadata scrub (EXIF/GPS, client-side before encryption). The row only
-  // shows when the selection contains a JPEG (showMetadataStrip).
+  // The metadata row only shows when a JPEG is selected.
   showMetadataStrip: boolean;
   stripMetadata: boolean;
   onStripMetadataChange: (value: boolean) => void;
 }
 
-// The options shown once a file is selected. Each option is ONE tidy row: a
-// toggle on the left and its control on the right, ALWAYS visible — just disabled
-// (greyed) when the toggle is off. Expiry off = never expires; limit off =
-// unlimited; password off = no password. Consistent + orderly across all three.
+// Each option is a row with a toggle and its control, which stays visible and
+// is disabled while the toggle is off. Expiry off means never, limit off
+// unlimited, password off none.
 export function SettingsPanel({
   expiry,
   onExpiryChange,
@@ -62,8 +59,6 @@ export function SettingsPanel({
   const { t } = useTranslation();
   const expires = expiry !== "never";
   const limited = maxDownloads !== null;
-  // Instance policy: the options the operator allows, and whether "never
-  // expires" (= toggle off) is even possible under a finite cap.
   const expiryChoices = allowedExpiryOptions(maxExpiry).filter(
     (o) => o.value !== "never",
   );
@@ -71,18 +66,14 @@ export function SettingsPanel({
     maxExpiry !== "" && maxExpiry !== "never" && expiryChoices.length > 0;
   const expiryWhenOn = clampExpiry(defaultExpiry || "7d", maxExpiry);
 
-  // Password is its own toggle. It can't be derived purely from the value
-  // (empty = off) because the toggle must stay ON while the user is still
-  // typing an empty field; so we track it locally. Initialised from the prop so
-  // a remount with a password already set shows the toggle on.
+  // The toggle cannot be derived from the value, since it has to stay on while
+  // the field is still empty.
   const [pwEnabled, setPwEnabled] = useState(password !== "");
 
   return (
     <Stack gap="lg" w="100%">
       <Text fw={600}>{t("settings.title")}</Text>
 
-      {/* Expiry — toggle on the left, the duration on the right (greyed = never
-          expires when off). */}
       <Group justify="space-between" wrap="nowrap" gap="md">
         <Switch
           label={t("settings.expiresAfter")}
@@ -90,8 +81,7 @@ export function SettingsPanel({
           onChange={(e) =>
             onExpiryChange(e.currentTarget.checked ? expiryWhenOn : "never")
           }
-          // With a finite operator cap, "never expires" isn't allowed — the
-          // toggle stays locked ON.
+          // A finite cap does not allow "never".
           disabled={uploading || capIsFinite}
         />
         <Select
@@ -108,7 +98,6 @@ export function SettingsPanel({
         />
       </Group>
 
-      {/* Download limit — toggle + count (greyed = unlimited when off). */}
       <Group justify="space-between" wrap="nowrap" gap="md">
         <Switch
           label={t("settings.limitDownloads")}
@@ -131,17 +120,16 @@ export function SettingsPanel({
         />
       </Group>
 
-      {/* Password — toggle + field (greyed = no password when off). */}
       <Group justify="space-between" wrap="nowrap" gap="md">
         <Switch
-          // The dedicated toggle already conveys "optional", so strip any trailing
-          // "(optional)" parenthetical from the label across every locale.
+          // The toggle already says it is optional, so the label's trailing
+          // "(optional)" goes in every locale.
           label={t("settings.password").replace(/\s*\([^)]*\)\s*$/, "")}
           checked={pwEnabled}
           onChange={(e) => {
             const on = e.currentTarget.checked;
             setPwEnabled(on);
-            if (!on) onPasswordChange(""); // clear the secret when switched off
+            if (!on) onPasswordChange("");
           }}
           disabled={uploading}
         />
@@ -153,9 +141,6 @@ export function SettingsPanel({
         />
       </Group>
 
-      {/* Photo metadata (EXIF/GPS) scrub — only offered when the selection
-          contains a JPEG. Runs in the BROWSER before encryption (the server
-          never sees plaintext, so this is the only place it can happen). */}
       {showMetadataStrip && (
         <Group justify="space-between" wrap="nowrap" gap="md">
           <Switch

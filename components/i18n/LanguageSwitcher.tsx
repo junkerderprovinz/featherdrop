@@ -6,9 +6,7 @@ import { LANGUAGES } from "@/lib/i18n/locales";
 import { writeLanguageCookie } from "@/lib/i18n/detect";
 import { Flag } from "./Flag";
 
-// The flag-based language picker shown beside the theme toggle. The button shows
-// the current language's flag; the menu lists every language. Choosing one
-// switches i18next live and persists the choice in a cookie.
+// Switching keeps the choice in a cookie.
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
   const current = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];

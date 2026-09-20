@@ -2,23 +2,17 @@
 
 import { createContext, useContext } from "react";
 
-// Runtime server configuration the client needs. Next.js does not expose plain
-// (non-NEXT_PUBLIC) runtime env vars to client components, so the server resolves
-// them once (lib/config) and passes them down as plain props; client components
-// read them via useServerConfig.
+// The runtime configuration from /api/config.
 interface ServerConfig {
-  // Public BASE_URL used to build share links behind a reverse proxy.
+  // BASE_URL for share links behind a reverse proxy.
   baseUrl: string;
-  // Whether this instance gates uploads behind an operator-set upload password
-  // (UPLOAD_PASSWORD). Only the BOOLEAN is exposed — the secret itself NEVER
-  // leaves the server. When true, the UI prompts for the password before
-  // uploading; when false, uploading is open (the default).
+  // Set when UPLOAD_PASSWORD gates uploads; the password itself never leaves
+  // the server.
   uploadProtected: boolean;
-  // Operator's DEFAULT_EXPIRY — pre-selected when the user has no stored
-  // preference. Empty = the built-in "7d".
+  // Preselected without a stored preference; empty means "7d".
   defaultExpiry: string;
-  // Operator's MAX_EXPIRY cap — the UI hides expiry options above it and the
-  // server rejects them. Empty/"never" = no cap.
+  // Longer options are hidden, and the server rejects them. Empty or "never"
+  // means no cap.
   maxExpiry: string;
 }
 

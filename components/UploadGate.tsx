@@ -10,15 +10,11 @@ import {
 import { IconKey, IconLock } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 
-// Upload gate shown only when the instance sets UPLOAD_PASSWORD (server exposes
-// the boolean `uploadProtected`). The operator's secret is NEVER sent to the
-// client — the user types it here and it is attached to the upload requests via
-// the `x-fd-upload-token` header; the server verifies it constant-time. A wrong
-// secret surfaces as an error (passed in via `error`) and the user can retry.
+// Asks for the upload password when UPLOAD_PASSWORD is set. The server never
+// sends the secret; the one typed here goes along in `x-fd-upload-token`.
 interface UploadGateProps {
-  /** Called with the entered secret when the user unlocks. */
   onUnlock: (token: string) => void;
-  /** Localized error to show (e.g. "Wrong upload password"); empty = none. */
+  /** A localized error such as "Wrong upload password"; empty for none. */
   error?: string;
 }
 

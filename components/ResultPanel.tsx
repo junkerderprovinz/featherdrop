@@ -24,20 +24,18 @@ interface ResultPanelProps {
   onReset: () => void;
 }
 
-// On-screen QR edge in px; the PNG download rasterizes at 4× this. One source so
-// the displayed code and the saved file can never drift apart.
+// The on-screen QR edge in px; the saved PNG is four times as large.
 const QR_SIZE = 160;
 
-// Shown after a successful upload: the shareable link, a copy button, a QR code
-// for phones, and a way to start over.
+// Shown after a successful upload: the link, a copy button, a QR code for
+// phones and a way to start over.
 export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
-  // This panel mounts only once the share link exists — i.e. the upload reached
-  // 100% — so a short gold/violet confetti burst here celebrates completion.
-  // Loaded lazily so it never weighs on the initial bundle; honours reduced motion.
+  // The panel mounts when the upload has finished, which a short confetti burst
+  // celebrates. It loads lazily to stay out of the initial bundle.
   useEffect(() => {
     let cancelled = false;
     void import("canvas-confetti").then(({ default: confetti }) => {
@@ -66,9 +64,8 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
     };
   }, []);
 
-  // Save the QR as a crisp PNG so it can be printed or pasted into a chat: take
-  // the rendered SVG, rasterize it onto a white canvas at 4× and trigger a
-  // download. Pure client work — no extra dependency, no server round-trip.
+  // Rasterizes the rendered SVG onto a white canvas so the QR can be printed or
+  // pasted into a chat.
   const onDownloadQr = () => {
     const svg = qrRef.current?.querySelector("svg");
     if (!svg) return;
@@ -100,8 +97,6 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
     img.src = svgUrl;
   };
 
-  // Robust copy: works on plain-HTTP LAN access too (see lib/clipboard.ts),
-  // where navigator.clipboard is unavailable and the modern path silently fails.
   const onCopy = async () => {
     const ok = await copyText(url);
     if (ok) {
@@ -115,7 +110,6 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
   return (
     <Paper radius="lg" p="xl" maw={520} mx="auto" w="100%" className="fd-glass">
       <Stack align="center" gap="xl">
-        {/* Header — the success state and the share's expiry, centred. */}
         <Stack align="center" gap={4}>
           <Text fw={700} size="xl" ta="center">
             {t("result.ready")}
@@ -125,9 +119,6 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
           </Text>
         </Stack>
 
-        {/* Primary block: the QR + the share link with its copy button. This is
-            the one thing the user came for, so it leads and stays visually
-            dominant (gold copy accent, full-size input). */}
         <Stack align="center" gap="md" w="100%">
           <Stack align="center" gap="xs">
             <Box
@@ -172,8 +163,6 @@ export function ResultPanel({ url, expiryLabel, onReset }: ResultPanelProps) {
           </Group>
         </Stack>
 
-        {/* Tertiary action — start over. A subtle, full-width button so it reads
-            clearly as the way out without competing with the share link. */}
         <Button
           fullWidth
           variant="subtle"

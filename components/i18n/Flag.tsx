@@ -1,8 +1,7 @@
 import { rem } from "@mantine/core";
 
-// Tiny rounded flag rendered from the `flag-icons` CSS sprite. We avoid bundling
-// 26 SVGs by hand: the package ships one CSS file + flag backgrounds, and a span
-// with class `fi fi-<code>` paints the right flag. Kept as a 4:3 chip.
+// A 4:3 flag from the flag-icons stylesheet, painted by the `fi fi-<code>`
+// classes.
 export function Flag({ code, size = 20 }: { code: string; size?: number }) {
   return (
     <span

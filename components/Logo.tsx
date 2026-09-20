@@ -3,32 +3,25 @@
 import { useId } from "react";
 import { useBranding } from "@/components/BrandingProvider";
 
-// The featherdrop mark — a gold feather. Rendered inline so it scales crisply and
-// the gold gradient travels with it. The gradient is in userSpaceOnUse so it runs
-// uniformly across the mark's separate paths (not per-path). useId keeps the id
-// unique when several logos appear on one page. A self-hoster's custom logo
-// (logoUrl), when set, replaces the feather with their image.
+// The gold feather, or the operator's logo when one is configured. The
+// gradient uses userSpaceOnUse so it runs across all paths rather than per path,
+// and useId keeps its id unique when several logos share a page.
 export function Logo({
   size = 28,
   cssSize,
 }: {
   size?: number;
   /**
-   * Optional CSS length (e.g. a clamp() expression) that drives the rendered
-   * width/height for a responsive hero. When set it overrides the numeric `size`
-   * box so the mark scales fluidly with the viewport; `size` stays the intrinsic
-   * fallback. Existing callers that pass only `size` are unaffected.
+   * A CSS length such as a clamp() expression that overrides size, so the mark
+   * scales with the viewport.
    */
   cssSize?: string;
 }) {
   const { logoUrl, appName } = useBranding();
   const gradientId = useId();
-  // When a responsive cssSize is given, let CSS drive the box; otherwise the
-  // numeric width/height attributes remain authoritative.
   const sizeStyle = cssSize ? { width: cssSize, height: cssSize } : undefined;
   if (logoUrl) {
-    // A self-hoster's logo is an arbitrary external/mounted URL, so a plain
-    // <img> is intended here.
+    // The operator's logo can be any external or mounted URL.
     return (
       <img
         src={logoUrl}
