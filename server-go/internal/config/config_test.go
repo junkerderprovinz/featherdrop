@@ -7,17 +7,14 @@ import (
 	"testing"
 )
 
-// configEnvVars are all the environment variables Load reads.
 var configEnvVars = []string{
 	"DATA_DIR", "CONFIG_DIR", "MAX_FILE_SIZE", "DEFAULT_EXPIRY", "BASE_URL",
 	"UPLOAD_PASSWORD", "APP_NAME", "APP_LOGO", "ACCENT_COLOR", "PORT",
 	"MAX_EXPIRY", "STORAGE_QUOTA", "RATE_LIMIT", "TRUST_PROXY",
 }
 
-// clearConfigEnv unsets every config env var for the duration of the test,
-// restoring the originals via t.Cleanup. This lets Load apply its built-in
-// defaults regardless of the host environment. Subsequent t.Setenv calls in a
-// test override individual vars on top of this clean baseline.
+// clearConfigEnv unsets every config variable for the test, so Load sees its
+// defaults whatever the host environment holds.
 func clearConfigEnv(t *testing.T) {
 	t.Helper()
 	for _, k := range configEnvVars {
@@ -101,7 +98,6 @@ func TestConfigDirOverrideChangesDBPath(t *testing.T) {
 	if want := filepath.Join("/srv/config", "db.sqlite"); cfg.DBPath != want {
 		t.Errorf("DBPath = %q, want %q", cfg.DBPath, want)
 	}
-	// Uploads/tmp still derive from DATA_DIR, not CONFIG_DIR.
 	if want := filepath.Join("/srv/data", "uploads"); cfg.UploadsDir != want {
 		t.Errorf("UploadsDir = %q, want %q", cfg.UploadsDir, want)
 	}
@@ -117,11 +113,6 @@ func TestMaxFileSizeParsed(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Validate — the v6.1 guardrail envs + boot-time warnings
-// ---------------------------------------------------------------------------
-
-// loadAndValidate runs Load + Validate on the current (cleared) env.
 func loadAndValidate(t *testing.T) (Config, []string, error) {
 	t.Helper()
 	cfg := Load()
@@ -373,7 +364,6 @@ func TestValidate_ShortUploadPasswordWarns(t *testing.T) {
 			if got := hasWarning(warnings, "UPLOAD_PASSWORD"); got != tt.wantWarn {
 				t.Errorf("UPLOAD_PASSWORD warning present = %v, want %v (warnings %v)", got, tt.wantWarn, warnings)
 			}
-			// The warning must never include the secret itself.
 			for _, warning := range warnings {
 				if tt.password != "" && strings.Contains(warning, tt.password) {
 					t.Errorf("warning leaked the password: %q", warning)
@@ -383,7 +373,6 @@ func TestValidate_ShortUploadPasswordWarns(t *testing.T) {
 	}
 }
 
-// hasWarning reports whether any warning mentions the given variable name.
 func hasWarning(warnings []string, variable string) bool {
 	for _, w := range warnings {
 		if strings.Contains(w, variable) {

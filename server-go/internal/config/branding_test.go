@@ -3,7 +3,6 @@ package config
 import "testing"
 
 func TestResolveBranding_Defaults(t *testing.T) {
-	// All blank/whitespace -> the DEFAULT_BRANDING values from lib/branding.ts.
 	b := ResolveBranding("", "  ", "")
 	if b.AppName != "featherdrop" {
 		t.Errorf("appName = %q, want featherdrop", b.AppName)
@@ -49,7 +48,6 @@ func TestResolveBranding_ValidHexVariants(t *testing.T) {
 	for _, in := range []string{"#d4af37", "#D4AF37", "#abc123"} {
 		b := ResolveBranding("App", "", in)
 		want := in
-		// normaliser lowercases.
 		switch in {
 		case "#D4AF37":
 			want = "#d4af37"
