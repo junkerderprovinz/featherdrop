@@ -12,17 +12,10 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
-// metaResponse is the GET /api/d/{slug}/meta body. It mirrors the DownloadView
-// props the SSR download page (app/d/[slug]/page.tsx) computed for a format>=2
-// share: the share-shape metadata the future static SPA needs to render the
-// download UI without an SSR pass.
-//
-// Nullable fields are pointers so a real null round-trips as JSON null (rather
-// than being dropped); name and MIME are deliberately ABSENT — they live inside
-// the client-encrypted blob and the server never knows them (zero-knowledge).
-// key_verifier is ALSO absent: the client derives it from the content key. No
-// per-share secret beyond what the SSR page already exposed to anyone with the
-// slug is returned here.
+// metaResponse is the GET /api/d/{slug}/meta body, what the download page needs
+// to render. Nullable fields are pointers so they marshal as JSON null. Name and
+// type live inside the encrypted blob, and the client derives the key verifier
+// itself, so neither is here.
 type metaResponse struct {
 	Format        int64   `json:"format"`
 	Size          int64   `json:"size"`
@@ -33,9 +26,8 @@ type metaResponse struct {
 	KDFSalt       *string `json:"kdfSalt"`
 }
 
-// b64OrNil base64-encodes (STD, matching the TS Buffer.toString("base64")) a
-// blob, returning nil for a nil/absent blob so it marshals to JSON null —
-// mirroring the SSR page's `rec.wrapped_key ? base64 : null`.
+// b64OrNil encodes b as standard base64, or returns nil for a nil blob so it
+// marshals as JSON null.
 func b64OrNil(b []byte) *string {
 	if b == nil {
 		return nil
@@ -44,11 +36,9 @@ func b64OrNil(b []byte) *string {
 	return &s
 }
 
-// MetaHandler builds GET /api/d/{slug}/meta. It is READ-ONLY: it never counts or
-// burns a download. It returns the same share metadata the SSR download page
-// computed for DownloadView, as JSON for the static SPA. No auth gate — the SSR
-// page exposed these to anyone holding the slug. now is injected for
-// testability; pass nil for time.Now.
+// MetaHandler builds GET /api/d/{slug}/meta. It never counts or burns a
+// download and needs no auth, since the metadata is meant for anyone holding
+// the slug. A nil now means time.Now.
 func MetaHandler(db *sql.DB, now func() time.Time) http.HandlerFunc {
 	if now == nil {
 		now = time.Now
@@ -62,13 +52,10 @@ func MetaHandler(db *sql.DB, now func() time.Time) http.HandlerFunc {
 			writeJSONError(w, http.StatusNotFound, "not found")
 			return
 		}
-		// Mirrors the SSR page's notFound() guard: no row OR expired.
 		if rec == nil || isExpired(rec, now().UnixMilli()) {
 			writeJSONError(w, http.StatusNotFound, "not found")
 			return
 		}
-		// Zero-knowledge only: a legacy/extinct format-1 row is never exposed.
-		// The SSR page rendered DownloadView only for `rec.format >= 2`.
 		if rec.Format < 2 {
 			writeJSONError(w, http.StatusNotFound, "not found")
 			return

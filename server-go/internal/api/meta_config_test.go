@@ -13,21 +13,16 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
-// metaRouter wires the meta route exactly as main.go does, so tests exercise the
-// real chi {slug} URL-param routing.
+// metaRouter mounts the meta route on chi as main.go does, so {slug} resolves.
 func (e *testEnv) metaRouter(now func() time.Time) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/api/d/{slug}/meta", MetaHandler(e.db, now))
 	return r
 }
 
-// ---------------------------------------------------------------------------
-// /api/d/{slug}/meta
-// ---------------------------------------------------------------------------
-
 func TestMeta_Format2Happy(t *testing.T) {
 	e := newTestEnv(t)
-	content := []byte("0123456789ABCDEF") // 16 bytes
+	content := []byte("0123456789ABCDEF")
 	rawWrapped := bytes.Repeat([]byte{0xab}, 48)
 	rawSalt := bytes.Repeat([]byte{0xcd}, 16)
 	exp := int64(5_000_000)
@@ -63,7 +58,6 @@ func TestMeta_Format2Happy(t *testing.T) {
 	if resp.DownloadsLeft == nil || *resp.DownloadsLeft != 5 {
 		t.Fatalf("downloadsLeft = %v, want 5", deref(resp.DownloadsLeft))
 	}
-	// base64 STD round-trip of the blobs (matches Buffer.toString("base64")).
 	if resp.WrappedKey == nil || *resp.WrappedKey != base64.StdEncoding.EncodeToString(rawWrapped) {
 		t.Fatalf("wrappedKey = %v, want STD base64 of wrapped blob", resp.WrappedKey)
 	}
@@ -81,8 +75,6 @@ func TestMeta_Format2Happy(t *testing.T) {
 }
 
 func TestMeta_LinkMode_NullsAndUnlimited(t *testing.T) {
-	// A link-mode share (no wrapped_key/kdf_salt, no limit, no expiry) must report
-	// hasPassword=false and JSON null for wrappedKey/kdfSalt/expiresAt/downloadsLeft.
 	e := newTestEnv(t)
 	slug := e.seedV2(t, []byte("ciphertext"), nil)
 
@@ -93,8 +85,6 @@ func TestMeta_LinkMode_NullsAndUnlimited(t *testing.T) {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
 
-	// Decode into a generic map to assert the nullables serialize as JSON null and
-	// that name/mime/keyVerifier are absent entirely (zero-knowledge).
 	var m map[string]any
 	decodeJSON(t, rec, &m)
 	for _, k := range []string{"wrappedKey", "kdfSalt", "expiresAt", "downloadsLeft"} {
@@ -108,7 +98,7 @@ func TestMeta_LinkMode_NullsAndUnlimited(t *testing.T) {
 	}
 	for _, k := range []string{"name", "mime", "keyVerifier"} {
 		if _, present := m[k]; present {
-			t.Fatalf("%q must NOT be present in meta (zero-knowledge)", k)
+			t.Fatalf("%q must not be present in meta", k)
 		}
 	}
 }
@@ -141,7 +131,6 @@ func TestMeta_Expired_404(t *testing.T) {
 }
 
 func TestMeta_Format1_404(t *testing.T) {
-	// A legacy format-1 row is never exposed via the ZK meta endpoint.
 	e := newTestEnv(t)
 	slug := e.seedV2(t, []byte("legacy"), func(r *store.FileRecord) { r.Format = 1 })
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"/meta", nil)
@@ -153,8 +142,6 @@ func TestMeta_Format1_404(t *testing.T) {
 }
 
 func TestMeta_NeverCounts(t *testing.T) {
-	// meta is read-only: hitting it must never bump download_count or burn a
-	// limited share.
 	e := newTestEnv(t)
 	one := int64(1)
 	slug := e.seedV2(t, []byte("burn-me-only-on-download"), func(r *store.FileRecord) {
@@ -178,14 +165,8 @@ func TestMeta_NeverCounts(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// /api/config
-// ---------------------------------------------------------------------------
-
 func TestConfig_DefaultsShape(t *testing.T) {
 	e := newTestEnv(t)
-	// Branding env left empty -> resolveBranding defaults; BaseURL empty;
-	// UploadProtected false (no UPLOAD_PASSWORD set on cfg).
 	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	rec := httptest.NewRecorder()
 	ConfigHandler(e.cfg).ServeHTTP(rec, req)
@@ -221,9 +202,9 @@ func TestConfig_DefaultsShape(t *testing.T) {
 func TestConfig_CustomBrandingAndBaseURL(t *testing.T) {
 	e := newTestEnv(t)
 	e.cfg.BaseURL = "https://drop.example.com"
-	e.cfg.AppName = "  MyDrop  " // trimmed
+	e.cfg.AppName = "  MyDrop  "
 	e.cfg.AppLogo = "https://cdn.example.com/logo.svg"
-	e.cfg.AccentColor = "#AABBCC" // normalised to lowercase
+	e.cfg.AccentColor = "#AABBCC"
 
 	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	rec := httptest.NewRecorder()
@@ -248,8 +229,6 @@ func TestConfig_CustomBrandingAndBaseURL(t *testing.T) {
 }
 
 func TestConfig_MaxExpiryExposed(t *testing.T) {
-	// A configured MAX_EXPIRY cap is surfaced as maxExpiry so the UI can hide
-	// expiry options above it.
 	e := newTestEnv(t)
 	e.cfg.MaxExpiry = "7d"
 
@@ -262,7 +241,6 @@ func TestConfig_MaxExpiryExposed(t *testing.T) {
 	if resp.MaxExpiry != "7d" {
 		t.Fatalf("maxExpiry = %q, want 7d", resp.MaxExpiry)
 	}
-	// The raw JSON must carry the documented key name.
 	var m map[string]any
 	decodeJSON(t, rec, &m)
 	if v, ok := m["maxExpiry"]; !ok || v != "7d" {
@@ -287,8 +265,6 @@ func TestConfig_UploadProtectedReflectsPassword(t *testing.T) {
 }
 
 func TestConfig_NoSecretsLeak(t *testing.T) {
-	// The JSON must expose ONLY non-secret fields. The upload password must never
-	// appear anywhere in the body, nor secret-named keys.
 	e := newTestEnv(t)
 	e.cfg.UploadPassword = "TOP-SECRET-PASSWORD"
 	e.cfg.UploadProtected = true
@@ -302,8 +278,6 @@ func TestConfig_NoSecretsLeak(t *testing.T) {
 		t.Fatalf("config body leaked the upload password: %s", bodyStr)
 	}
 
-	// Assert the JSON has exactly the expected top-level keys (no secret-named
-	// fields like uploadPassword/masterKey/token).
 	var m map[string]any
 	decodeJSON(t, rec, &m)
 	allowed := map[string]bool{"baseUrl": true, "uploadProtected": true, "maxExpiry": true, "defaultExpiry": true, "branding": true}
@@ -319,14 +293,7 @@ func TestConfig_NoSecretsLeak(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// /api/* catch-all (JSON 404 instead of the SPA HTML shell)
-// ---------------------------------------------------------------------------
-
 func TestNotFoundHandler_JSON404(t *testing.T) {
-	// An unmatched /api path must yield a JSON 404, not the HTML SPA shell. Wire
-	// it via chi exactly as main.go does (a /api/* catch-all after the real
-	// routes) so the routing precedence is exercised too.
 	r := chi.NewRouter()
 	r.Get("/api/config", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	r.HandleFunc("/api/*", NotFoundHandler())
@@ -347,7 +314,6 @@ func TestNotFoundHandler_JSON404(t *testing.T) {
 		t.Fatalf("error = %q, want not found", body.Error)
 	}
 
-	// A real registered route must still win over the catch-all.
 	req = httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)

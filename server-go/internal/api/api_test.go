@@ -27,18 +27,13 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
 )
 
-// ---------------------------------------------------------------------------
-// Test harness
-// ---------------------------------------------------------------------------
-
-// testEnv bundles a fresh config over a temp dir + an opened SQLite store.
 type testEnv struct {
 	cfg config.Config
 	db  *sql.DB
 }
 
-// newTestEnv builds a throwaway environment: temp DATA_DIR with uploads/ + tmp/
-// created, and a real modernc SQLite store with the schema applied.
+// newTestEnv builds a temp data dir and a real SQLite store with the schema
+// applied.
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 	dataDir := t.TempDir()
@@ -61,14 +56,12 @@ func newTestEnv(t *testing.T) *testEnv {
 	return &testEnv{cfg: cfg, db: db}
 }
 
-// fixedNow returns a now() func pinned to ms, for deterministic expiry.
 func fixedNow(ms int64) func() time.Time {
 	return func() time.Time { return time.UnixMilli(ms) }
 }
 
-// makeTusUpload creates a REAL tusd filestore upload in cfg.TmpDir (bytes file +
-// genuine <id>.info sidecar) so finalize parses the exact FileInfo shape tusd
-// persists. Returns the upload id.
+// makeTusUpload creates a real tusd filestore upload in cfg.TmpDir, bytes and
+// .info sidecar, and returns its id.
 func (e *testEnv) makeTusUpload(t *testing.T, content []byte) string {
 	t.Helper()
 	fs := filestore.New(e.cfg.TmpDir)
@@ -92,8 +85,7 @@ func (e *testEnv) makeTusUpload(t *testing.T, content []byte) string {
 	return info.ID
 }
 
-// router wires the handlers exactly as main.go does, so tests exercise the real
-// chi routing (URL params) too.
+// router mounts the handlers on chi as main.go does, so URL params resolve.
 func (e *testEnv) router(now func() time.Time) http.Handler {
 	r := chi.NewRouter()
 	r.Post("/api/finalize", FinalizeHandler(e.cfg, e.db, now))
@@ -101,7 +93,6 @@ func (e *testEnv) router(now func() time.Time) http.Handler {
 	return r
 }
 
-// finalize posts a JSON body and returns the response recorder.
 func (e *testEnv) finalize(t *testing.T, now func() time.Time, body map[string]any, headers map[string]string) *httptest.ResponseRecorder {
 	t.Helper()
 	raw, _ := json.Marshal(body)
@@ -115,10 +106,10 @@ func (e *testEnv) finalize(t *testing.T, now func() time.Time, body map[string]a
 	return rec
 }
 
-// goodVerifier is a well-formed 43-char unpadded base64url key verifier.
+// goodVerifier is a well-formed 43-character unpadded base64url key verifier.
 const goodVerifier = "Zmh6rfhivXdsj8GLjp-OIAiXFIVu4jOzkCpZHQ1fKSU"
 
-// deref returns the pointed-to value, or -1 for a nil pointer (test logging).
+// deref returns the pointed-to value, or -1 for a nil pointer.
 func deref(p *int64) int64 {
 	if p == nil {
 		return -1
@@ -126,17 +117,12 @@ func deref(p *int64) int64 {
 	return *p
 }
 
-// decodeJSON unmarshals the recorder body into v.
 func decodeJSON(t *testing.T, rec *httptest.ResponseRecorder, v any) {
 	t.Helper()
 	if err := json.Unmarshal(rec.Body.Bytes(), v); err != nil {
 		t.Fatalf("decode JSON %q: %v", rec.Body.String(), err)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// finalize
-// ---------------------------------------------------------------------------
 
 func TestFinalize_GatedNoToken_401(t *testing.T) {
 	e := newTestEnv(t)
@@ -153,7 +139,6 @@ func TestFinalize_GatedNoToken_401(t *testing.T) {
 	if body.Error != "upload password required" {
 		t.Fatalf("error = %q, want %q", body.Error, "upload password required")
 	}
-	// Must have created no share and left the upload in tmp untouched.
 	if _, err := os.Stat(filepath.Join(e.cfg.TmpDir, id)); err != nil {
 		t.Fatalf("upload must survive a gated 401: %v", err)
 	}
@@ -214,7 +199,6 @@ func TestFinalize_BadExpiry_400(t *testing.T) {
 	if body.Error != "invalid expiry" {
 		t.Fatalf("error = %q, want invalid expiry", body.Error)
 	}
-	// 400 must have no side effects: the upload survives.
 	if _, err := os.Stat(filepath.Join(e.cfg.TmpDir, id)); err != nil {
 		t.Fatalf("upload must survive a 400: %v", err)
 	}
@@ -236,7 +220,6 @@ func TestFinalize_BadKeyVerifier_400(t *testing.T) {
 
 func TestFinalize_UnsupportedFormat_400(t *testing.T) {
 	e := newTestEnv(t)
-	// format absent AND format 1 are both legacy -> 400.
 	for _, body := range []map[string]any{
 		{"uploadId": e.makeTusUpload(t, []byte("blob"))},
 		{"uploadId": e.makeTusUpload(t, []byte("blob")), "format": 1},
@@ -254,12 +237,8 @@ func TestFinalize_UnsupportedFormat_400(t *testing.T) {
 }
 
 func TestFinalize_KeyVerifierExplicitNull_400(t *testing.T) {
-	// Parity with the TS guard `body.keyVerifier !== undefined`: an explicit JSON
-	// null is present (not undefined), so isValidKeyVerifier(null) runs and the
-	// route returns 400 — distinct from omitting the field entirely.
 	e := newTestEnv(t)
 	id := e.makeTusUpload(t, []byte("blob"))
-	// Marshal an explicit null (map[string]any with a nil value emits "null").
 	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2, "keyVerifier": nil}, nil)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400 (explicit null keyVerifier)", rec.Code)
@@ -269,15 +248,12 @@ func TestFinalize_KeyVerifierExplicitNull_400(t *testing.T) {
 	if body.Error != "invalid keyVerifier" {
 		t.Fatalf("error = %q, want invalid keyVerifier", body.Error)
 	}
-	// 400 must have no side effects: the upload survives.
 	if _, err := os.Stat(filepath.Join(e.cfg.TmpDir, id)); err != nil {
 		t.Fatalf("upload must survive a 400: %v", err)
 	}
 }
 
 func TestFinalize_KeyVerifierAbsent_200_NoVerifierShare(t *testing.T) {
-	// Omitting keyVerifier entirely is accepted (no-verifier share), unlike an
-	// explicit null. Confirms absent vs null produce different outcomes.
 	e := newTestEnv(t)
 	id := e.makeTusUpload(t, []byte("blob"))
 	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2}, nil)
@@ -307,7 +283,7 @@ func TestFinalize_UploadNotFound_404(t *testing.T) {
 
 func TestFinalize_Incomplete_409(t *testing.T) {
 	e := newTestEnv(t)
-	// Create a tus upload declaring Size=100 but only write 10 bytes on disk.
+	// Declares 100 bytes and writes 10.
 	fs := filestore.New(e.cfg.TmpDir)
 	up, err := fs.NewUpload(context.Background(), tushandler.FileInfo{Size: 100})
 	if err != nil {
@@ -344,14 +320,12 @@ func TestFinalize_Format2Happy(t *testing.T) {
 	if resp.Slug == "" {
 		t.Fatalf("response missing slug: %+v", resp)
 	}
-	// Response is {slug} only — the manage feature was removed.
 	var raw map[string]any
 	decodeJSON(t, rec, &raw)
 	if _, ok := raw["manageToken"]; ok {
 		t.Fatalf("response must not include manageToken: %s", rec.Body.String())
 	}
 
-	// Blob moved to uploads, removed from tmp; sidecar removed.
 	storedPath := filepath.Join(e.cfg.UploadsDir, id)
 	if _, err := os.Stat(storedPath); err != nil {
 		t.Fatalf("blob must exist in uploads: %v", err)
@@ -363,7 +337,6 @@ func TestFinalize_Format2Happy(t *testing.T) {
 		t.Fatalf("sidecar must be removed")
 	}
 
-	// Row recorded correctly.
 	row, err := store.GetFileBySlug(e.db, resp.Slug)
 	if err != nil || row == nil {
 		t.Fatalf("row must exist: %v", err)
@@ -383,11 +356,9 @@ func TestFinalize_Format2Happy(t *testing.T) {
 	if row.KeyVerifier == nil || *row.KeyVerifier != goodVerifier {
 		t.Fatalf("key_verifier mismatch: %v", row.KeyVerifier)
 	}
-	// The manage feature was removed: the column stays but is never populated.
 	if row.ManageTokenHash != nil {
 		t.Fatalf("manage_token_hash must be NULL, got %q", *row.ManageTokenHash)
 	}
-	// expires_at = now + 7d.
 	wantExp := int64(1_000_000_000_000) + 7*24*60*60*1000
 	if row.ExpiresAt == nil || *row.ExpiresAt != wantExp {
 		t.Fatalf("expires_at = %v, want %d", row.ExpiresAt, wantExp)
@@ -444,11 +415,8 @@ func TestFinalize_Format3_NeverExpiry_Limited(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// download
-// ---------------------------------------------------------------------------
-
-// seedV2 inserts a v2 share row + writes the blob to uploads, returning slug.
+// seedV2 inserts a format 2 share row, writes its blob to uploads and returns
+// the slug.
 func (e *testEnv) seedV2(t *testing.T, content []byte, mutate func(*store.FileRecord)) string {
 	t.Helper()
 	id := fmt.Sprintf("seed-%d-%d", time.Now().UnixNano(), len(content))
@@ -501,7 +469,6 @@ func TestDownload_Expired_404(t *testing.T) {
 
 func TestDownload_MissingBlob_404(t *testing.T) {
 	e := newTestEnv(t)
-	// Seed a row whose blob we delete to simulate a swept file.
 	slug := e.seedV2(t, []byte("blob"), nil)
 	row, _ := store.GetFileBySlug(e.db, slug)
 	if err := os.Remove(filepath.Join(e.cfg.UploadsDir, row.ID)); err != nil {
@@ -516,9 +483,6 @@ func TestDownload_MissingBlob_404(t *testing.T) {
 }
 
 func TestDownload_Format1_404_NotServedOrBurned(t *testing.T) {
-	// A legacy format-1 row (e.g. migrated from an older DB) must NOT be served,
-	// counted, or burned through the ZK path. Mirrors the TS `if (rec.format >= 2)`
-	// gate: format-1 is routed elsewhere (the v1 age flow this server omits).
 	e := newTestEnv(t)
 	content := []byte("legacy age ciphertext that must not be served")
 	one := int64(1)
@@ -535,10 +499,9 @@ func TestDownload_Format1_404_NotServedOrBurned(t *testing.T) {
 	if rec.Body.Len() > 0 && bytes.Equal(rec.Body.Bytes(), content) {
 		t.Fatalf("format-1 ciphertext must not be streamed")
 	}
-	// Row must survive untouched: not counted, not burned.
 	row, _ := store.GetFileBySlug(e.db, slug)
 	if row == nil {
-		t.Fatalf("format-1 row must NOT be burned by a download attempt")
+		t.Fatalf("format-1 row must not be burned by a download attempt")
 	}
 	if row.DownloadCount != 0 {
 		t.Fatalf("format-1 download_count = %d, want 0 (never counted)", row.DownloadCount)
@@ -606,7 +569,6 @@ func TestDownload_Counted_200(t *testing.T) {
 	if !bytes.Equal(rec.Body.Bytes(), content) {
 		t.Fatalf("body mismatch")
 	}
-	// counter bumped.
 	row, _ := store.GetFileBySlug(e.db, slug)
 	if row.DownloadCount != 1 {
 		t.Fatalf("download_count = %d, want 1", row.DownloadCount)
@@ -616,7 +578,7 @@ func TestDownload_Counted_200(t *testing.T) {
 func TestDownload_NoVerifierShare_200(t *testing.T) {
 	e := newTestEnv(t)
 	content := []byte("legacy no-verifier ciphertext")
-	slug := e.seedV2(t, content, nil) // KeyVerifier nil
+	slug := e.seedV2(t, content, nil)
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
 	rec := httptest.NewRecorder()
 	e.router(nil).ServeHTTP(rec, req)
@@ -636,7 +598,6 @@ func TestDownload_BurnDeletesBlob(t *testing.T) {
 	row, _ := store.GetFileBySlug(e.db, slug)
 	blobPath := filepath.Join(e.cfg.UploadsDir, row.ID)
 
-	// First (last allowed) download: 200 + body + blob removed + row gone.
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
 	rec := httptest.NewRecorder()
 	e.router(nil).ServeHTTP(rec, req)
@@ -653,7 +614,6 @@ func TestDownload_BurnDeletesBlob(t *testing.T) {
 		t.Fatalf("row must be deleted after burn")
 	}
 
-	// Second download: 404.
 	rec2 := httptest.NewRecorder()
 	e.router(nil).ServeHTTP(rec2, httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil))
 	if rec2.Code != http.StatusNotFound {
@@ -663,8 +623,8 @@ func TestDownload_BurnDeletesBlob(t *testing.T) {
 
 func TestDownload_Preview_Range_206(t *testing.T) {
 	e := newTestEnv(t)
-	content := []byte("0123456789ABCDEFGHIJ") // 20 bytes
-	slug := e.seedV2(t, content, nil)         // unlimited
+	content := []byte("0123456789ABCDEFGHIJ")
+	slug := e.seedV2(t, content, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"?preview=1", nil)
 	req.Header.Set("Range", "bytes=5-9")
@@ -685,7 +645,6 @@ func TestDownload_Preview_Range_206(t *testing.T) {
 	if got := rec.Body.String(); got != "56789" {
 		t.Fatalf("body = %q, want 56789", got)
 	}
-	// preview must NOT count.
 	row, _ := store.GetFileBySlug(e.db, slug)
 	if row.DownloadCount != 0 {
 		t.Fatalf("preview must not count, download_count = %d", row.DownloadCount)
@@ -694,11 +653,11 @@ func TestDownload_Preview_Range_206(t *testing.T) {
 
 func TestDownload_Preview_SuffixRange_206(t *testing.T) {
 	e := newTestEnv(t)
-	content := []byte("0123456789ABCDEFGHIJ") // 20 bytes
+	content := []byte("0123456789ABCDEFGHIJ")
 	slug := e.seedV2(t, content, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"?preview=1", nil)
-	req.Header.Set("Range", "bytes=-4") // last 4 bytes
+	req.Header.Set("Range", "bytes=-4")
 	rec := httptest.NewRecorder()
 	e.router(nil).ServeHTTP(rec, req)
 	if rec.Code != http.StatusPartialContent {
@@ -714,7 +673,7 @@ func TestDownload_Preview_SuffixRange_206(t *testing.T) {
 
 func TestDownload_Preview_Unsatisfiable_416(t *testing.T) {
 	e := newTestEnv(t)
-	content := []byte("0123456789") // 10 bytes
+	content := []byte("0123456789")
 	slug := e.seedV2(t, content, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"?preview=1", nil)
@@ -759,7 +718,6 @@ func TestDownload_Preview_LimitedShare_404(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
-	// must not have counted.
 	row, _ := store.GetFileBySlug(e.db, slug)
 	if row.DownloadCount != 0 {
 		t.Fatalf("download_count = %d, want 0", row.DownloadCount)
@@ -778,14 +736,9 @@ func TestDownload_Preview_RequiresVerifier_401(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// End-to-end: real tus upload -> finalize -> download (+ burn-after-download)
-// ---------------------------------------------------------------------------
-
 func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 	e := newTestEnv(t)
 
-	// 1. Real upload through the Phase-2 tus handler.
 	tusHandler, err := upload.NewHandler(e.cfg, e.db)
 	if err != nil {
 		t.Fatal(err)
@@ -794,8 +747,7 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 	defer srv.Close()
 
 	content := []byte("end-to-end encrypted ciphertext blob")
-	// Use a real key verifier derived from a fake key so download proves it.
-	keyBytes := []byte("a-32-byte-content-key-aaaaaaaaaa") // 32 bytes
+	keyBytes := []byte("a-32-byte-content-key-aaaaaaaaaa")
 	sum := sha256.Sum256(keyBytes)
 	verifier := base64.RawURLEncoding.EncodeToString(sum[:])
 
@@ -825,12 +777,9 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 		t.Fatalf("tus patch status = %d", patchResp.StatusCode)
 	}
 
-	// Extract the upload id from the Location URL's last path segment.
 	uploadID := loc[strings.LastIndex(loc, "/")+1:]
 
-	// 2. Finalize as a burn-after-download share (maxDownloads=1) so the single
-	// allowed download also removes the share — exercising the full removal path
-	// end-to-end now that the manage delete-early feature is gone.
+	// With one allowed download, the download below also removes the share.
 	apiRouter := e.router(nil)
 	finRec := e.finalize(t, nil, map[string]any{
 		"uploadId": uploadID, "format": 2, "keyVerifier": verifier, "maxDownloads": 1,
@@ -841,8 +790,6 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 	var fin finalizeResponse
 	decodeJSON(t, finRec, &fin)
 
-	// 3. Download with the verifier -> the exact ciphertext bytes. This is the
-	// last allowed download, so it burns the share.
 	dlReq := httptest.NewRequest(http.MethodGet, "/api/d/"+fin.Slug, nil)
 	dlReq.Header.Set(keyVerifierHeader, verifier)
 	dlRec := httptest.NewRecorder()
@@ -854,7 +801,6 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 		t.Fatalf("downloaded bytes do not match uploaded ciphertext")
 	}
 
-	// 4. The share is burned: a second download 404s.
 	after := httptest.NewRecorder()
 	afterReq := httptest.NewRequest(http.MethodGet, "/api/d/"+fin.Slug, nil)
 	afterReq.Header.Set(keyVerifierHeader, verifier)
@@ -863,15 +809,10 @@ func TestEndToEnd_UploadFinalizeDownloadDelete(t *testing.T) {
 		t.Fatalf("post-burn download status = %d, want 404", after.Code)
 	}
 
-	// blob gone from disk.
 	if _, err := os.Stat(filepath.Join(e.cfg.UploadsDir, uploadID)); !os.IsNotExist(err) {
 		t.Fatalf("blob must be removed after burn-after-download")
 	}
 }
-
-// ---------------------------------------------------------------------------
-// parseByteRange unit table (mirrors the TS parser edge cases)
-// ---------------------------------------------------------------------------
 
 func TestParseByteRange(t *testing.T) {
 	const size = int64(20)
@@ -884,18 +825,15 @@ func TestParseByteRange(t *testing.T) {
 		{"bytes=5-", byteRange{start: 5, end: 19}},
 		{"bytes=-4", byteRange{start: 16, end: 19}},
 		{"bytes=-0", byteRange{none: true}},
-		{"bytes=-100", byteRange{start: 0, end: 19}}, // suffix bigger than file
+		{"bytes=-100", byteRange{start: 0, end: 19}},
 		{"bytes=10-100", byteRange{start: 10, end: 19}},
-		{"bytes=20-25", byteRange{unsatisfiable: true}}, // start >= size
-		{"bytes=9-5", byteRange{unsatisfiable: true}},   // start > end
+		{"bytes=20-25", byteRange{unsatisfiable: true}},
+		{"bytes=9-5", byteRange{unsatisfiable: true}},
 		{"not-a-range", byteRange{none: true}},
 		{"bytes=abc-def", byteRange{none: true}},
-		// Overflow parity with TS parseInt() (finite huge, not NaN):
-		// a START exceeding int64 -> start >= size -> 416 (not "serve whole").
+		// Bounds past int64 behave like bounds past the file size.
 		{"bytes=99999999999999999999-", byteRange{unsatisfiable: true}},
-		// a suffix N exceeding int64 -> last min(N,size) bytes = [0, size-1] (206).
 		{"bytes=-99999999999999999999", byteRange{start: 0, end: 19}},
-		// an END exceeding int64 -> clamped to size-1 (206), start preserved.
 		{"bytes=10-99999999999999999999", byteRange{start: 10, end: 19}},
 	}
 	for _, c := range cases {

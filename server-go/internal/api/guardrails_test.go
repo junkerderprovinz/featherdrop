@@ -8,10 +8,6 @@ import (
 	"testing"
 )
 
-// ---------------------------------------------------------------------------
-// MAX_EXPIRY cap enforcement on finalize (v6.1)
-// ---------------------------------------------------------------------------
-
 func TestFinalize_ExpiryCap(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -50,8 +46,6 @@ func TestFinalize_ExpiryCap(t *testing.T) {
 				if eb.Error != "expiry exceeds the server's maximum" {
 					t.Fatalf("error = %q, want expiry exceeds the server's maximum", eb.Error)
 				}
-				// A cap rejection must have no side effects: the upload survives
-				// in tmp for a corrected retry.
 				if _, err := os.Stat(filepath.Join(e.cfg.TmpDir, id)); err != nil {
 					t.Fatalf("upload must survive a cap 400: %v", err)
 				}
@@ -60,13 +54,7 @@ func TestFinalize_ExpiryCap(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// STORAGE_QUOTA guard on finalize (v6.1)
-// ---------------------------------------------------------------------------
-
 func TestFinalize_QuotaExceeded_507(t *testing.T) {
-	// 100 stored bytes + a 60-byte upload against a 150-byte quota -> 507, and
-	// the rejection is side-effect-free (tmp upload survives, no share row).
 	e := newTestEnv(t)
 	e.cfg.StorageQuota = 150
 	e.seedV2(t, make([]byte, 100), nil)
@@ -90,7 +78,6 @@ func TestFinalize_QuotaExceeded_507(t *testing.T) {
 }
 
 func TestFinalize_QuotaWithin_200(t *testing.T) {
-	// The same setup but a fitting upload (100+50 == 150) publishes normally.
 	e := newTestEnv(t)
 	e.cfg.StorageQuota = 150
 	e.seedV2(t, make([]byte, 100), nil)
@@ -103,7 +90,6 @@ func TestFinalize_QuotaWithin_200(t *testing.T) {
 }
 
 func TestFinalize_QuotaUnlimited_200(t *testing.T) {
-	// StorageQuota 0 = unlimited: stored bytes never block a finalize.
 	e := newTestEnv(t)
 	e.cfg.StorageQuota = 0
 	e.seedV2(t, make([]byte, 4096), nil)
@@ -115,15 +101,10 @@ func TestFinalize_QuotaUnlimited_200(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// X-Robots-Tag on the share-facing APIs (v6.1)
-// ---------------------------------------------------------------------------
-
 func TestDownload_NoIndexHeader(t *testing.T) {
 	e := newTestEnv(t)
 	slug := e.seedV2(t, []byte("blob"), nil)
 
-	// On a served download…
 	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
 	rec := httptest.NewRecorder()
 	e.router(nil).ServeHTTP(rec, req)
@@ -131,8 +112,8 @@ func TestDownload_NoIndexHeader(t *testing.T) {
 		t.Fatalf("download X-Robots-Tag = %q, want noindex, nofollow", got)
 	}
 
-	// …and on the uniform 404 too (the header's presence must not become an
-	// existence side-channel).
+	// The 404 carries it too, so the header does not reveal whether a share
+	// exists.
 	rec404 := httptest.NewRecorder()
 	e.router(nil).ServeHTTP(rec404, httptest.NewRequest(http.MethodGet, "/api/d/nonexistent", nil))
 	if got := rec404.Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
@@ -157,10 +138,6 @@ func TestMeta_NoIndexHeader(t *testing.T) {
 		t.Fatalf("meta 404 X-Robots-Tag = %q, want noindex, nofollow", got)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// /api/healthcheck (v6.1)
-// ---------------------------------------------------------------------------
 
 func TestHealthcheck_OKTrue(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/healthcheck", nil)
