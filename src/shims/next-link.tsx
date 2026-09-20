@@ -1,32 +1,23 @@
-// Drop-in replacement for `next/link`, aliased to this module in vite.config.ts.
-//
-// The featherdrop components import `Link from "next/link"` in two ways:
-//   - <Link href="/" style={…}>…</Link>            (DownloadView)
-//   - <Button component={Link} href="/" …/>         (Mantine polymorphic
-//     `component`, which forwards arbitrary props AND a ref)
-//
-// So this shim must (a) accept `href` like next/link, (b) forward every other
-// prop (className/style/onClick/role/…) onto the rendered element, and (c)
-// forward a ref so Mantine's `component={Link}` works. Internal app paths route
-// client-side via react-router's <Link>; external/absolute/protocol/anchor/mail
-// targets fall back to a plain <a> so they leave the SPA normally.
+// Stands in for `next/link`, aliased in vite.config.ts. The components use it
+// both as <Link href> and as Mantine's `component={Link}`, which passes any
+// props and a ref, so every prop and the ref are forwarded. App paths route
+// through react-router; absolute, protocol, mail and anchor targets render a
+// plain <a> and leave the SPA.
 import { forwardRef, type AnchorHTMLAttributes, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 export interface LinkProps
   extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
-  // next/link accepts string | UrlObject; the components only ever pass a string.
+  // next/link also takes a UrlObject; the components only pass strings.
   href: string;
   children?: ReactNode;
 }
 
-// A path that should leave the SPA (or is not a client route) and so must render
-// as a real <a>: absolute URLs, protocol-relative, mailto/tel, and #fragments.
 function isExternalHref(href: string): boolean {
   return (
-    /^[a-z][a-z0-9+.-]*:/i.test(href) || // scheme: http:, mailto:, tel:, …
-    href.startsWith("//") || // protocol-relative
-    href.startsWith("#") // in-page anchor
+    /^[a-z][a-z0-9+.-]*:/i.test(href) || // http:, mailto:, tel:, ...
+    href.startsWith("//") ||
+    href.startsWith("#")
   );
 }
 

@@ -1,15 +1,9 @@
-// Client-side language detection for the Vite SPA.
-//
-// The Next app resolved the UI language on the SERVER (cookie -> Accept-Language
-// -> fallback) in app/layout.tsx and passed it to I18nProvider. The static SPA
-// has no server render, so we replicate that resolution in the browser using the
-// SAME pure helper (resolveLanguage) and the SAME cookie name (COOKIE) from
-// lib/i18n/detect — an explicit cookie choice wins, then the browser's
+// Picks the UI language in the browser: a stored cookie choice wins, then
 // navigator.languages, then DEFAULT_LANGUAGE.
 import { COOKIE, resolveLanguage } from "@/lib/i18n/detect";
 import { SUPPORTED, DEFAULT_LANGUAGE } from "@/lib/i18n/locales";
 
-// Read the persisted fd_lang cookie (set by writeLanguageCookie on a switch).
+// writeLanguageCookie sets it when the user switches language.
 function readLanguageCookie(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie
@@ -24,8 +18,6 @@ function readLanguageCookie(): string | null {
   }
 }
 
-// Resolve the UI language from the cookie then the browser's preferred locales,
-// mirroring the server's pickLanguage(cookie, Accept-Language, …) ordering.
 export function detectClientLanguage(): string {
   const cookie = readLanguageCookie();
   const navLangs =

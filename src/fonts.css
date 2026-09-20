@@ -1,9 +1,6 @@
 /*
- * Bitter (humanist slab serif, SIL OFL) for the wordmark only — italic 500, the
- * exact face app/fonts.ts loads via next/font/google. Self-hosted here through
- * @fontsource/bitter so the Vite SPA has no runtime Google call, and exposes the
- * SAME `--font-bitter` CSS variable the Next app set via `bitter.variable` on the
- * body. The components reference `var(--font-bitter), Georgia, serif`.
+ * Bitter (SIL OFL) italic for the wordmark only, self-hosted so the page makes
+ * no Google Fonts request. The components use var(--font-bitter).
  */
 @import "@fontsource/bitter/400-italic.css";
 @import "@fontsource/bitter/500-italic.css";

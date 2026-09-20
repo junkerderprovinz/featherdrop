@@ -1,26 +1,19 @@
-// Client replacement for app/d/[slug]/page.tsx.
-//
-// The Next page read the DB on the server and rendered <DownloadView/> with the
-// format>=2 share metadata. The static SPA has no server render, so it FETCHES
-// GET /api/d/{slug}/meta — the Go endpoint that returns the exact same shape the
-// SSR page computed (format, size, expiresAt, hasPassword, downloadsLeft,
-// wrappedKey, kdfSalt; name/mime are zero-knowledge and absent). A 404 (no row,
-// expired, or legacy format<2) renders the same not-found view as the Next app.
+// Loads a share's metadata from /api/d/{slug}/meta and renders DownloadView. A
+// 404, for a missing, expired or format 1 share, shows the not-found view.
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Center, Loader } from "@mantine/core";
 import { DownloadView } from "@/components/DownloadView";
 import NotFound from "@/app/not-found";
 
-// Mirrors the metaResponse the Go server returns (server-go/internal/api/meta.go)
-// and the DownloadView props the SSR page passed for a format>=2 share.
+// The body of server-go/internal/api/meta.go.
 interface ShareMeta {
   format: number;
   size: number;
   expiresAt: number | null;
   hasPassword: boolean;
   downloadsLeft: number | null;
-  wrappedKey: string | null; // base64 (matches the SSR Buffer.toString("base64"))
+  wrappedKey: string | null; // base64
   kdfSalt: string | null; // base64
 }
 
@@ -69,8 +62,8 @@ export function DownloadPage() {
   }
 
   const { meta } = state;
-  // Same props the SSR page (app/d/[slug]/page.tsx) passed for rec.format >= 2:
-  // name/mime null (zero-knowledge), linkMode/serverMode false (v2 paths).
+  // Name and type are inside the encrypted blob, and link and server mode
+  // belong to format 1.
   return (
     <DownloadView
       slug={slug}

@@ -1,16 +1,7 @@
-// Vite SPA entry point. It replicates the provider tree app/layout.tsx built on
-// the server (MantineProvider + ColorSchemeScript + DirectionProvider +
-// Notifications + ServerConfigProvider + BrandingProvider + I18nProvider),
-// wrapped in a BrowserRouter for client routing. The one difference from the SSR
-// layout: runtime config (baseUrl, uploadProtected, branding) is not available
-// at build time, so we FETCH GET /api/config first and render a minimal loader
-// until it resolves; on failure we fall back to sensible defaults so the app
-// still renders. The language is resolved client-side (cookie -> navigator),
-// mirroring the server's pickLanguage in app/layout.tsx.
+// The SPA entry point. The runtime config (base URL, upload gate, branding) is
+// only known to the server, so it is fetched from /api/config behind a loader,
+// with defaults when that fails.
 
-// CSS imports — the SAME set, in the same order, as app/layout.tsx, plus the
-// Bitter wordmark font (src/fonts.css supplies the --font-bitter var that
-// next/font set via bitter.variable) and the app globals.
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "@mantine/notifications/styles.css";
@@ -40,14 +31,11 @@ import { isRtl } from "@/lib/i18n/locales";
 import { detectClientLanguage } from "./detect-client";
 import { App } from "./App";
 
-// The GET /api/config body (server-go/internal/api/config.go). The branding shape
-// matches lib/branding.ts (Branding). Defaults below mirror DEFAULT_BRANDING and
-// the open-upload default so a failed/offline /api/config still renders the app.
+// The body of server-go/internal/api/config.go.
 interface AppConfig {
   baseUrl: string;
   uploadProtected: boolean;
-  // Operator expiry policy (v6.1): pre-selected default + hard cap. Optional in
-  // the payload so an older server (or the fallback) still renders fine.
+  // May be missing from an older server; "" means no preference or cap.
   defaultExpiry: string;
   maxExpiry: string;
   branding: {
@@ -69,9 +57,6 @@ const FALLBACK_CONFIG: AppConfig = {
   },
 };
 
-// Bootstrap: fetch /api/config, then mount the full provider tree. A minimal
-// centered loader shows while the request is in flight; any failure falls back
-// to FALLBACK_CONFIG so the UI always renders.
 function Bootstrap() {
   const [config, setConfig] = useState<AppConfig | null>(null);
 
@@ -83,8 +68,7 @@ function Bootstrap() {
         if (!res.ok) throw new Error(`config ${res.status}`);
         const data = (await res.json()) as Partial<AppConfig>;
         if (cancelled) return;
-        // Merge over the fallback so a partial/odd payload can't leave a field
-        // undefined (e.g. a missing accentColor would break theme creation).
+        // A missing field, such as accentColor, would break theme creation.
         setConfig({
           baseUrl: data.baseUrl ?? FALLBACK_CONFIG.baseUrl,
           uploadProtected:
@@ -110,25 +94,18 @@ function Bootstrap() {
     };
   }, []);
 
-  // Resolve the UI language + direction client-side, the SPA twin of the server
-  // pickLanguage()/isRtl() pass in app/layout.tsx. Independent of /api/config, so
-  // it is available immediately (also during the loading state).
+  // The language does not depend on /api/config, so the loader has it too.
   const lang = detectClientLanguage();
   const dir = isRtl(lang) ? "rtl" : "ltr";
 
-  // The accent only arrives with /api/config; until then theme from the default
-  // so MantineProvider can mount immediately.
+  // The accent arrives with /api/config; the default lets MantineProvider mount
+  // before that.
   const accentColor =
     config?.branding.accentColor ?? FALLBACK_CONFIG.branding.accentColor;
 
-  // CRITICAL: DirectionProvider + MantineProvider must wrap BOTH the loading
-  // state and the loaded app. The loading spinner (<Center>/<Loader>) are Mantine
-  // components whose internal hooks throw "MantineProvider was not found" if
-  // rendered outside a provider — which would crash the SPA on first paint,
-  // before /api/config resolves, so the UI never appears. So the provider tree is
-  // always mounted; only its CONTENT switches on `config`. Same structure as
-  // app/layout.tsx's <body> (minus <html>/<head>, which the Go-templated
-  // index.html shell provides).
+  // The loader is a Mantine component and throws outside MantineProvider, so
+  // the providers wrap the loading state as well and only their content
+  // switches on config.
   return (
     <DirectionProvider initialDirection={dir} detectDirection={false}>
       <MantineProvider
@@ -169,16 +146,14 @@ function Bootstrap() {
   );
 }
 
-// Register the service worker at BOOT (not just lazily at download time, as
-// lib/e2e/stream-download.ts does): the PWA share target needs a controlling
-// worker before any share-sheet POST arrives, and an early registration also
-// makes the very first streamed download snappier. Same script + scope as the
-// lazy path, so this is a no-op when already registered.
+// The PWA share target needs a controlling worker before a share-sheet POST
+// arrives, so the worker is registered at boot and not only on the first
+// download. Registering the same script and scope again is a no-op.
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("/sw-download.js", { scope: "/" })
     .catch(() => {
-      // Insecure context / private mode: downloads fall back as before.
+      // Insecure context or private mode: downloads use the blob fallback.
     });
 }
 
@@ -187,8 +162,7 @@ if (!rootEl) throw new Error("missing #root element");
 
 createRoot(rootEl).render(
   <StrictMode>
-    {/* ColorSchemeScript sets the data-mantine-color-scheme attribute early,
-        matching app/layout.tsx (which renders it in <head>). */}
+    {/* Sets data-mantine-color-scheme before the first paint. */}
     <ColorSchemeScript defaultColorScheme="auto" />
     <BrowserRouter>
       <Bootstrap />
