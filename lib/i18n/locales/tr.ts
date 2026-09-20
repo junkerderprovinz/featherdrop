@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const tr: Translation = {
   "app.tagline": "Dosyalarını güvenli ve gizli paylaş",
-  "app.subtitle": "Uçtan uca şifreli — sunucu dosyalarını asla görmez. Otomatik olarak silinir.",
+  "app.subtitle": "Uçtan uca şifreli. Sunucu dosyalarını asla görmez. Otomatik olarak silinir.",
   "app.privacy": "Uçtan uca şifreleme · otomatik silme · takip yok · hesap yok · saçmalık yok",
   "theme.toggle": "Temayı değiştir",
   "language.label": "Dil",
@@ -30,14 +30,14 @@ export const tr: Translation = {
   "result.copy": "Bağlantıyı kopyala",
   "result.copied": "Kopyalandı",
 
-  "result.copyFailed": "Kopyalanamadı — bağlantıyı seçip elle kopyalayın.",
+  "result.copyFailed": "Kopyalanamadı. Bağlantıyı seçip elle kopyalayın.",
   "result.shareAnother": "Başka bir dosya paylaş",
   "result.downloadQr": "QR kodunu kaydet",
   "result.neverExpires": "Asla sona ermez",
   "result.expiresAfter": "{{label}} sonra sona erer",
 
   "result.manageTitle": "Yönetim bağlantısı",
-  "result.manageHint": "Bunu gizli tutun — paylaşımı süresi dolmadan silmek için kullanın.",
+  "result.manageHint": "Bunu gizli tutun. Paylaşımı süresi dolmadan silmek için kullanın.",
   "result.copyManage": "Yönetim bağlantısını kopyala",
   "manage.title": "Paylaşımını yönet",
   "manage.loading": "Paylaşım kontrol ediliyor…",
@@ -57,7 +57,7 @@ export const tr: Translation = {
   "download.encryptedFile": "Şifreli dosya",
   "download.downloadsLeft": "Kalan indirme: {{count}}",
 
-  "download.missingKey": "Bu bağlantının şifre çözme anahtarı eksik — eksik kopyalanmış olabilir.",
+  "download.missingKey": "Bu bağlantının şifre çözme anahtarı eksik. Eksik kopyalanmış olabilir.",
   "download.multiFile": "Şifreli dosyalar",
   "download.fileCount": "Dosyalar: {{count}}",
   "download.total": "Toplam: {{size}}",
@@ -66,7 +66,7 @@ export const tr: Translation = {
 
   "preview.show": "Önizleme",
   "preview.hide": "Önizlemeyi gizle",
-  "preview.tooLarge": "Önizleme için çok büyük — görüntülemek için indirin",
+  "preview.tooLarge": "Önizleme için çok büyük. Görüntülemek için indirin",
 
   "notfound.title": "Burada bir şey yok",
   "notfound.body": "Bu bağlantı geçersiz veya dosya sona erip kaldırılmış.",

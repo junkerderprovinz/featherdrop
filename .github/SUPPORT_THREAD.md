@@ -10,10 +10,10 @@ template's <Support> at the thread URL. Title format matches the sister apps.
 
 # Body
 
-**featherdrop** is a sleek, feather-light, self-hosted file sharer. Drop a file, set an
+**featherdrop** is a feather-light, self-hosted file sharer. Drop a file, set an
 expiry (plus an optional password or download limit), and share a short link or
 QR code. Files are end-to-end encrypted in your browser before upload, uploads are
-resumable, and metadata lives in a single SQLite file — no accounts, no separate
+resumable, and metadata lives in a single SQLite file. No accounts, no separate
 database, no tracking.
 
 **Links**
@@ -22,25 +22,25 @@ database, no tracking.
 - Changelog: https://github.com/junkerderprovinz/featherdrop/releases
 
 **Features**
-- 🔒 Zero-knowledge — end-to-end encrypted in your browser; the server only ever stores opaque ciphertext (name and type encrypted inside)
-- 🔑 Link mode (key in the URL `#fragment`) or optional password (Argon2id) — the key never reaches the server
-- ⏳ Expiry 1h–30d or never, plus optional burn-after-N-downloads
+- 🔒 Zero-knowledge: end-to-end encrypted in your browser; the server only ever stores opaque ciphertext (name and type encrypted inside)
+- 🔑 Link mode (key in the URL `#fragment`) or optional password (Argon2id); the key never reaches the server
+- ⏳ Expiry 1h to 30d or never, plus optional burn-after-N-downloads
 - 🖼️ Inline image/PDF preview · savable QR code · clean link previews
 - 🌍 26 languages (right-to-left for Arabic/Hebrew) · light/dark
-- 🎨 Custom branding — name, logo, accent colour (env vars)
+- 🎨 Custom branding: name, logo, accent colour (env vars)
 - 📦 One container · resumable uploads (tus) · SQLite (no DB server)
-- 🧹 No accounts, no telemetry — your files stay on your server
+- 🧹 No accounts, no telemetry; your files stay on your server
 
 **Installation**
 Search "featherdrop" in Community Applications and click Install. Map the **Data**
-directory (uploads) and **Config** directory (database), pick a port, and — behind
-a reverse proxy — set `BASE_URL` to your public URL. Apply, then open the WebUI.
+directory (uploads) and **Config** directory (database), pick a port, and, behind
+a reverse proxy, set `BASE_URL` to your public URL. Apply, then open the WebUI.
 
 **Configuration (key variables)**
-- `BASE_URL` — your public URL, so share links use your domain
-- `DEFAULT_EXPIRY` — `1h` | `6h` | `1d` | `7d` | `30d` | `never`
-- `MAX_FILE_SIZE` — bytes; `0` = unlimited
-- `APP_NAME` / `APP_LOGO` / `ACCENT_COLOR` — custom branding
+- `BASE_URL`: your public URL, so share links use your domain
+- `DEFAULT_EXPIRY`: `1h` | `6h` | `1d` | `7d` | `30d` | `never`
+- `MAX_FILE_SIZE`: bytes; `0` = unlimited
+- `APP_NAME` / `APP_LOGO` / `ACCENT_COLOR`: custom branding
 
 **Support**
 Reply here, or open an issue: https://github.com/junkerderprovinz/featherdrop/issues

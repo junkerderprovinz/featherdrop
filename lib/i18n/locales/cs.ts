@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const cs: Translation = {
   "app.tagline": "Sdílejte soubory bezpečně a soukromě",
-  "app.subtitle": "Šifrováno end-to-end — server vaše soubory nikdy nevidí. Automaticky smazáno.",
+  "app.subtitle": "Šifrováno end-to-end. Server vaše soubory nikdy nevidí. Automaticky smazáno.",
   "app.privacy": "End-to-end šifrování · automatické mazání · bez sledování · bez účtu · žádné kecy",
   "theme.toggle": "Přepnout motiv",
   "language.label": "Jazyk",
@@ -30,14 +30,14 @@ export const cs: Translation = {
   "result.copy": "Kopírovat odkaz",
   "result.copied": "Zkopírováno",
 
-  "result.copyFailed": "Kopírování se nezdařilo — označte odkaz a zkopírujte ručně.",
+  "result.copyFailed": "Kopírování se nezdařilo. Označte odkaz a zkopírujte ručně.",
   "result.shareAnother": "Sdílet další soubor",
   "result.downloadQr": "Uložit QR kód",
   "result.neverExpires": "Nikdy nevyprší",
   "result.expiresAfter": "Vyprší za {{label}}",
 
   "result.manageTitle": "Odkaz pro správu",
-  "result.manageHint": "Uchovejte jej v soukromí — slouží ke smazání sdílení před vypršením.",
+  "result.manageHint": "Uchovejte jej v soukromí. Slouží ke smazání sdílení před vypršením.",
   "result.copyManage": "Kopírovat odkaz pro správu",
   "manage.title": "Správa vašeho sdílení",
   "manage.loading": "Kontrola sdílení…",
@@ -57,7 +57,7 @@ export const cs: Translation = {
   "download.encryptedFile": "Šifrovaný soubor",
   "download.downloadsLeft": "Zbývající stažení: {{count}}",
 
-  "download.missingKey": "Tomuto odkazu chybí dešifrovací klíč — možná byl zkopírován neúplně.",
+  "download.missingKey": "Tomuto odkazu chybí dešifrovací klíč. Možná byl zkopírován neúplně.",
   "download.multiFile": "Šifrované soubory",
   "download.fileCount": "Soubory: {{count}}",
   "download.total": "Celkem: {{size}}",
@@ -66,7 +66,7 @@ export const cs: Translation = {
 
   "preview.show": "Náhled",
   "preview.hide": "Skrýt náhled",
-  "preview.tooLarge": "Příliš velké pro náhled — stáhněte si to k zobrazení",
+  "preview.tooLarge": "Příliš velké pro náhled. Stáhněte si to k zobrazení",
 
   "notfound.title": "Tady nic není",
   "notfound.body": "Tento odkaz je neplatný, nebo soubor vypršel a byl odstraněn.",

@@ -66,7 +66,7 @@ export const es: Translation = {
 
   "preview.show": "Vista previa",
   "preview.hide": "Ocultar vista previa",
-  "preview.tooLarge": "Demasiado grande para previsualizar — descárgalo para verlo",
+  "preview.tooLarge": "Demasiado grande para previsualizar: descárgalo para verlo",
 
   "notfound.title": "Aquí no hay nada",
   "notfound.body": "Este enlace no es válido, o el archivo ha caducado y se ha eliminado.",

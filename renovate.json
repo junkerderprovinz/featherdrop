@@ -16,7 +16,7 @@
   ],
   "packageRules": [
     {
-      "description": "Group Mantine packages — they must move together",
+      "description": "Group Mantine packages, they must move together",
       "matchPackageNames": [
         "@mantine/core",
         "@mantine/hooks",

@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const fi: Translation = {
   "app.tagline": "Jaa tiedostosi turvallisesti ja yksityisesti",
-  "app.subtitle": "Päästä päähän salattu — palvelin ei koskaan näe tiedostojasi. Poistetaan automaattisesti.",
+  "app.subtitle": "Päästä päähän salattu. Palvelin ei koskaan näe tiedostojasi. Poistetaan automaattisesti.",
   "app.privacy": "Päästä päähän -salaus · automaattinen poisto · ei seurantaa · ei tiliä · ei paskapuhetta",
   "theme.toggle": "Vaihda teemaa",
   "language.label": "Kieli",
@@ -30,14 +30,14 @@ export const fi: Translation = {
   "result.copy": "Kopioi linkki",
   "result.copied": "Kopioitu",
 
-  "result.copyFailed": "Kopiointi epäonnistui — valitse linkki ja kopioi käsin.",
+  "result.copyFailed": "Kopiointi epäonnistui. Valitse linkki ja kopioi käsin.",
   "result.shareAnother": "Jaa toinen tiedosto",
   "result.downloadQr": "Tallenna QR-koodi",
   "result.neverExpires": "Ei vanhene koskaan",
   "result.expiresAfter": "Vanhenee {{label}} kuluttua",
 
   "result.manageTitle": "Hallintalinkki",
-  "result.manageHint": "Pidä se yksityisenä — sillä voit poistaa jaon ennen sen vanhenemista.",
+  "result.manageHint": "Pidä se yksityisenä. Sillä voit poistaa jaon ennen sen vanhenemista.",
   "result.copyManage": "Kopioi hallintalinkki",
   "manage.title": "Hallitse jakoasi",
   "manage.loading": "Tarkistetaan jakoa…",
@@ -57,7 +57,7 @@ export const fi: Translation = {
   "download.encryptedFile": "Salattu tiedosto",
   "download.downloadsLeft": "Latauksia jäljellä: {{count}}",
 
-  "download.missingKey": "Tästä linkistä puuttuu salauksenpurkuavain — se on voitu kopioida vaillinaisesti.",
+  "download.missingKey": "Tästä linkistä puuttuu salauksenpurkuavain. Se on voitu kopioida vaillinaisesti.",
   "download.multiFile": "Salatut tiedostot",
   "download.fileCount": "Tiedostot: {{count}}",
   "download.total": "Yhteensä: {{size}}",
@@ -66,7 +66,7 @@ export const fi: Translation = {
 
   "preview.show": "Esikatselu",
   "preview.hide": "Piilota esikatselu",
-  "preview.tooLarge": "Liian suuri esikatseltavaksi — lataa nähdäksesi sen",
+  "preview.tooLarge": "Liian suuri esikatseltavaksi. Lataa nähdäksesi sen",
 
   "notfound.title": "Täällä ei ole mitään",
   "notfound.body": "Tämä linkki on virheellinen tai tiedosto on vanhentunut ja poistettu.",

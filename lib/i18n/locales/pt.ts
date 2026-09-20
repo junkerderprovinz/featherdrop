@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const pt: Translation = {
   "app.tagline": "Partilha os teus ficheiros de forma segura e privada",
-  "app.subtitle": "Encriptado de ponta a ponta — o servidor nunca vê os teus ficheiros. Eliminado automaticamente.",
+  "app.subtitle": "Encriptado de ponta a ponta. O servidor nunca vê os teus ficheiros. Eliminado automaticamente.",
   "app.privacy": "Encriptação de ponta a ponta · eliminação automática · sem rastreio · sem conta · sem tretas",
   "theme.toggle": "Alternar tema",
   "language.label": "Idioma",
@@ -30,14 +30,14 @@ export const pt: Translation = {
   "result.copy": "Copiar link",
   "result.copied": "Copiado",
 
-  "result.copyFailed": "Não foi possível copiar — selecione o link e copie manualmente.",
+  "result.copyFailed": "Não foi possível copiar. Selecione o link e copie manualmente.",
   "result.shareAnother": "Partilhar outro ficheiro",
   "result.downloadQr": "Guardar código QR",
   "result.neverExpires": "Nunca expira",
   "result.expiresAfter": "Expira após {{label}}",
 
   "result.manageTitle": "Link de gestão",
-  "result.manageHint": "Mantenha-o privado — use-o para eliminar a partilha antes de expirar.",
+  "result.manageHint": "Mantenha-o privado. Use-o para eliminar a partilha antes de expirar.",
   "result.copyManage": "Copiar link de gestão",
   "manage.title": "Gerir a sua partilha",
   "manage.loading": "A verificar a partilha…",
@@ -57,7 +57,7 @@ export const pt: Translation = {
   "download.encryptedFile": "Ficheiro encriptado",
   "download.downloadsLeft": "Transferências restantes: {{count}}",
 
-  "download.missingKey": "Falta a chave de desencriptação a este link — pode ter sido copiado de forma incompleta.",
+  "download.missingKey": "Falta a chave de desencriptação a este link. Pode ter sido copiado de forma incompleta.",
   "download.multiFile": "Ficheiros encriptados",
   "download.fileCount": "Ficheiros: {{count}}",
   "download.total": "Total: {{size}}",
@@ -66,7 +66,7 @@ export const pt: Translation = {
 
   "preview.show": "Pré-visualização",
   "preview.hide": "Ocultar pré-visualização",
-  "preview.tooLarge": "Demasiado grande para pré-visualizar — descarregue para o ver",
+  "preview.tooLarge": "Demasiado grande para pré-visualizar. Descarregue para o ver",
 
   "notfound.title": "Não há nada aqui",
   "notfound.body": "Este link é inválido, ou o ficheiro expirou e foi removido.",

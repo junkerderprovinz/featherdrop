@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ar: Translation = {
   "app.tagline": "شارك ملفاتك بأمان وخصوصية",
-  "app.subtitle": "مشفّر من طرف إلى طرف — الخادم لا يرى ملفاتك أبدًا. يُحذف تلقائيًا.",
+  "app.subtitle": "مشفّر من طرف إلى طرف. الخادم لا يرى ملفاتك أبدًا. يُحذف تلقائيًا.",
   "app.privacy": "تشفير من طرف إلى طرف · حذف تلقائي · بدون تتبّع · بدون حساب · بدون هراء",
   "theme.toggle": "تبديل السمة",
   "language.label": "اللغة",
@@ -30,14 +30,14 @@ export const ar: Translation = {
   "result.copy": "نسخ الرابط",
   "result.copied": "تم النسخ",
 
-  "result.copyFailed": "تعذّر النسخ — حدّد الرابط وانسخه يدويًا.",
+  "result.copyFailed": "تعذّر النسخ. حدّد الرابط وانسخه يدويًا.",
   "result.shareAnother": "مشاركة ملف آخر",
   "result.downloadQr": "حفظ رمز QR",
   "result.neverExpires": "لا تنتهي صلاحيته أبدًا",
   "result.expiresAfter": "تنتهي الصلاحية بعد {{label}}",
 
   "result.manageTitle": "رابط الإدارة",
-  "result.manageHint": "احتفظ به خاصًا — استخدمه لحذف المشاركة قبل انتهاء صلاحيتها.",
+  "result.manageHint": "احتفظ به خاصًا. استخدمه لحذف المشاركة قبل انتهاء صلاحيتها.",
   "result.copyManage": "نسخ رابط الإدارة",
   "manage.title": "إدارة مشاركتك",
   "manage.loading": "جارٍ التحقق من المشاركة…",
@@ -57,7 +57,7 @@ export const ar: Translation = {
   "download.encryptedFile": "ملف مشفّر",
   "download.downloadsLeft": "التنزيلات المتبقية: {{count}}",
 
-  "download.missingKey": "هذا الرابط ينقصه مفتاح فك التشفير — ربما نُسخ بشكل غير كامل.",
+  "download.missingKey": "هذا الرابط ينقصه مفتاح فك التشفير. ربما نُسخ بشكل غير كامل.",
   "download.multiFile": "ملفات مشفّرة",
   "download.fileCount": "الملفات: {{count}}",
   "download.total": "الإجمالي: {{size}}",
@@ -66,7 +66,7 @@ export const ar: Translation = {
 
   "preview.show": "معاينة",
   "preview.hide": "إخفاء المعاينة",
-  "preview.tooLarge": "كبير جدًا للمعاينة — نزّله لعرضه",
+  "preview.tooLarge": "كبير جدًا للمعاينة. نزّله لعرضه",
 
   "notfound.title": "لا شيء هنا",
   "notfound.body": "هذا الرابط غير صالح، أو انتهت صلاحية الملف وتمت إزالته.",

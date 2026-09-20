@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const fr: Translation = {
   "app.tagline": "Partagez vos fichiers en toute sécurité et confidentialité",
-  "app.subtitle": "Chiffré de bout en bout — le serveur ne voit jamais vos fichiers. Supprimé automatiquement.",
+  "app.subtitle": "Chiffré de bout en bout. Le serveur ne voit jamais vos fichiers. Supprimé automatiquement.",
   "app.privacy": "Chiffrement de bout en bout · suppression automatique · sans pistage · sans compte · sans conneries",
   "theme.toggle": "Changer de thème",
   "language.label": "Langue",
@@ -30,14 +30,14 @@ export const fr: Translation = {
   "result.copy": "Copier le lien",
   "result.copied": "Copié",
 
-  "result.copyFailed": "Copie impossible — sélectionnez le lien et copiez-le manuellement.",
+  "result.copyFailed": "Copie impossible. Sélectionnez le lien et copiez-le manuellement.",
   "result.shareAnother": "Partager un autre fichier",
   "result.downloadQr": "Enregistrer le QR code",
   "result.neverExpires": "N'expire jamais",
   "result.expiresAfter": "Expire après {{label}}",
 
   "result.manageTitle": "Lien de gestion",
-  "result.manageHint": "Gardez-le privé — il permet de supprimer le partage avant son expiration.",
+  "result.manageHint": "Gardez-le privé. Il permet de supprimer le partage avant son expiration.",
   "result.copyManage": "Copier le lien de gestion",
   "manage.title": "Gérer votre partage",
   "manage.loading": "Vérification du partage…",
@@ -57,7 +57,7 @@ export const fr: Translation = {
   "download.encryptedFile": "Fichier chiffré",
   "download.downloadsLeft": "Téléchargements restants : {{count}}",
 
-  "download.missingKey": "Ce lien n'a pas sa clé de déchiffrement — il a peut-être été copié de façon incomplète.",
+  "download.missingKey": "Ce lien n'a pas sa clé de déchiffrement. Il a peut-être été copié de façon incomplète.",
   "download.multiFile": "Fichiers chiffrés",
   "download.fileCount": "Fichiers : {{count}}",
   "download.total": "Total : {{size}}",
@@ -66,7 +66,7 @@ export const fr: Translation = {
 
   "preview.show": "Aperçu",
   "preview.hide": "Masquer l’aperçu",
-  "preview.tooLarge": "Trop volumineux pour un aperçu — télécharger pour le voir",
+  "preview.tooLarge": "Trop volumineux pour un aperçu. Télécharger pour le voir",
 
   "notfound.title": "Rien ici",
   "notfound.body": "Ce lien est invalide, ou le fichier a expiré et a été supprimé.",

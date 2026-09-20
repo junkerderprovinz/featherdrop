@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const de: Translation = {
   "app.tagline": "Teile deine Dateien sicher und ohne Datenschutzbedenken",
-  "app.subtitle": "Ende-zu-Ende verschlüsselt — der Server sieht deine Dateien nie. Wird automatisch gelöscht.",
+  "app.subtitle": "Ende-zu-Ende verschlüsselt. Der Server sieht deine Dateien nie. Wird automatisch gelöscht.",
   "app.privacy": "Ende-zu-Ende verschlüsselt · automatische Löschung · kein Tracking · kein Kontozwang · kein Scheiß",
   "theme.toggle": "Design umschalten",
   "language.label": "Sprache",
@@ -30,14 +30,14 @@ export const de: Translation = {
   "result.copy": "Link kopieren",
   "result.copied": "Kopiert",
 
-  "result.copyFailed": "Kopieren fehlgeschlagen — Link markieren und manuell kopieren.",
+  "result.copyFailed": "Kopieren fehlgeschlagen. Link markieren und manuell kopieren.",
   "result.shareAnother": "Weitere Datei teilen",
   "result.downloadQr": "QR-Code speichern",
   "result.neverExpires": "Läuft nie ab",
   "result.expiresAfter": "Läuft ab nach {{label}}",
 
   "result.manageTitle": "Verwaltungslink",
-  "result.manageHint": "Privat halten — damit kannst du die Freigabe vor Ablauf löschen.",
+  "result.manageHint": "Privat halten. Damit kannst du die Freigabe vor Ablauf löschen.",
   "result.copyManage": "Verwaltungslink kopieren",
   "manage.title": "Freigabe verwalten",
   "manage.loading": "Freigabe wird geprüft…",
@@ -58,7 +58,7 @@ export const de: Translation = {
 
   "download.downloadsLeft": "Verbleibende Downloads: {{count}}",
 
-  "download.missingKey": "Diesem Link fehlt der Entschlüsselungs-Schlüssel — er wurde vielleicht unvollständig kopiert.",
+  "download.missingKey": "Diesem Link fehlt der Entschlüsselungs-Schlüssel. Er wurde vielleicht unvollständig kopiert.",
   "download.multiFile": "Verschlüsselte Dateien",
   "download.fileCount": "Dateien: {{count}}",
   "download.total": "Gesamt: {{size}}",
@@ -67,7 +67,7 @@ export const de: Translation = {
 
   "preview.show": "Vorschau",
   "preview.hide": "Vorschau ausblenden",
-  "preview.tooLarge": "Zu groß für eine Vorschau — zum Ansehen herunterladen",
+  "preview.tooLarge": "Zu groß für eine Vorschau. Zum Ansehen herunterladen",
 
   "notfound.title": "Hier ist nichts",
   "notfound.body": "Dieser Link ist ungültig oder die Datei ist abgelaufen und wurde entfernt.",

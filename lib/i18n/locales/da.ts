@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const da: Translation = {
   "app.tagline": "Del dine filer sikkert og privat",
-  "app.subtitle": "End-to-end-krypteret — serveren ser aldrig dine filer. Slettes automatisk.",
+  "app.subtitle": "End-to-end-krypteret. Serveren ser aldrig dine filer. Slettes automatisk.",
   "app.privacy": "End-to-end-kryptering · automatisk sletning · ingen sporing · ingen konto · intet pis",
   "theme.toggle": "Skift tema",
   "language.label": "Sprog",
@@ -30,14 +30,14 @@ export const da: Translation = {
   "result.copy": "Kopiér link",
   "result.copied": "Kopieret",
 
-  "result.copyFailed": "Kunne ikke kopiere — markér linket og kopiér manuelt.",
+  "result.copyFailed": "Kunne ikke kopiere. Markér linket og kopiér manuelt.",
   "result.shareAnother": "Del en anden fil",
   "result.downloadQr": "Gem QR-kode",
   "result.neverExpires": "Udløber aldrig",
   "result.expiresAfter": "Udløber efter {{label}}",
 
   "result.manageTitle": "Administrationslink",
-  "result.manageHint": "Hold det privat — brug det til at slette delingen, før den udløber.",
+  "result.manageHint": "Hold det privat. Brug det til at slette delingen, før den udløber.",
   "result.copyManage": "Kopiér administrationslink",
   "manage.title": "Administrér din deling",
   "manage.loading": "Kontrollerer delingen…",
@@ -57,7 +57,7 @@ export const da: Translation = {
   "download.encryptedFile": "Krypteret fil",
   "download.downloadsLeft": "Resterende downloads: {{count}}",
 
-  "download.missingKey": "Dette link mangler sin dekrypteringsnøgle — det er måske kopieret ufuldstændigt.",
+  "download.missingKey": "Dette link mangler sin dekrypteringsnøgle. Det er måske kopieret ufuldstændigt.",
   "download.multiFile": "Krypterede filer",
   "download.fileCount": "Filer: {{count}}",
   "download.total": "I alt: {{size}}",
@@ -66,7 +66,7 @@ export const da: Translation = {
 
   "preview.show": "Forhåndsvisning",
   "preview.hide": "Skjul forhåndsvisning",
-  "preview.tooLarge": "For stor til forhåndsvisning — download for at se den",
+  "preview.tooLarge": "For stor til forhåndsvisning. Download for at se den",
 
   "notfound.title": "Intet her",
   "notfound.body": "Dette link er ugyldigt, eller filen er udløbet og fjernet.",

@@ -30,8 +30,8 @@
 </head>
 <body>
 
-<h1>featherdrop – a sleek, feather-light file sharer for Unraid</h1>
-<p class="subtitle">Drop a file, get a link — encrypted, self-destructing, no accounts.</p>
+<h1>featherdrop: a feather-light file sharer for Unraid</h1>
+<p class="subtitle">Drop a file, get a link. Encrypted, self-destructing, no accounts.</p>
 
 <p align="center">
   <a href="https://github.com/junkerderprovinz/featherdrop">
@@ -51,29 +51,29 @@
 <p>A feather-light, login-free, self-hosted file sharer. Open the page, drop a file, set an
 expiry (plus an optional password or download limit), and share a short link or QR
 code. Files are <strong>end-to-end encrypted in your browser</strong> before upload,
-uploads are <strong>resumable</strong>, and metadata is a single SQLite file — no
+uploads are <strong>resumable</strong>, and metadata is a single SQLite file. No
 accounts, no separate database, no tracking.
 Built with Next.js + Mantine, it runs as one small container and is configured entirely
-from the Unraid template — no SSH or config-file editing.</p>
+from the Unraid template, with no SSH or config-file editing.</p>
 
 <h2>Highlights</h2>
 <ul>
-  <li><strong>Zero-knowledge</strong> — files are end-to-end encrypted in your browser (libsodium XChaCha20-Poly1305); the server only ever stores opaque ciphertext and never sees your files, their names, or the key</li>
-  <li><strong>Link mode</strong> carries the key in the URL <code>#fragment</code>; an optional <strong>password</strong> (Argon2id) keeps it off the link entirely — either way the key never reaches the server</li>
-  <li><strong>Self-destructing</strong> — expiry from 1 hour to 30 days (or never), plus optional <strong>burn-after-N-downloads</strong></li>
+  <li><strong>Zero-knowledge</strong>: files are end-to-end encrypted in your browser (libsodium XChaCha20-Poly1305); the server only ever stores opaque ciphertext and never sees your files, their names, or the key</li>
+  <li><strong>Link mode</strong> carries the key in the URL <code>#fragment</code>; an optional <strong>password</strong> (Argon2id) keeps it off the link entirely, and either way the key never reaches the server</li>
+  <li><strong>Self-destructing</strong>: expiry from 1 hour to 30 days (or never), plus optional <strong>burn-after-N-downloads</strong></li>
   <li>Inline <strong>image/PDF preview</strong>, a savable <strong>QR code</strong>, and clean <strong>link previews</strong> that never leak the file's name</li>
   <li><strong>26 UI languages</strong> (right-to-left for Arabic &amp; Hebrew), light/dark, picked from the browser</li>
-  <li><strong>Custom branding</strong> — app name, logo and accent colour via env vars</li>
-  <li><strong>One container</strong> — resumable uploads (tus), a single SQLite file, separate data/config volumes</li>
-  <li><strong>Private by design</strong> — no accounts, no telemetry, no third-party calls at runtime</li>
-  <li>Multi-arch — amd64 + arm64</li>
+  <li><strong>Custom branding</strong>: app name, logo and accent colour via env vars</li>
+  <li><strong>One container</strong>: resumable uploads (tus), a single SQLite file, separate data/config volumes</li>
+  <li><strong>Private by design</strong>: no accounts, no telemetry, no third-party calls at runtime</li>
+  <li>Multi-arch: amd64 + arm64</li>
   <li>Image: <code>ghcr.io/junkerderprovinz/featherdrop:latest</code></li>
 </ul>
 
 <h2>Requirements</h2>
 <ul>
   <li>Unraid 6.10+</li>
-  <li>A reverse proxy with <strong>HTTPS</strong> is recommended — set <code>BASE_URL</code> to your public URL so share links are correct (and so a link's decryption key in the URL fragment stays private in transit)</li>
+  <li>A reverse proxy with <strong>HTTPS</strong> is recommended: set <code>BASE_URL</code> to your public URL so share links are correct (and so a link's decryption key in the URL fragment stays private in transit)</li>
   <li>Allow <strong>large uploads</strong> in your proxy (e.g. <code>client_max_body_size 0</code> and generous timeouts) for big files</li>
 </ul>
 
@@ -99,7 +99,7 @@ better-sqlite3. If featherdrop saves you a trip to a third-party host, you can
 
 <hr>
 
-<p class="footnote">Self-hosted, MIT-licensed — you run it, you own your data and the responsibility.</p>
+<p class="footnote">Self-hosted, MIT-licensed: you run it, you own your data and the responsibility.</p>
 
 </body>
 </html>

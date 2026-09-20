@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const th: Translation = {
   "app.tagline": "แชร์ไฟล์ของคุณอย่างปลอดภัยและเป็นส่วนตัว",
-  "app.subtitle": "เข้ารหัสแบบ end-to-end — เซิร์ฟเวอร์ไม่เคยเห็นไฟล์ของคุณ ลบอัตโนมัติ",
+  "app.subtitle": "เข้ารหัสแบบ end-to-end เซิร์ฟเวอร์ไม่เคยเห็นไฟล์ของคุณ ลบอัตโนมัติ",
   "app.privacy": "เข้ารหัสแบบ end-to-end · ลบอัตโนมัติ · ไม่มีการติดตาม · ไม่ต้องมีบัญชี · ไม่มีเรื่องไร้สาระ",
   "theme.toggle": "สลับธีม",
   "language.label": "ภาษา",
@@ -30,14 +30,14 @@ export const th: Translation = {
   "result.copy": "คัดลอกลิงก์",
   "result.copied": "คัดลอกแล้ว",
 
-  "result.copyFailed": "คัดลอกไม่สำเร็จ — เลือกลิงก์แล้วคัดลอกเอง",
+  "result.copyFailed": "คัดลอกไม่สำเร็จ เลือกลิงก์แล้วคัดลอกเอง",
   "result.shareAnother": "แชร์ไฟล์อื่น",
   "result.downloadQr": "บันทึกคิวอาร์โค้ด",
   "result.neverExpires": "ไม่หมดอายุ",
   "result.expiresAfter": "หมดอายุหลังจาก {{label}}",
 
   "result.manageTitle": "ลิงก์จัดการ",
-  "result.manageHint": "เก็บไว้เป็นความลับ — ใช้สำหรับลบการแชร์ก่อนหมดอายุ",
+  "result.manageHint": "เก็บไว้เป็นความลับ ใช้สำหรับลบการแชร์ก่อนหมดอายุ",
   "result.copyManage": "คัดลอกลิงก์จัดการ",
   "manage.title": "จัดการการแชร์ของคุณ",
   "manage.loading": "กำลังตรวจสอบการแชร์…",
@@ -57,7 +57,7 @@ export const th: Translation = {
   "download.encryptedFile": "ไฟล์ที่เข้ารหัส",
   "download.downloadsLeft": "ดาวน์โหลดที่เหลือ: {{count}}",
 
-  "download.missingKey": "ลิงก์นี้ไม่มีคีย์ถอดรหัส — อาจถูกคัดลอกมาไม่ครบ",
+  "download.missingKey": "ลิงก์นี้ไม่มีคีย์ถอดรหัส อาจถูกคัดลอกมาไม่ครบ",
   "download.multiFile": "ไฟล์ที่เข้ารหัส",
   "download.fileCount": "ไฟล์: {{count}}",
   "download.total": "รวม: {{size}}",
@@ -66,7 +66,7 @@ export const th: Translation = {
 
   "preview.show": "แสดงตัวอย่าง",
   "preview.hide": "ซ่อนตัวอย่าง",
-  "preview.tooLarge": "ใหญ่เกินกว่าจะแสดงตัวอย่าง — ดาวน์โหลดเพื่อดู",
+  "preview.tooLarge": "ใหญ่เกินกว่าจะแสดงตัวอย่าง ดาวน์โหลดเพื่อดู",
 
   "notfound.title": "ไม่มีอะไรที่นี่",
   "notfound.body": "ลิงก์นี้ไม่ถูกต้อง หรือไฟล์หมดอายุและถูกลบไปแล้ว",

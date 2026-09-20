@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const nl: Translation = {
   "app.tagline": "Deel je bestanden veilig en privé",
-  "app.subtitle": "End-to-end versleuteld — de server ziet je bestanden nooit. Wordt automatisch verwijderd.",
+  "app.subtitle": "End-to-end versleuteld. De server ziet je bestanden nooit. Wordt automatisch verwijderd.",
   "app.privacy": "End-to-end versleuteld · automatisch verwijderd · geen tracking · geen account · geen bullshit",
   "theme.toggle": "Thema wisselen",
   "language.label": "Taal",
@@ -30,14 +30,14 @@ export const nl: Translation = {
   "result.copy": "Link kopiëren",
   "result.copied": "Gekopieerd",
 
-  "result.copyFailed": "Kopiëren mislukt — selecteer de link en kopieer handmatig.",
+  "result.copyFailed": "Kopiëren mislukt. Selecteer de link en kopieer handmatig.",
   "result.shareAnother": "Nog een bestand delen",
   "result.downloadQr": "QR-code opslaan",
   "result.neverExpires": "Verloopt nooit",
   "result.expiresAfter": "Verloopt na {{label}}",
 
   "result.manageTitle": "Beheerlink",
-  "result.manageHint": "Houd deze privé — gebruik hem om de share vóór het verlopen te verwijderen.",
+  "result.manageHint": "Houd deze privé. Gebruik hem om de share vóór het verlopen te verwijderen.",
   "result.copyManage": "Beheerlink kopiëren",
   "manage.title": "Je share beheren",
   "manage.loading": "Share controleren…",
@@ -57,7 +57,7 @@ export const nl: Translation = {
   "download.encryptedFile": "Versleuteld bestand",
   "download.downloadsLeft": "Resterende downloads: {{count}}",
 
-  "download.missingKey": "Deze link mist zijn ontsleutelsleutel — mogelijk is hij onvolledig gekopieerd.",
+  "download.missingKey": "Deze link mist zijn ontsleutelsleutel. Mogelijk is hij onvolledig gekopieerd.",
   "download.multiFile": "Versleutelde bestanden",
   "download.fileCount": "Bestanden: {{count}}",
   "download.total": "Totaal: {{size}}",
@@ -66,7 +66,7 @@ export const nl: Translation = {
 
   "preview.show": "Voorbeeld",
   "preview.hide": "Voorbeeld verbergen",
-  "preview.tooLarge": "Te groot voor een voorbeeld — download om het te bekijken",
+  "preview.tooLarge": "Te groot voor een voorbeeld. Download om het te bekijken",
 
   "notfound.title": "Hier is niets",
   "notfound.body": "Deze link is ongeldig, of het bestand is verlopen en verwijderd.",

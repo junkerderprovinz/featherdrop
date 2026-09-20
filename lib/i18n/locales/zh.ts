@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const zh: Translation = {
   "app.tagline": "安全且私密地分享你的文件",
-  "app.subtitle": "端到端加密 — 服务器永远看不到你的文件。自动删除。",
+  "app.subtitle": "端到端加密。服务器永远看不到你的文件。自动删除。",
   "app.privacy": "端到端加密 · 自动删除 · 无追踪 · 无需账户 · 绝无废话",
   "theme.toggle": "切换主题",
   "language.label": "语言",
@@ -30,14 +30,14 @@ export const zh: Translation = {
   "result.copy": "复制链接",
   "result.copied": "已复制",
 
-  "result.copyFailed": "无法复制 — 请选中链接手动复制。",
+  "result.copyFailed": "无法复制。请选中链接手动复制。",
   "result.shareAnother": "分享另一个文件",
   "result.downloadQr": "保存二维码",
   "result.neverExpires": "永不过期",
   "result.expiresAfter": "{{label}}后过期",
 
   "result.manageTitle": "管理链接",
-  "result.manageHint": "请妥善保管——用它可在分享过期前删除分享。",
+  "result.manageHint": "请妥善保管。用它可在分享过期前删除分享。",
   "result.copyManage": "复制管理链接",
   "manage.title": "管理你的分享",
   "manage.loading": "正在检查分享…",
@@ -57,7 +57,7 @@ export const zh: Translation = {
   "download.encryptedFile": "已加密的文件",
   "download.downloadsLeft": "剩余下载次数：{{count}}",
 
-  "download.missingKey": "此链接缺少解密密钥 — 可能复制不完整。",
+  "download.missingKey": "此链接缺少解密密钥。可能复制不完整。",
   "download.multiFile": "已加密的文件",
   "download.fileCount": "文件数：{{count}}",
   "download.total": "总计：{{size}}",
@@ -66,7 +66,7 @@ export const zh: Translation = {
 
   "preview.show": "预览",
   "preview.hide": "隐藏预览",
-  "preview.tooLarge": "太大无法预览 — 下载后查看",
+  "preview.tooLarge": "太大无法预览。下载后查看",
 
   "notfound.title": "这里什么都没有",
   "notfound.body": "此链接无效，或文件已过期并被删除。",

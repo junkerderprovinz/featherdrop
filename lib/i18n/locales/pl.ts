@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const pl: Translation = {
   "app.tagline": "Udostępniaj pliki bezpiecznie i prywatnie",
-  "app.subtitle": "Szyfrowanie end-to-end — serwer nigdy nie widzi twoich plików. Usuwane automatycznie.",
+  "app.subtitle": "Szyfrowanie end-to-end. Serwer nigdy nie widzi twoich plików. Usuwane automatycznie.",
   "app.privacy": "Szyfrowanie end-to-end · automatyczne usuwanie · bez śledzenia · bez konta · bez ściemy",
   "theme.toggle": "Przełącz motyw",
   "language.label": "Język",
@@ -30,14 +30,14 @@ export const pl: Translation = {
   "result.copy": "Kopiuj link",
   "result.copied": "Skopiowano",
 
-  "result.copyFailed": "Nie udało się skopiować — zaznacz link i skopiuj ręcznie.",
+  "result.copyFailed": "Nie udało się skopiować. Zaznacz link i skopiuj ręcznie.",
   "result.shareAnother": "Udostępnij kolejny plik",
   "result.downloadQr": "Zapisz kod QR",
   "result.neverExpires": "Nigdy nie wygasa",
   "result.expiresAfter": "Wygasa po {{label}}",
 
   "result.manageTitle": "Link do zarządzania",
-  "result.manageHint": "Zachowaj go prywatnie — pozwala usunąć udostępnienie przed wygaśnięciem.",
+  "result.manageHint": "Zachowaj go prywatnie. Pozwala usunąć udostępnienie przed wygaśnięciem.",
   "result.copyManage": "Kopiuj link do zarządzania",
   "manage.title": "Zarządzaj swoim udostępnieniem",
   "manage.loading": "Sprawdzanie udostępnienia…",
@@ -57,7 +57,7 @@ export const pl: Translation = {
   "download.encryptedFile": "Zaszyfrowany plik",
   "download.downloadsLeft": "Pozostałe pobrania: {{count}}",
 
-  "download.missingKey": "Temu linkowi brakuje klucza deszyfrującego — mógł zostać skopiowany niekompletnie.",
+  "download.missingKey": "Temu linkowi brakuje klucza deszyfrującego. Mógł zostać skopiowany niekompletnie.",
   "download.multiFile": "Zaszyfrowane pliki",
   "download.fileCount": "Pliki: {{count}}",
   "download.total": "Razem: {{size}}",
@@ -66,7 +66,7 @@ export const pl: Translation = {
 
   "preview.show": "Podgląd",
   "preview.hide": "Ukryj podgląd",
-  "preview.tooLarge": "Zbyt duży, aby wyświetlić podgląd — pobierz, aby zobaczyć",
+  "preview.tooLarge": "Zbyt duży, aby wyświetlić podgląd. Pobierz, aby zobaczyć",
 
   "notfound.title": "Tu nic nie ma",
   "notfound.body": "Ten link jest nieprawidłowy lub plik wygasł i został usunięty.",

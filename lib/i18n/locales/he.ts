@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const he: Translation = {
   "app.tagline": "שתפו את הקבצים שלכם בבטחה ובפרטיות",
-  "app.subtitle": "מוצפן מקצה לקצה — השרת לא רואה את הקבצים שלך אף פעם. נמחק אוטומטית.",
+  "app.subtitle": "מוצפן מקצה לקצה. השרת לא רואה את הקבצים שלך אף פעם. נמחק אוטומטית.",
   "app.privacy": "הצפנה מקצה לקצה · מחיקה אוטומטית · בלי מעקב · בלי חשבון · בלי שטויות",
   "theme.toggle": "החלפת ערכת נושא",
   "language.label": "שפה",
@@ -30,14 +30,14 @@ export const he: Translation = {
   "result.copy": "העתקת קישור",
   "result.copied": "הועתק",
 
-  "result.copyFailed": "ההעתקה נכשלה — סמנו את הקישור והעתיקו ידנית.",
+  "result.copyFailed": "ההעתקה נכשלה. סמנו את הקישור והעתיקו ידנית.",
   "result.shareAnother": "שיתוף קובץ נוסף",
   "result.downloadQr": "שמירת קוד QR",
   "result.neverExpires": "לעולם לא פג",
   "result.expiresAfter": "פג אחרי {{label}}",
 
   "result.manageTitle": "קישור ניהול",
-  "result.manageHint": "שמרו אותו פרטי — הוא משמש למחיקת השיתוף לפני שיפוג.",
+  "result.manageHint": "שמרו אותו פרטי. הוא משמש למחיקת השיתוף לפני שיפוג.",
   "result.copyManage": "העתקת קישור ניהול",
   "manage.title": "ניהול השיתוף שלך",
   "manage.loading": "בודק את השיתוף…",
@@ -57,7 +57,7 @@ export const he: Translation = {
   "download.encryptedFile": "קובץ מוצפן",
   "download.downloadsLeft": "הורדות שנותרו: {{count}}",
 
-  "download.missingKey": "לקישור הזה חסר מפתח הפענוח — ייתכן שהועתק באופן חלקי.",
+  "download.missingKey": "לקישור הזה חסר מפתח הפענוח. ייתכן שהועתק באופן חלקי.",
   "download.multiFile": "קבצים מוצפנים",
   "download.fileCount": "קבצים: {{count}}",
   "download.total": "סך הכול: {{size}}",
@@ -66,7 +66,7 @@ export const he: Translation = {
 
   "preview.show": "תצוגה מקדימה",
   "preview.hide": "הסתרת תצוגה מקדימה",
-  "preview.tooLarge": "גדול מדי לתצוגה מקדימה — הורד כדי לצפות בו",
+  "preview.tooLarge": "גדול מדי לתצוגה מקדימה. הורד כדי לצפות בו",
 
   "notfound.title": "אין כאן כלום",
   "notfound.body": "הקישור הזה אינו תקין, או שהקובץ פג ונמחק.",

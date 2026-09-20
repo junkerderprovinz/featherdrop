@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ro: Translation = {
   "app.tagline": "Partajează-ți fișierele în siguranță și confidențial",
-  "app.subtitle": "Criptat end-to-end — serverul nu îți vede niciodată fișierele. Se șterge automat.",
+  "app.subtitle": "Criptat end-to-end. Serverul nu îți vede niciodată fișierele. Se șterge automat.",
   "app.privacy": "Criptare end-to-end · ștergere automată · fără urmărire · fără cont · fără prostii",
   "theme.toggle": "Comută tema",
   "language.label": "Limbă",
@@ -30,14 +30,14 @@ export const ro: Translation = {
   "result.copy": "Copiază linkul",
   "result.copied": "Copiat",
 
-  "result.copyFailed": "Nu s-a putut copia — selectează linkul și copiază-l manual.",
+  "result.copyFailed": "Nu s-a putut copia. Selectează linkul și copiază-l manual.",
   "result.shareAnother": "Partajează alt fișier",
   "result.downloadQr": "Salvează codul QR",
   "result.neverExpires": "Nu expiră niciodată",
   "result.expiresAfter": "Expiră după {{label}}",
 
   "result.manageTitle": "Link de gestionare",
-  "result.manageHint": "Păstrează-l privat — îl folosești pentru a șterge partajarea înainte de expirare.",
+  "result.manageHint": "Păstrează-l privat. Îl folosești pentru a șterge partajarea înainte de expirare.",
   "result.copyManage": "Copiază linkul de gestionare",
   "manage.title": "Gestionează partajarea ta",
   "manage.loading": "Se verifică partajarea…",
@@ -57,7 +57,7 @@ export const ro: Translation = {
   "download.encryptedFile": "Fișier criptat",
   "download.downloadsLeft": "Descărcări rămase: {{count}}",
 
-  "download.missingKey": "Acestui link îi lipsește cheia de decriptare — poate a fost copiat incomplet.",
+  "download.missingKey": "Acestui link îi lipsește cheia de decriptare. Poate a fost copiat incomplet.",
   "download.multiFile": "Fișiere criptate",
   "download.fileCount": "Fișiere: {{count}}",
   "download.total": "Total: {{size}}",
@@ -66,7 +66,7 @@ export const ro: Translation = {
 
   "preview.show": "Previzualizare",
   "preview.hide": "Ascunde previzualizarea",
-  "preview.tooLarge": "Prea mare pentru previzualizare — descarcă-l pentru a-l vedea",
+  "preview.tooLarge": "Prea mare pentru previzualizare. Descarcă-l pentru a-l vedea",
 
   "notfound.title": "Nimic aici",
   "notfound.body": "Acest link este invalid sau fișierul a expirat și a fost eliminat.",

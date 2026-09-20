@@ -5,7 +5,7 @@
 // Interpolation uses i18next syntax: {{label}}, {{count}}.
 export const en = {
   "app.tagline": "Share your files securely and privately",
-  "app.subtitle": "End-to-end encrypted — the server never sees your files. Deleted automatically.",
+  "app.subtitle": "End-to-end encrypted. The server never sees your files. Deleted automatically.",
   "app.privacy": "End-to-end encrypted · auto-deleted · no tracking · no account · no bullshit",
   "theme.toggle": "Toggle theme",
   "language.label": "Language",
@@ -32,13 +32,13 @@ export const en = {
   "result.ready": "Your link is ready",
   "result.copy": "Copy link",
   "result.copied": "Copied",
-  "result.copyFailed": "Could not copy — select the link and copy it manually.",
+  "result.copyFailed": "Could not copy. Select the link and copy it manually.",
   "result.shareAnother": "Share another file",
   "result.downloadQr": "Save QR code",
   "result.neverExpires": "Never expires",
   "result.expiresAfter": "Expires after {{label}}",
   "result.manageTitle": "Management link",
-  "result.manageHint": "Keep this private — use it to delete the share before it expires.",
+  "result.manageHint": "Keep this private. Use it to delete the share before it expires.",
   "result.copyManage": "Copy management link",
 
   "manage.title": "Manage your share",
@@ -58,7 +58,7 @@ export const en = {
   "download.failed": "Download failed",
   "download.encryptedFile": "Encrypted file",
   "download.downloadsLeft": "Downloads left: {{count}}",
-  "download.missingKey": "This link is missing its decryption key — it may have been copied incompletely.",
+  "download.missingKey": "This link is missing its decryption key. It may have been copied incompletely.",
   "download.multiFile": "Encrypted files",
   "download.fileCount": "Files: {{count}}",
   "download.total": "Total: {{size}}",
@@ -67,7 +67,7 @@ export const en = {
 
   "preview.show": "Preview",
   "preview.hide": "Hide preview",
-  "preview.tooLarge": "Too large to preview — download to view it",
+  "preview.tooLarge": "Too large to preview. Download to view it",
 
   "notfound.title": "Nothing here",
   "notfound.body": "This link is invalid, or the file has expired and been removed.",

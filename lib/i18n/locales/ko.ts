@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ko: Translation = {
   "app.tagline": "파일을 안전하고 비공개로 공유하세요",
-  "app.subtitle": "종단 간 암호화 — 서버는 당신의 파일을 절대 볼 수 없습니다. 자동으로 삭제됩니다.",
+  "app.subtitle": "종단 간 암호화. 서버는 당신의 파일을 절대 볼 수 없습니다. 자동으로 삭제됩니다.",
   "app.privacy": "종단 간 암호화 · 자동 삭제 · 추적 없음 · 계정 불필요 · 허튼소리 없음",
   "theme.toggle": "테마 전환",
   "language.label": "언어",
@@ -30,7 +30,7 @@ export const ko: Translation = {
   "result.copy": "링크 복사",
   "result.copied": "복사됨",
 
-  "result.copyFailed": "복사하지 못했습니다 — 링크를 선택해 직접 복사하세요.",
+  "result.copyFailed": "복사하지 못했습니다. 링크를 선택해 직접 복사하세요.",
   "result.shareAnother": "다른 파일 공유",
   "result.downloadQr": "QR 코드 저장",
   "result.neverExpires": "만료되지 않음",
@@ -66,7 +66,7 @@ export const ko: Translation = {
 
   "preview.show": "미리보기",
   "preview.hide": "미리보기 숨기기",
-  "preview.tooLarge": "미리보기에는 너무 큽니다 — 보려면 다운로드하세요",
+  "preview.tooLarge": "미리보기에는 너무 큽니다. 보려면 다운로드하세요",
 
   "notfound.title": "여기에 아무것도 없습니다",
   "notfound.body": "이 링크가 유효하지 않거나 파일이 만료되어 삭제되었습니다.",

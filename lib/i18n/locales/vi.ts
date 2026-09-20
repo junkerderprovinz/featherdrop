@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const vi: Translation = {
   "app.tagline": "Chia sẻ tệp của bạn an toàn và riêng tư",
-  "app.subtitle": "Mã hóa đầu-cuối — máy chủ không bao giờ thấy tệp của bạn. Tự động xóa.",
+  "app.subtitle": "Mã hóa đầu-cuối. Máy chủ không bao giờ thấy tệp của bạn. Tự động xóa.",
   "app.privacy": "Mã hóa đầu-cuối · tự động xóa · không theo dõi · không cần tài khoản · không nhảm nhí",
   "theme.toggle": "Đổi giao diện",
   "language.label": "Ngôn ngữ",
@@ -30,14 +30,14 @@ export const vi: Translation = {
   "result.copy": "Sao chép liên kết",
   "result.copied": "Đã sao chép",
 
-  "result.copyFailed": "Không thể sao chép — hãy chọn liên kết và sao chép thủ công.",
+  "result.copyFailed": "Không thể sao chép. Hãy chọn liên kết và sao chép thủ công.",
   "result.shareAnother": "Chia sẻ tệp khác",
   "result.downloadQr": "Lưu mã QR",
   "result.neverExpires": "Không bao giờ hết hạn",
   "result.expiresAfter": "Hết hạn sau {{label}}",
 
   "result.manageTitle": "Liên kết quản lý",
-  "result.manageHint": "Giữ riêng tư — dùng để xóa chia sẻ trước khi hết hạn.",
+  "result.manageHint": "Giữ riêng tư. Dùng để xóa chia sẻ trước khi hết hạn.",
   "result.copyManage": "Sao chép liên kết quản lý",
   "manage.title": "Quản lý chia sẻ của bạn",
   "manage.loading": "Đang kiểm tra chia sẻ…",
@@ -57,7 +57,7 @@ export const vi: Translation = {
   "download.encryptedFile": "Tệp đã mã hóa",
   "download.downloadsLeft": "Lượt tải còn lại: {{count}}",
 
-  "download.missingKey": "Liên kết này thiếu khóa giải mã — có thể đã được sao chép không đầy đủ.",
+  "download.missingKey": "Liên kết này thiếu khóa giải mã. Có thể đã được sao chép không đầy đủ.",
   "download.multiFile": "Tệp đã mã hóa",
   "download.fileCount": "Tệp: {{count}}",
   "download.total": "Tổng: {{size}}",
@@ -66,7 +66,7 @@ export const vi: Translation = {
 
   "preview.show": "Xem trước",
   "preview.hide": "Ẩn xem trước",
-  "preview.tooLarge": "Quá lớn để xem trước — tải xuống để xem",
+  "preview.tooLarge": "Quá lớn để xem trước. Tải xuống để xem",
 
   "notfound.title": "Không có gì ở đây",
   "notfound.body": "Liên kết này không hợp lệ, hoặc tệp đã hết hạn và bị xóa.",

@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const no: Translation = {
   "app.tagline": "Del filene dine sikkert og privat",
-  "app.subtitle": "Ende-til-ende-kryptert — serveren ser aldri filene dine. Slettes automatisk.",
+  "app.subtitle": "Ende-til-ende-kryptert. Serveren ser aldri filene dine. Slettes automatisk.",
   "app.privacy": "Ende-til-ende-kryptering · automatisk sletting · ingen sporing · ingen konto · ingen bullshit",
   "theme.toggle": "Bytt tema",
   "language.label": "Språk",
@@ -30,14 +30,14 @@ export const no: Translation = {
   "result.copy": "Kopier lenke",
   "result.copied": "Kopiert",
 
-  "result.copyFailed": "Kunne ikke kopiere — merk lenken og kopier manuelt.",
+  "result.copyFailed": "Kunne ikke kopiere. Merk lenken og kopier manuelt.",
   "result.shareAnother": "Del en annen fil",
   "result.downloadQr": "Lagre QR-kode",
   "result.neverExpires": "Utløper aldri",
   "result.expiresAfter": "Utløper etter {{label}}",
 
   "result.manageTitle": "Administrasjonslenke",
-  "result.manageHint": "Hold den privat — bruk den til å slette delingen før den utløper.",
+  "result.manageHint": "Hold den privat. Bruk den til å slette delingen før den utløper.",
   "result.copyManage": "Kopier administrasjonslenke",
   "manage.title": "Administrer delingen din",
   "manage.loading": "Sjekker delingen…",
@@ -57,7 +57,7 @@ export const no: Translation = {
   "download.encryptedFile": "Kryptert fil",
   "download.downloadsLeft": "Gjenværende nedlastinger: {{count}}",
 
-  "download.missingKey": "Denne lenken mangler dekrypteringsnøkkelen — den kan ha blitt kopiert ufullstendig.",
+  "download.missingKey": "Denne lenken mangler dekrypteringsnøkkelen. Den kan ha blitt kopiert ufullstendig.",
   "download.multiFile": "Krypterte filer",
   "download.fileCount": "Filer: {{count}}",
   "download.total": "Totalt: {{size}}",
@@ -66,7 +66,7 @@ export const no: Translation = {
 
   "preview.show": "Forhåndsvisning",
   "preview.hide": "Skjul forhåndsvisning",
-  "preview.tooLarge": "For stor for forhåndsvisning — last ned for å se den",
+  "preview.tooLarge": "For stor for forhåndsvisning. Last ned for å se den",
 
   "notfound.title": "Ingenting her",
   "notfound.body": "Denne lenken er ugyldig, eller filen har utløpt og blitt fjernet.",

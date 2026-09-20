@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const hu: Translation = {
   "app.tagline": "Oszd meg fájljaidat biztonságosan és privátan",
-  "app.subtitle": "Végpontok közötti titkosítás — a szerver soha nem látja a fájljaidat. Automatikusan törlődik.",
+  "app.subtitle": "Végpontok közötti titkosítás. A szerver soha nem látja a fájljaidat. Automatikusan törlődik.",
   "app.privacy": "Végpontok közötti titkosítás · automatikus törlés · követés nélkül · fiók nélkül · semmi kamu",
   "theme.toggle": "Téma váltása",
   "language.label": "Nyelv",
@@ -30,14 +30,14 @@ export const hu: Translation = {
   "result.copy": "Link másolása",
   "result.copied": "Másolva",
 
-  "result.copyFailed": "Nem sikerült másolni — jelölje ki a linket és másolja kézzel.",
+  "result.copyFailed": "Nem sikerült másolni. Jelölje ki a linket és másolja kézzel.",
   "result.shareAnother": "Másik fájl megosztása",
   "result.downloadQr": "QR-kód mentése",
   "result.neverExpires": "Soha nem jár le",
   "result.expiresAfter": "Lejár {{label}} után",
 
   "result.manageTitle": "Kezelési hivatkozás",
-  "result.manageHint": "Tartsd titokban — ezzel törölheted a megosztást a lejárat előtt.",
+  "result.manageHint": "Tartsd titokban. Ezzel törölheted a megosztást a lejárat előtt.",
   "result.copyManage": "Kezelési hivatkozás másolása",
   "manage.title": "Megosztás kezelése",
   "manage.loading": "Megosztás ellenőrzése…",
@@ -57,7 +57,7 @@ export const hu: Translation = {
   "download.encryptedFile": "Titkosított fájl",
   "download.downloadsLeft": "Hátralévő letöltések: {{count}}",
 
-  "download.missingKey": "Erről a linkről hiányzik a visszafejtő kulcs — lehet, hogy hiányosan másolták.",
+  "download.missingKey": "Erről a linkről hiányzik a visszafejtő kulcs. Lehet, hogy hiányosan másolták.",
   "download.multiFile": "Titkosított fájlok",
   "download.fileCount": "Fájlok: {{count}}",
   "download.total": "Összesen: {{size}}",
@@ -66,7 +66,7 @@ export const hu: Translation = {
 
   "preview.show": "Előnézet",
   "preview.hide": "Előnézet elrejtése",
-  "preview.tooLarge": "Túl nagy az előnézethez — töltsd le a megtekintéshez",
+  "preview.tooLarge": "Túl nagy az előnézethez. Töltsd le a megtekintéshez",
 
   "notfound.title": "Itt nincs semmi",
   "notfound.body": "Ez a link érvénytelen, vagy a fájl lejárt és eltávolításra került.",

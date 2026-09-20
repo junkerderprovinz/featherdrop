@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const ja: Translation = {
   "app.tagline": "ファイルを安全かつプライベートに共有",
-  "app.subtitle": "エンドツーエンドで暗号化 — サーバーがあなたのファイルを見ることはありません。自動的に削除されます。",
+  "app.subtitle": "エンドツーエンドで暗号化。サーバーがあなたのファイルを見ることはありません。自動的に削除されます。",
   "app.privacy": "エンドツーエンド暗号化 · 自動削除 · 追跡なし · アカウント不要 · ごまかしなし",
   "theme.toggle": "テーマを切り替え",
   "language.label": "言語",
@@ -66,7 +66,7 @@ export const ja: Translation = {
 
   "preview.show": "プレビュー",
   "preview.hide": "プレビューを非表示",
-  "preview.tooLarge": "プレビューするには大きすぎます — ダウンロードして表示してください",
+  "preview.tooLarge": "プレビューするには大きすぎます。ダウンロードして表示してください",
 
   "notfound.title": "ここには何もありません",
   "notfound.body": "このリンクは無効か、ファイルが期限切れで削除されています。",

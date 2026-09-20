@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const sv: Translation = {
   "app.tagline": "Dela dina filer säkert och privat",
-  "app.subtitle": "Totalsträckskrypterat — servern ser aldrig dina filer. Raderas automatiskt.",
+  "app.subtitle": "Totalsträckskrypterat. Servern ser aldrig dina filer. Raderas automatiskt.",
   "app.privacy": "Totalsträckskryptering · automatisk radering · ingen spårning · inget konto · inget skitsnack",
   "theme.toggle": "Växla tema",
   "language.label": "Språk",
@@ -30,14 +30,14 @@ export const sv: Translation = {
   "result.copy": "Kopiera länk",
   "result.copied": "Kopierat",
 
-  "result.copyFailed": "Kunde inte kopiera — markera länken och kopiera manuellt.",
+  "result.copyFailed": "Kunde inte kopiera. Markera länken och kopiera manuellt.",
   "result.shareAnother": "Dela en annan fil",
   "result.downloadQr": "Spara QR-kod",
   "result.neverExpires": "Går aldrig ut",
   "result.expiresAfter": "Går ut efter {{label}}",
 
   "result.manageTitle": "Hanteringslänk",
-  "result.manageHint": "Håll den privat — använd den för att radera delningen innan den går ut.",
+  "result.manageHint": "Håll den privat. Använd den för att radera delningen innan den går ut.",
   "result.copyManage": "Kopiera hanteringslänk",
   "manage.title": "Hantera din delning",
   "manage.loading": "Kontrollerar delningen…",
@@ -57,7 +57,7 @@ export const sv: Translation = {
   "download.encryptedFile": "Krypterad fil",
   "download.downloadsLeft": "Återstående nedladdningar: {{count}}",
 
-  "download.missingKey": "Den här länken saknar sin dekrypteringsnyckel — den kan ha kopierats ofullständigt.",
+  "download.missingKey": "Den här länken saknar sin dekrypteringsnyckel. Den kan ha kopierats ofullständigt.",
   "download.multiFile": "Krypterade filer",
   "download.fileCount": "Filer: {{count}}",
   "download.total": "Totalt: {{size}}",
@@ -66,7 +66,7 @@ export const sv: Translation = {
 
   "preview.show": "Förhandsvisning",
   "preview.hide": "Dölj förhandsvisning",
-  "preview.tooLarge": "För stor för förhandsvisning — ladda ner för att visa den",
+  "preview.tooLarge": "För stor för förhandsvisning. Ladda ner för att visa den",
 
   "notfound.title": "Inget här",
   "notfound.body": "Den här länken är ogiltig, eller så har filen gått ut och tagits bort.",

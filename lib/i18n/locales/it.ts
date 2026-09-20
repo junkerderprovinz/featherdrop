@@ -2,7 +2,7 @@ import type { Translation } from "./en.ts";
 
 export const it: Translation = {
   "app.tagline": "Condividi i tuoi file in modo sicuro e privato",
-  "app.subtitle": "Crittografia end-to-end — il server non vede mai i tuoi file. Eliminato automaticamente.",
+  "app.subtitle": "Crittografia end-to-end: il server non vede mai i tuoi file. Eliminato automaticamente.",
   "app.privacy": "Crittografia end-to-end · cancellazione automatica · niente tracciamento · senza account · niente cazzate",
   "theme.toggle": "Cambia tema",
   "language.label": "Lingua",
@@ -30,7 +30,7 @@ export const it: Translation = {
   "result.copy": "Copia link",
   "result.copied": "Copiato",
 
-  "result.copyFailed": "Copia non riuscita — seleziona il link e copialo manualmente.",
+  "result.copyFailed": "Copia non riuscita: seleziona il link e copialo manualmente.",
   "result.shareAnother": "Condividi un altro file",
   "result.downloadQr": "Salva il codice QR",
   "result.neverExpires": "Non scade mai",
@@ -57,7 +57,7 @@ export const it: Translation = {
   "download.encryptedFile": "File cifrato",
   "download.downloadsLeft": "Download rimanenti: {{count}}",
 
-  "download.missingKey": "A questo link manca la chiave di decifratura — forse è stato copiato in modo incompleto.",
+  "download.missingKey": "A questo link manca la chiave di decifratura: forse è stato copiato in modo incompleto.",
   "download.multiFile": "File cifrati",
   "download.fileCount": "File: {{count}}",
   "download.total": "Totale: {{size}}",
@@ -66,7 +66,7 @@ export const it: Translation = {
 
   "preview.show": "Anteprima",
   "preview.hide": "Nascondi anteprima",
-  "preview.tooLarge": "Troppo grande per l’anteprima — scaricalo per visualizzarlo",
+  "preview.tooLarge": "Troppo grande per l’anteprima: scaricalo per visualizzarlo",
 
   "notfound.title": "Qui non c'è niente",
   "notfound.body": "Questo link non è valido, oppure il file è scaduto ed è stato rimosso.",
