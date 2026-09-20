@@ -1,16 +1,12 @@
 package share
 
-// Optional download limit / burn-after-download helpers. max is *int64: nil =
-// unlimited share; a positive value caps how many times it can be downloaded,
-// after which the file + DB row are deleted (the atomic count++/delete lives in
-// store.RegisterDownload). Mirrors lib/downloads.ts.
+// The download limit helpers follow lib/downloads.ts. A nil max is an unlimited
+// share; store.RegisterDownload does the atomic count and burn.
 
-// maxDownloadsCap is the upper bound an uploader-supplied limit is clamped to.
-// Mirrors lib/downloads.ts MAX_CAP.
 const maxDownloadsCap = int64(10_000)
 
-// DownloadsLeft returns the remaining downloads, or nil when unlimited
-// (max == nil). Never negative. Mirrors lib/downloads.ts downloadsLeft.
+// DownloadsLeft returns the remaining downloads, never negative, or nil for an
+// unlimited share.
 func DownloadsLeft(count int64, max *int64) *int64 {
 	if max == nil {
 		return nil
@@ -22,17 +18,13 @@ func DownloadsLeft(count int64, max *int64) *int64 {
 	return &left
 }
 
-// IsExhausted reports whether a finite-limit share has used up all its
-// downloads. An unlimited share (max == nil) is never exhausted. Mirrors
-// lib/downloads.ts isExhausted.
+// IsExhausted reports whether a limited share has used up its downloads.
 func IsExhausted(count int64, max *int64) bool {
 	return max != nil && count >= *max
 }
 
-// ParseMaxDownloads normalises an uploader-supplied limit to a positive integer
-// (1..maxDownloadsCap) or nil (= unlimited) for anything missing (nil), zero,
-// or negative. Mirrors lib/downloads.ts parseMaxDownloads (non-integer JSON
-// numbers are already excluded by *int64 typing on the Go side).
+// ParseMaxDownloads clamps an uploader-supplied limit to 1..maxDownloadsCap and
+// returns nil, meaning unlimited, for a missing, zero or negative value.
 func ParseMaxDownloads(input *int64) *int64 {
 	if input == nil || *input < 1 {
 		return nil

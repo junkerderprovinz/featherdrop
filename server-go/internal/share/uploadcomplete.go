@@ -1,12 +1,8 @@
 package share
 
-// IsUploadComplete reports whether a tus upload has fully arrived, judged from
-// the ACTUAL bytes on disk (onDiskSize) against the declared total length.
-//
-// declaredSize is the sidecar's size (Upload-Length). When it is unknown
-// (deferred length / not provided, declaredKnown == false) we cannot prove
-// incompleteness, so we accept. Mirrors lib/upload.ts isUploadComplete (where a
-// non-number declaredSize -> true).
+// IsUploadComplete reports whether a tus upload has fully arrived, judged by
+// the bytes on disk against the declared Upload-Length. A deferred length
+// cannot prove the upload incomplete, so it counts as complete.
 func IsUploadComplete(onDiskSize, declaredSize int64, declaredKnown bool) bool {
 	if !declaredKnown {
 		return true

@@ -3,6 +3,7 @@ package share
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -48,13 +49,12 @@ func TestNewSlug(t *testing.T) {
 				t.Fatalf("NewSlug() = %q contains char %q outside alphabet", s, c)
 			}
 		}
-		// Generated slugs must themselves be safe ids (used for paths later).
 		if !IsSafeID(s) {
 			t.Fatalf("NewSlug() = %q is not a safe id", s)
 		}
 		seen[s] = struct{}{}
 	}
-	// 1000 draws from a 56^8 space must be effectively collision-free.
+	// 1000 draws from 56^8 slugs do not collide in practice.
 	if len(seen) != 1000 {
 		t.Errorf("NewSlug() produced %d unique of 1000 draws", len(seen))
 	}
@@ -120,8 +120,6 @@ func TestExpiryWithinCap(t *testing.T) {
 		{"never over finite cap", "never", "7d", false},
 		{"smallest cap only fits itself", "6h", "1h", false},
 		{"cap equals smallest", "1h", "1h", true},
-		// An unknown value would be stored as NULL = never (ExpiryToTimestamp),
-		// so a finite cap must reject it rather than let it slip through.
 		{"unknown value vs finite cap", "99y", "7d", false},
 		{"unknown value vs no cap", "99y", "", true},
 	}
@@ -166,11 +164,11 @@ func TestIsExhausted(t *testing.T) {
 		max   *int64
 		want  bool
 	}{
-		{0, nil, false},      // unlimited never exhausted
-		{99999, nil, false},  // unlimited never exhausted
-		{0, ptr64(1), false}, // under limit
-		{1, ptr64(1), true},  // at limit
-		{2, ptr64(1), true},  // over limit (defensive)
+		{0, nil, false},
+		{99999, nil, false},
+		{0, ptr64(1), false},
+		{1, ptr64(1), true},
+		{2, ptr64(1), true},
 		{4, ptr64(5), false},
 		{5, ptr64(5), true},
 	}
@@ -187,12 +185,12 @@ func TestDownloadsLeft(t *testing.T) {
 		max   *int64
 		want  *int64
 	}{
-		{0, nil, nil}, // unlimited
-		{5, nil, nil}, // unlimited
+		{0, nil, nil},
+		{5, nil, nil},
 		{0, ptr64(3), ptr64(3)},
 		{2, ptr64(3), ptr64(1)},
 		{3, ptr64(3), ptr64(0)},
-		{5, ptr64(3), ptr64(0)}, // never negative
+		{5, ptr64(3), ptr64(0)},
 	}
 	for _, tt := range tests {
 		got := DownloadsLeft(tt.count, tt.max)
@@ -203,7 +201,6 @@ func TestDownloadsLeft(t *testing.T) {
 }
 
 func TestIsValidKeyVerifier(t *testing.T) {
-	// A real verifier: base64url(SHA-256(...)) is 43 unpadded chars.
 	sum := sha256.Sum256([]byte("content key"))
 	good := base64.RawURLEncoding.EncodeToString(sum[:])
 	if len(good) != 43 {
@@ -234,7 +231,7 @@ func TestIsValidKeyVerifier(t *testing.T) {
 }
 
 func TestVerifierMatches(t *testing.T) {
-	const stored = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ" // 43 chars
+	const stored = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ"
 	tests := []struct {
 		name     string
 		provided string
@@ -245,7 +242,7 @@ func TestVerifierMatches(t *testing.T) {
 		{"empty", "", false},
 		{"wrong length shorter", stored[:10], false},
 		{"wrong length longer", stored + "extra", false},
-		{"both empty", "", false}, // provided empty vs non-empty stored
+		{"both empty", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -254,7 +251,6 @@ func TestVerifierMatches(t *testing.T) {
 			}
 		})
 	}
-	// Two empties match (degenerate but constant-time-consistent).
 	if !VerifierMatches("", "") {
 		t.Errorf("VerifierMatches(\"\",\"\") = false, want true (equal inputs)")
 	}
@@ -268,7 +264,6 @@ func TestManageToken(t *testing.T) {
 	if !IsValidManageToken(tok) {
 		t.Errorf("IsValidManageToken(%q) = false, want true", tok)
 	}
-	// Two mints differ.
 	if NewManageToken() == tok {
 		t.Errorf("NewManageToken() produced a duplicate token")
 	}
@@ -280,7 +275,6 @@ func TestManageToken(t *testing.T) {
 	if !IsValidManageTokenHash(hash) {
 		t.Errorf("IsValidManageTokenHash(%q) = false, want true", hash)
 	}
-	// Hash is deterministic and matches the canonical computation.
 	sum := sha256.Sum256([]byte(tok))
 	if want := base64.RawURLEncoding.EncodeToString(sum[:]); hash != want {
 		t.Errorf("HashManageToken mismatch: got %q want %q", hash, want)
@@ -312,8 +306,7 @@ func TestManageTokenMatches(t *testing.T) {
 		})
 	}
 
-	// Wrong-length stored hash must still reject (hashes are fixed length, but
-	// a corrupted/short stored value must not match and must not panic).
+	// A corrupted stored hash of the wrong length must reject without a panic.
 	short := "short"
 	if ManageTokenMatches(tok, &short) {
 		t.Errorf("ManageTokenMatches with short stored hash = true, want false")
@@ -346,8 +339,6 @@ func TestIsUploadComplete(t *testing.T) {
 	}
 }
 
-// --- small test helpers ---
-
 func eqPtr64(a, b *int64) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
@@ -359,30 +350,7 @@ func show(p *int64) string {
 	if p == nil {
 		return "nil"
 	}
-	return strconvI(*p)
-}
-
-func strconvI(v int64) string {
-	// avoid importing strconv just for tests' debug strings
-	neg := v < 0
-	if neg {
-		v = -v
-	}
-	if v == 0 {
-		return "0"
-	}
-	var b [20]byte
-	i := len(b)
-	for v > 0 {
-		i--
-		b[i] = byte('0' + v%10)
-		v /= 10
-	}
-	s := string(b[i:])
-	if neg {
-		return "-" + s
-	}
-	return s
+	return strconv.FormatInt(*p, 10)
 }
 
 func strPtr(s string) *string { return &s }
