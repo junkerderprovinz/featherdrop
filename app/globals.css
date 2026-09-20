@@ -14,10 +14,9 @@ body {
   overflow-x: hidden;
 }
 
-/* Ambient, edel background: a soft gold/violet aurora on a fixed full-viewport
-   layer that sits ABOVE Mantine's solid body colour but BELOW all content.
-   A real element (not body's own background) so Mantine's `body { background }`
-   rule can't override it. */
+/* A soft gold and violet aurora between Mantine's body colour and the content.
+   It is an element rather than the body background, which Mantine's
+   `body { background }` rule would override. */
 .fd-aurora {
   position: fixed;
   inset: 0;
@@ -28,7 +27,6 @@ body {
     radial-gradient(42rem 42rem at 96% 4%, rgba(124, 58, 237, 0.30), transparent 55%),
     radial-gradient(55rem 34rem at 50% 118%, rgba(212, 175, 55, 0.22), transparent 60%),
     radial-gradient(30rem 30rem at 78% 82%, rgba(168, 85, 247, 0.18), transparent 60%);
-  /* A very slow, subtle drift so the ambient light feels alive but never busy. */
   animation: fd-aurora-drift 34s ease-in-out infinite alternate;
   will-change: transform;
 }
@@ -42,7 +40,6 @@ body {
   }
 }
 
-/* Respect users who prefer reduced motion: hold the aurora still. */
 @media (prefers-reduced-motion: reduce) {
   .fd-aurora {
     animation: none;
@@ -58,14 +55,11 @@ body {
     radial-gradient(30rem 30rem at 78% 82%, rgba(168, 85, 247, 0.16), transparent 60%);
 }
 
-/* Content sits above the aurora layer. */
 .fd-content {
   position: relative;
   z-index: 1;
 }
 
-/* Frosted-glass surface — translucent and blurred, with a luminous hairline
-   edge (top highlight + soft gold tint) and a deep drop shadow so it floats. */
 .fd-glass {
   position: relative;
   background:
@@ -81,8 +75,6 @@ body {
   transition: border-color 220ms ease, box-shadow 220ms ease;
 }
 
-/* Reactive edge: the gold hairline lights up and a soft glow blooms on hover,
-   matching the drop zone's interactive feel. */
 .fd-glass:hover {
   border-color: rgba(212, 175, 55, 0.55);
   box-shadow:
@@ -112,8 +104,7 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-/* The inner drop target — recessed below the glass with a darker well and a
-   dashed gold-tinted edge, so the window has real depth. */
+/* The drop target, recessed below the glass. */
 .fd-glass-inner {
   background:
     radial-gradient(120% 100% at 50% 0%, rgba(212, 175, 55, 0.06), transparent 70%),
@@ -141,10 +132,8 @@ body {
     0 0 30px -6px rgba(212, 175, 55, 0.35);
 }
 
-/* Icon buttons (the copy-link button) get a CLEAR, consistent hover: the gold
-   accent fills in (Mantine's light-variant hover alone is too subtle for the
-   primary copy CTA). Applies in the idle state; the copied/teal state keeps its
-   own colour. */
+/* Mantine's light-variant hover is too subtle for the copy button, so the gold
+   accent fills in. The copied state keeps its own colour. */
 .fd-icon-btn {
   transition:
     background-color 130ms ease,
@@ -157,11 +146,8 @@ body {
   transform: translateY(-1px);
 }
 
-/* On the home, the feather and each text line react INDEPENDENTLY on hover —
-   each element responds only to its OWN mouse-over (CSS :hover), fast + snappy:
-   - the feather blooms a soft gold glow (a "Schein") + a hair of scale; it also
-     glows while a file is dragged anywhere over the page (data-dragging),
-   - each text line (wordmark + hint) grows a touch. */
+/* On the home page the feather and each text line react to their own hover.
+   The feather also glows while a file is dragged over the page. */
 .fd-hero-logo {
   transition:
     transform 110ms ease,
@@ -176,7 +162,7 @@ body {
   );
 }
 .fd-hero-text {
-  display: inline-block; /* hug the text so the scale grows the line from centre */
+  display: inline-block; /* so the scale grows the line from its centre */
   transition: transform 110ms ease;
   will-change: transform;
 }

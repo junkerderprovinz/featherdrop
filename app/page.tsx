@@ -38,17 +38,15 @@ import { collectSharedFiles, isShareTargetLaunch } from "@/lib/share-target";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
 
-// Header the client attaches the upload secret to (mirrors lib/upload-auth.ts).
-// Kept in sync there for the server side; duplicated here so this client module
-// has no server-only import.
+// The same header as lib/upload-auth.ts, repeated so this module has no
+// server-only import.
 const UPLOAD_TOKEN_HEADER = "x-fd-upload-token";
-// sessionStorage key for the entered upload secret — survives the tab session,
-// gone when the tab closes. Memory-only would be lost on navigation; we never
-// persist it to localStorage.
+// The upload secret lives in sessionStorage, which survives navigation but not
+// closing the tab; it never goes to localStorage.
 const UPLOAD_TOKEN_STORAGE_KEY = "fd-upload-token";
 
-// Recognize a 401 from either write path (tus upload or finalize) so the UI can
-// re-prompt for the upload password instead of showing a generic failure.
+// A 401 from tus or finalize re-prompts for the upload password instead of
+// showing a generic failure.
 function isUploadAuthError(err: unknown): boolean {
   if (err instanceof tus.DetailedError) {
     return err.originalResponse?.getStatus() === 401;
@@ -56,7 +54,6 @@ function isUploadAuthError(err: unknown): boolean {
   return err instanceof Error && err.message === "finalize 401";
 }
 
-// "encrypting" is a client-side phase before the actual network upload starts.
 type Status = "idle" | "ready" | "encrypting" | "uploading" | "done";
 
 export default function HomePage() {
@@ -64,18 +61,16 @@ export default function HomePage() {
   const { appName } = useBranding();
   const { baseUrl, uploadProtected, defaultExpiry, maxExpiry } =
     useServerConfig();
-  // The expiry used when nothing else is chosen: the visitor's remembered
-  // preference, else the operator's DEFAULT_EXPIRY, else "7d" — always clamped
-  // to the operator's MAX_EXPIRY cap.
+  // The remembered preference, else DEFAULT_EXPIRY, else "7d", clamped to
+  // MAX_EXPIRY.
   const initialPrefs = useRef(loadPrefs());
   const baseExpiry = clampExpiry(
     initialPrefs.current.expiry ?? defaultExpiry ?? "7d",
     maxExpiry,
   );
   const { setColorScheme } = useMantineColorScheme();
-  // Resolve "auto" to the actually-displayed scheme so the first click always
-  // flips what the user sees (using the raw colorScheme, which starts as "auto",
-  // makes the first toggle a no-op when it matches the system theme).
+  // With the raw "auto" scheme the first toggle would do nothing when it
+  // matches the system theme.
   const computedColorScheme = useComputedColorScheme("light", {
     getInitialValueInEffect: true,
   });
@@ -87,30 +82,22 @@ export default function HomePage() {
   const [maxDownloads, setMaxDownloads] = useState<number | null>(
     initialPrefs.current.maxDownloads,
   );
-  // Photo-metadata scrub (EXIF/GPS): remembered, default ON — privacy-first.
   const [stripMetadata, setStripMetadata] = useState(
     initialPrefs.current.stripMetadata ?? true,
   );
   const [shareUrl, setShareUrl] = useState<string>("");
 
-  // Remember the last-used options (never the password) for the next visit.
   useEffect(() => {
     savePrefs({ expiry, maxDownloads, stripMetadata });
   }, [expiry, maxDownloads, stripMetadata]);
 
-  // Hidden file input — the ONLY <input type="file"> on the page. The big Logo
-  // is the visible affordance and forwards its click here; e2e drives uploads by
-  // calling setInputFiles() on this element. `multiple` keeps multi-file uploads
-  // (and the multi-file e2e scenario) working.
+  // The page's only file input. The Logo forwards its click here, and the e2e
+  // tests call setInputFiles() on it.
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Page-wide drag feedback: dim the page subtly while a drag hovers anywhere.
   const [dragging, setDragging] = useState(false);
 
-  // Upload gate (only relevant when the instance sets UPLOAD_PASSWORD, surfaced
-  // as `uploadProtected`). The operator's secret never reaches the client config;
-  // the user types it once and we keep it for the tab session (sessionStorage) so
-  // they don't re-enter it per upload. `gateError` shows a wrong-password retry.
+  // With UPLOAD_PASSWORD set, the user types the secret once per tab session.
   const [uploadToken, setUploadToken] = useState<string>("");
   const [gateError, setGateError] = useState<string>("");
   useEffect(() => {
@@ -119,7 +106,7 @@ export default function HomePage() {
       const saved = sessionStorage.getItem(UPLOAD_TOKEN_STORAGE_KEY);
       if (saved) setUploadToken(saved);
     } catch {
-      // sessionStorage can throw (e.g. privacy mode) — fall back to memory only.
+      // sessionStorage can throw in privacy mode; the token then stays in memory.
     }
   }, [uploadProtected]);
 
@@ -129,11 +116,10 @@ export default function HomePage() {
     try {
       sessionStorage.setItem(UPLOAD_TOKEN_STORAGE_KEY, token);
     } catch {
-      // Non-persistent fallback: token stays in memory for this page only.
+      // The token stays in memory for this page only.
     }
   };
 
-  // Re-lock the gate after a rejected secret so the user re-enters it.
   const clearUploadToken = () => {
     setUploadToken("");
     try {
@@ -143,26 +129,23 @@ export default function HomePage() {
     }
   };
 
-  // The gate blocks uploading until the user has entered a secret. An entered
-  // secret may still be wrong — that surfaces as gateError after a 401 retry.
+  // A wrong secret shows up as gateError after the 401.
   const uploadLocked = uploadProtected && uploadToken === "";
 
-  // Over a plain-HTTP origin (e.g. opened by IP), the browser treats the page as
-  // an insecure context: OPFS and the download service worker are unavailable,
-  // so large uploads fall back to memory (capped) and streamed downloads are off.
-  // Surface this instead of letting features silently degrade.
+  // Over plain HTTP there is no OPFS and no service worker, so large uploads
+  // are capped in memory and downloads do not stream. The page says so.
   const [insecure, setInsecure] = useState(false);
   useEffect(() => {
     setInsecure(typeof window !== "undefined" && !window.isSecureContext);
   }, []);
 
-  // PWA share-target launch: the SW stashed the shared files and redirected to
-  // /?shared=1 — collect them into the normal selection flow and clean the URL.
+  // A share-sheet launch lands on /?shared=1 with the files in the worker's
+  // cache.
   useEffect(() => {
     if (!isShareTargetLaunch()) return;
     void collectSharedFiles().then((shared) => {
       if (shared.length > 0) onDrop(shared);
-      // Drop the ?shared marker so a reload doesn't look like a new share.
+      // Otherwise a reload would look like a new share.
       window.history.replaceState(null, "", "/");
     });
   }, []);
@@ -178,40 +161,32 @@ export default function HomePage() {
     setShareUrl("");
     setProgress(0);
     setPassword("");
-    // Back to the resolved default (remembered preference / DEFAULT_EXPIRY) —
-    // NOT a hardcoded value; the whole point of remembering options.
     setExpiry(baseExpiry);
     setStatus("idle");
-    // Clear the native input so re-picking the same file fires `change` again.
+    // Otherwise picking the same file again fires no change event.
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // The upload is "in progress" during both the encrypt and upload phases.
   const uploading = status === "uploading" || status === "encrypting";
   const showPanel = status === "ready" || uploading;
 
-  // Clicking the big Logo opens the native file picker (unless an upload runs or
-  // the gate is locked). The hidden input's onChange routes the selection
-  // through the same onDrop(files) path as a drag-drop.
   const openPicker = () => {
     if (uploading || uploadLocked) return;
     fileInputRef.current?.click();
   };
 
-  // Page-level drag-and-drop: dropping files ANYWHERE selects them. We read the
-  // flat FileList via filesFromDropEvent (NOT webkitGetAsEntry) to avoid the
-  // Chromium/Edge renderer crash (issue #4); folders are never expanded.
+  // Files dropped anywhere on the page are selected. filesFromDropEvent avoids
+  // the webkitGetAsEntry renderer crash (#4).
   const onPageDragOver = (e: React.DragEvent) => {
     if (uploading || uploadLocked) return;
-    // Only react to file drags (ignore text/element drags) and allow the drop.
+    // Text and element drags are ignored.
     if (e.dataTransfer?.types?.includes("Files")) {
       e.preventDefault();
       if (!dragging) setDragging(true);
     }
   };
   const onPageDragLeave = (e: React.DragEvent) => {
-    // Only clear when the cursor actually left the container, not when moving
-    // between children (relatedTarget still inside the container).
+    // Moving between children also fires dragleave.
     if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
       setDragging(false);
     }
@@ -226,11 +201,9 @@ export default function HomePage() {
     }
   };
 
-  // Paste-to-upload: Ctrl/Cmd+V anywhere on the page drops the clipboard's
-  // files (e.g. a screenshot) into the normal selection flow. Guards: never
-  // while an upload runs or the gate is locked, and never when the user is
-  // pasting INTO a text field (share password!). Uses document-level listening
-  // because the paste target is wherever focus happens to be.
+  // Pasting files anywhere, a screenshot for example, selects them, except
+  // while the focus is in a text field such as the share password. The
+  // listener sits on the document because a paste goes wherever focus is.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       if (uploading || uploadLocked || status === "done") return;
@@ -258,36 +231,29 @@ export default function HomePage() {
     setStatus("encrypting");
     setProgress(0);
 
-    // Photo-metadata scrub BEFORE encryption (browser-side by necessity — the
-    // server only ever sees ciphertext). Failures fall back to the original
-    // file inside stripFileMetadata; this never blocks an upload.
+    // stripFileMetadata returns the original file when it fails, so this never
+    // blocks an upload.
     let toUpload = files;
     if (stripMetadata && hasJpeg) {
       toUpload = await Promise.all(files.map((f) => stripFileMetadata(f)));
     }
 
-    // When the instance gates uploads, attach the operator's secret to both
-    // write paths via the `x-fd-upload-token` header. Empty when not protected,
-    // so the header is simply omitted and the flow is exactly as today.
     const authHeaders: Record<string, string> = uploadToken
       ? { [UPLOAD_TOKEN_HEADER]: uploadToken }
       : {};
 
-    // Build the UploadDeps that uploadEncrypted injects for tus and finalize.
     const deps: UploadDeps = {
       upload(scratchFile, onProgress) {
         return new Promise<string>((resolve, reject) => {
           const upload = new tus.Upload(scratchFile, {
             endpoint: "/files",
-            // Split the upload into <100 MB PATCH requests. Without this,
-            // tus-js-client sends the whole (encrypted) blob in ONE request,
-            // which a 100 MB-capped proxy/CDN (Cloudflare free/pro, incl. its
-            // Tunnel) rejects with 413 — and a dropped upload would restart from
-            // zero. 64 MiB stays safely under the cap and gives real resume.
+            // Without chunking the whole blob goes in one request, which a proxy
+            // with a 100 MB cap such as Cloudflare rejects with 413, and a
+            // dropped upload restarts from zero.
             chunkSize: 64 * 1024 * 1024,
             retryDelays: [0, 1000, 3000, 5000],
             headers: authHeaders,
-            // Name/type are encrypted inside the blob — do NOT send them to tus.
+            // No metadata: name and type are encrypted inside the blob.
             onError: (err) => reject(err),
             onProgress: (sent, total) => onProgress(sent, total),
             onSuccess: () => {
@@ -320,13 +286,12 @@ export default function HomePage() {
       { expiry, maxDownloads, password: password || undefined },
       deps,
       (phase, fraction) => {
+        // Encrypting fills the first half of the bar, uploading the second.
         if (phase === "encrypting") {
           setStatus("encrypting");
-          // Show a 0–50 % range for the encrypt phase so the bar moves.
           setProgress(fraction * 50);
         } else {
           setStatus("uploading");
-          // Map upload fraction to 50–100 % so the bar continues smoothly.
           setProgress(50 + fraction * 50);
         }
       },
@@ -337,8 +302,7 @@ export default function HomePage() {
       })
       .catch((e: unknown) => {
         setStatus("ready");
-        // A 401 from either write path means the upload password was wrong (or
-        // missing) — re-lock the gate, show the retry hint, no generic error.
+        // A wrong or missing upload password locks the gate again.
         if (uploadProtected && isUploadAuthError(e)) {
           clearUploadToken();
           setGateError(t("uploadGate.wrongPassword"));
@@ -374,8 +338,6 @@ export default function HomePage() {
       onDragLeave={onPageDragLeave}
       onDrop={onPageDrop}
     >
-      {/* Hidden, multiple file input — the page's single input[type=file]. The
-          big Logo forwards its click here; e2e sets files directly on it. */}
       <input
         ref={fileInputRef}
         type="file"
@@ -387,10 +349,8 @@ export default function HomePage() {
         }}
       />
 
-      {/* Top band: the tagline is centred, and the language + theme controls sit
-          on the right at the SAME height as the text. Absolutely positioned so it
-          never pushes the feather down — the feather then centres in the FULL
-          viewport (see the stage below). */}
+      {/* Absolutely positioned so the feather below centres in the full
+          viewport. */}
       <Box style={{ position: "absolute", top: 28, left: 24, right: 24, zIndex: 2 }}>
         <Box style={{ position: "relative", display: "flex", justifyContent: "center" }}>
           <Stack align="center" gap={4} px={72} style={{ maxWidth: "100%" }}>
@@ -445,18 +405,13 @@ export default function HomePage() {
         </Center>
       )}
 
-      {/* The interactive stage fills the space under the tagline and CENTERS its
-          active block in the viewport — so the feather, the options panel and the
-          result card all sit in the middle of the page (consistent across every
-          screen). The feather (idle), the options panel (a file is chosen) and the
-          result share ONE grid cell, so they cross-fade into one another. */}
+      {/* The feather, the options panel and the result share one grid cell in
+          the middle of the page, so they cross-fade into one another. */}
       <Box style={{ flex: 1, display: "grid", placeItems: "center", width: "100%" }}>
         {status === "done" ? (
           <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
         ) : (
           <Box style={{ display: "grid", placeItems: "center", width: "100%" }}>
-            {/* IDLE: the big, reactive feather IS the upload affordance — click
-                opens the picker, dragging anywhere on the page drops files. */}
             <Transition
               mounted={!showPanel && !uploadLocked}
               transition="fade"
@@ -470,17 +425,14 @@ export default function HomePage() {
                 >
                   <UnstyledButton
                     onClick={openPicker}
-                    // NOT settings.upload: that is the real Upload-&-share button's
-                    // name; two buttons sharing it breaks the e2e (strict-mode) +
-                    // screen-reader clarity. This is the "choose files" affordance.
+                    // settings.upload names the real upload button; sharing the
+                    // name would confuse screen readers and the e2e locators.
                     aria-label={t("drop.drag")}
                     disabled={uploading}
                     style={{ cursor: uploading ? "default" : "pointer" }}
                   >
-                    {/* The feather and the two text lines react INDEPENDENTLY on
-                        hover (see .fd-hero-logo / .fd-hero-text): the feather glows,
-                        each text line grows a touch. The feather also glows while a
-                        file is dragged over the page (data-dragging). */}
+                    {/* The feather glows on hover and while a file is dragged
+                        over the page; see .fd-hero-logo and .fd-hero-text. */}
                     <Stack align="center" gap={8}>
                       <Box
                         className="fd-hero-logo"
@@ -516,7 +468,6 @@ export default function HomePage() {
               )}
             </Transition>
 
-            {/* Upload-password gate (UPLOAD_PASSWORD set, not yet unlocked). */}
             <Transition mounted={uploadLocked} transition="pop" duration={200}>
               {(styles) => (
                 <Paper
@@ -534,9 +485,6 @@ export default function HomePage() {
               )}
             </Transition>
 
-            {/* A file is chosen: the OPTIONS panel REPLACES the feather (same grid
-                cell -> cross-fade + pop). The upload-progress bar sits BELOW the
-                panel, not inside it. */}
             <Transition
               mounted={showPanel && !uploadLocked}
               transition="pop"
@@ -581,7 +529,6 @@ export default function HomePage() {
                     </Stack>
                   </Paper>
 
-                  {/* Progress BELOW the options window. */}
                   {uploading && (
                     <Stack align="center" gap={6} w="100%">
                       <Progress
