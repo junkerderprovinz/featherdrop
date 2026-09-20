@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// fakeClock is a manually-advanced clock so refill/sweep behaviour is
-// deterministic (mirrors the injectable now() of the api handlers).
 type fakeClock struct{ t time.Time }
 
 func newFakeClock() *fakeClock {
@@ -18,7 +16,6 @@ func newFakeClock() *fakeClock {
 func (c *fakeClock) now() time.Time          { return c.t }
 func (c *fakeClock) advance(d time.Duration) { c.t = c.t.Add(d) }
 
-// okHandler is the wrapped next handler: 200 "ok".
 func okHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -28,7 +25,7 @@ func okHandler() http.Handler {
 
 func TestLimiter_AllowsBurstThenBlocks(t *testing.T) {
 	clock := newFakeClock()
-	l := NewLimiter(30, 10, clock.now) // 30/min, burst 10
+	l := NewLimiter(30, 10, clock.now)
 
 	for i := 0; i < 10; i++ {
 		if ok, _ := l.Allow("1.2.3.4"); !ok {
@@ -39,7 +36,7 @@ func TestLimiter_AllowsBurstThenBlocks(t *testing.T) {
 	if ok {
 		t.Fatalf("request 11 allowed, want denied (burst exhausted)")
 	}
-	// 30/min = one token per 2s: the deficit of one whole token needs 2s.
+	// 30 per minute is one token every 2s.
 	if retryAfter <= 0 || retryAfter > 2*time.Second {
 		t.Fatalf("retryAfter = %v, want in (0s, 2s]", retryAfter)
 	}
@@ -47,7 +44,7 @@ func TestLimiter_AllowsBurstThenBlocks(t *testing.T) {
 
 func TestLimiter_RefillsAtRate(t *testing.T) {
 	clock := newFakeClock()
-	l := NewLimiter(30, 10, clock.now) // one token per 2s
+	l := NewLimiter(30, 10, clock.now)
 
 	for i := 0; i < 10; i++ {
 		l.Allow("1.2.3.4")
@@ -55,7 +52,6 @@ func TestLimiter_RefillsAtRate(t *testing.T) {
 	if ok, _ := l.Allow("1.2.3.4"); ok {
 		t.Fatalf("exhausted bucket must deny")
 	}
-	// After 2s exactly one token has refilled: one allow, then denied again.
 	clock.advance(2 * time.Second)
 	if ok, _ := l.Allow("1.2.3.4"); !ok {
 		t.Fatalf("one token must have refilled after 2s at 30/min")
@@ -63,7 +59,7 @@ func TestLimiter_RefillsAtRate(t *testing.T) {
 	if ok, _ := l.Allow("1.2.3.4"); ok {
 		t.Fatalf("second request after a single-token refill must be denied")
 	}
-	// A long idle refills to (at most) the burst — never beyond.
+	// A long idle refills to the burst and no further.
 	clock.advance(time.Hour)
 	allowed := 0
 	for i := 0; i < 20; i++ {
@@ -86,7 +82,6 @@ func TestLimiter_PerKeyIsolation(t *testing.T) {
 	if ok, _ := l.Allow("1.2.3.4"); ok {
 		t.Fatalf("exhausted key must deny")
 	}
-	// A different client IP owns its own untouched bucket.
 	if ok, _ := l.Allow("5.6.7.8"); !ok {
 		t.Fatalf("another key must not be affected by an exhausted neighbour")
 	}
@@ -101,8 +96,7 @@ func TestLimiter_SweepDropsIdleBuckets(t *testing.T) {
 	if got := len(l.buckets); got != 2 {
 		t.Fatalf("bucket count = %d, want 2", got)
 	}
-	// After enough idle time every bucket has refilled to capacity; the next
-	// Allow's sweep drops them (the new caller re-creates only its own).
+	// The next Allow sweeps the refilled buckets and creates only its own.
 	clock.advance(time.Hour)
 	l.Allow("9.9.9.9")
 	if got := len(l.buckets); got != 1 {
@@ -143,7 +137,7 @@ func TestClientIP_TrustProxy(t *testing.T) {
 
 func TestMiddleware_429WithRetryAfter(t *testing.T) {
 	clock := newFakeClock()
-	l := NewLimiter(30, 2, clock.now) // tiny burst so the test is short
+	l := NewLimiter(30, 2, clock.now)
 	h := Middleware(l, false, "", okHandler())
 
 	send := func() *httptest.ResponseRecorder {
@@ -210,8 +204,7 @@ func TestMiddleware_XFFOnlyWithTrustProxy(t *testing.T) {
 		return rec.Code
 	}
 
-	// trustProxy=false: rotating XFF must NOT dodge the limit (all requests
-	// come from the same peer, so they share one bucket).
+	// Without trustProxy a rotating XFF does not dodge the limit.
 	clock := newFakeClock()
 	untrusted := Middleware(NewLimiter(30, 1, clock.now), false, "", okHandler())
 	if code := send(untrusted, "1.1.1.1"); code != http.StatusOK {
@@ -221,8 +214,6 @@ func TestMiddleware_XFFOnlyWithTrustProxy(t *testing.T) {
 		t.Fatalf("spoofed-XFF second request = %d, want 429 (XFF must be ignored)", code)
 	}
 
-	// trustProxy=true: distinct XFF clients get distinct buckets, and the same
-	// XFF client is limited.
 	trusted := Middleware(NewLimiter(30, 1, clock.now), true, "", okHandler())
 	if code := send(trusted, "1.1.1.1"); code != http.StatusOK {
 		t.Fatalf("trusted first client = %d, want 200", code)
@@ -248,14 +239,13 @@ func TestMiddleware_MethodFilter(t *testing.T) {
 		return rec.Code
 	}
 
-	// POST consumes the single token; a second POST is limited…
 	if code := send(http.MethodPost); code != http.StatusOK {
 		t.Fatalf("first POST = %d, want 200", code)
 	}
 	if code := send(http.MethodPost); code != http.StatusTooManyRequests {
 		t.Fatalf("second POST = %d, want 429", code)
 	}
-	// …but PATCH/HEAD (upload resumes) pass through untouched, even now.
+	// Upload resumes pass even with the bucket empty.
 	for _, m := range []string{http.MethodPatch, http.MethodHead, http.MethodOptions} {
 		if code := send(m); code != http.StatusOK {
 			t.Fatalf("%s = %d, want 200 (method filter must exempt it)", m, code)
