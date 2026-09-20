@@ -14,9 +14,8 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
-// newTestRouter builds a chi router mounting the tus handler exactly as main.go
-// does, so the tests exercise the real routing for both "/files" and
-// "/files/*". db may be nil (no STORAGE_QUOTA configured).
+// newTestRouter mounts the tus handler on chi at "/files" and "/files/*" as
+// main.go does. db may be nil when no quota is set.
 func newTestRouter(t *testing.T, cfg config.Config, db *sql.DB) http.Handler {
 	t.Helper()
 	h, err := NewHandler(cfg, db)
@@ -48,12 +47,12 @@ func protectedCfg(t *testing.T, secret string) config.Config {
 	}
 }
 
-// tusCreate issues a tus create (POST /files). token is attached when non-empty.
+// tusCreate sends a tus create, with the upload token when it is non-empty.
 func tusCreate(srv http.Handler, token string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, "/files", nil)
 	req.Header.Set("Tus-Resumable", "1.0.0")
 	req.Header.Set("Upload-Length", "11")
-	// metadata: filename "hello.txt" base64 = aGVsbG8udHh0
+	// filename "hello.txt"
 	req.Header.Set("Upload-Metadata", "filename aGVsbG8udHh0")
 	if token != "" {
 		req.Header.Set(UploadTokenHeader, token)
@@ -137,12 +136,8 @@ func TestTus_Protected_OptionsNoToken_OK(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// STORAGE_QUOTA gate on tus creation
-// ---------------------------------------------------------------------------
-
-// quotaEnv opens a real schema-applied store seeded with one share of
-// storedSize bytes and returns it with a quota-capped config.
+// quotaEnv opens a real store seeded with one share of storedSize bytes and
+// returns it with a config capped at quota.
 func quotaEnv(t *testing.T, quota, storedSize int64) (config.Config, *sql.DB) {
 	t.Helper()
 	dir := t.TempDir()
@@ -168,7 +163,6 @@ func quotaEnv(t *testing.T, quota, storedSize int64) (config.Config, *sql.DB) {
 	return cfg, db
 }
 
-// tusCreateLen issues a tus create declaring the given Upload-Length.
 func tusCreateLen(srv http.Handler, length int64) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, "/files", nil)
 	req.Header.Set("Tus-Resumable", "1.0.0")
@@ -179,8 +173,6 @@ func tusCreateLen(srv http.Handler, length int64) *httptest.ResponseRecorder {
 }
 
 func TestTus_Quota_CreateOverQuota_507(t *testing.T) {
-	// 100 bytes stored of a 150-byte quota: a 51-byte create must be refused
-	// with 507 and the uniform JSON error shape, before any byte is accepted.
 	cfg, db := quotaEnv(t, 150, 100)
 	srv := newTestRouter(t, cfg, db)
 
@@ -197,7 +189,6 @@ func TestTus_Quota_CreateOverQuota_507(t *testing.T) {
 }
 
 func TestTus_Quota_CreateWithinQuota_201(t *testing.T) {
-	// The same setup but a create that still fits (100+50 == 150) is accepted.
 	cfg, db := quotaEnv(t, 150, 100)
 	srv := newTestRouter(t, cfg, db)
 
@@ -208,7 +199,6 @@ func TestTus_Quota_CreateWithinQuota_201(t *testing.T) {
 }
 
 func TestTus_Quota_Unlimited_201(t *testing.T) {
-	// StorageQuota 0 = unlimited: any declared length passes the gate.
 	cfg, db := quotaEnv(t, 0, 1<<40)
 	srv := newTestRouter(t, cfg, db)
 

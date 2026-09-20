@@ -3,13 +3,11 @@ package upload
 import "testing"
 
 func TestIsUploadAuthorized_Open(t *testing.T) {
-	// Not protected: any token (including empty) is authorized.
 	cases := []string{"", "anything", "secret", "x-fd-upload-token"}
 	for _, tok := range cases {
 		if !IsUploadAuthorized(tok, false, "") {
 			t.Errorf("IsUploadAuthorized(%q, false, \"\") = false, want true (open)", tok)
 		}
-		// A non-empty configured secret is irrelevant while protected is false.
 		if !IsUploadAuthorized(tok, false, "secret") {
 			t.Errorf("IsUploadAuthorized(%q, false, \"secret\") = false, want true (open)", tok)
 		}
@@ -51,8 +49,6 @@ func TestUploadTokenMatches(t *testing.T) {
 		t.Error("uploadTokenMatches(length mismatch) = true, want false")
 	}
 	if uploadTokenMatches("", "") {
-		// Empty == empty is technically a match, but IsUploadAuthorized rejects
-		// empty tokens before reaching here; document the raw behaviour.
 		t.Log("uploadTokenMatches(\"\",\"\") = true (empty compares equal); guarded by IsUploadAuthorized")
 	}
 }
