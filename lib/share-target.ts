@@ -1,27 +1,23 @@
-// PWA share-target pickup — the page side of the /share-target flow.
-//
-// The service worker (public/sw-download.js) stashes files shared via the OS
-// share sheet in the "fd-share-target" Cache and redirects to /?shared=1. This
-// module collects that stash back into File objects (original name/type carried
-// in the stored response headers) and clears it, so a share is consumed exactly
-// once. Everything is guarded: no Cache API (insecure context, old browser) or
-// an empty stash simply yields [].
+// The page side of the PWA share target. The service worker
+// (public/sw-download.js) stores files shared from the OS share sheet in the
+// "fd-share-target" cache and redirects to /?shared=1. This module turns that
+// stash back into File objects, with name and type from the stored headers,
+// and clears it so a share is used once. Without the Cache API it yields [].
 
 const SHARE_TARGET_CACHE = "fd-share-target";
 
-/** True when the current URL indicates a share-sheet launch. */
 export function isShareTargetLaunch(
   search: string = typeof location !== "undefined" ? location.search : "",
 ): boolean {
   return new URLSearchParams(search).has("shared");
 }
 
-/** Collect and CLEAR the stashed shared files. */
+/** Collects the shared files and clears the stash. */
 export async function collectSharedFiles(): Promise<File[]> {
   try {
     if (typeof caches === "undefined") return [];
     const cache = await caches.open(SHARE_TARGET_CACHE);
-    // Numbered /fd-share-target/<i> entries — restore the share-sheet order.
+    // The entries are numbered /fd-share-target/<i> in share-sheet order.
     const keys = [...(await cache.keys())].sort((a, b) =>
       a.url.localeCompare(b.url, undefined, { numeric: true }),
     );

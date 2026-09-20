@@ -1,6 +1,5 @@
-// Allowed expiry options offered to the uploader. Keys are stable identifiers
-// sent from the client; values are durations in milliseconds. "never" = no
-// expiry (the file lives until manually removed / disk pressure).
+// The expiry options offered to the uploader. The values are the identifiers
+// sent to the server; "never" has no expiry.
 export const EXPIRY_OPTIONS = [
   { value: "1h", label: "1 hour", ms: 60 * 60 * 1000 },
   { value: "6h", label: "6 hours", ms: 6 * 60 * 60 * 1000 },
@@ -19,9 +18,8 @@ export function isValidExpiry(value: string): value is ExpiryValue {
 }
 
 /**
- * Resolve an expiry option key to an absolute unix-ms timestamp.
- * Returns null for "never" (stored as NULL = no expiry). Unknown keys fall
- * back to null so a bad client value never silently shortens a share.
+ * Resolves an expiry key to a unix-ms timestamp, or null for "never". Unknown
+ * keys also give null, so a bad client value never shortens a share.
  */
 export function expiryToTimestamp(value: string, now = Date.now()): number | null {
   const opt = BY_VALUE.get(value as ExpiryValue);
@@ -30,11 +28,10 @@ export function expiryToTimestamp(value: string, now = Date.now()): number | nul
 }
 
 /**
- * The expiry options an instance actually offers, honouring the operator's
- * MAX_EXPIRY cap (surfaced via /api/config as `maxExpiry`). An empty/unknown
- * cap or "never" means everything is allowed. With a finite cap, "never" and
- * every duration above the cap disappear from the menu — EXPIRY_OPTIONS is
- * ordered ascending, so the cap is a simple index cut.
+ * The expiry options this instance offers under the MAX_EXPIRY cap from
+ * /api/config. An empty, unknown or "never" cap allows everything; a finite cap
+ * drops "never" and every longer duration. EXPIRY_OPTIONS is sorted ascending,
+ * so the cap is an index cut.
  */
 export function allowedExpiryOptions(maxExpiry: string) {
   if (!maxExpiry || maxExpiry === "never" || !isValidExpiry(maxExpiry)) {
@@ -45,9 +42,8 @@ export function allowedExpiryOptions(maxExpiry: string) {
 }
 
 /**
- * Clamp a wanted expiry to the instance cap: invalid/over-cap values fall to
- * the LONGEST still-allowed duration (the closest match to the user's intent;
- * also what the stored preference degrades to on a stricter instance).
+ * Clamps a wanted expiry to the cap. An invalid or too long value becomes the
+ * longest allowed duration, the closest match to what the user wanted.
  */
 export function clampExpiry(value: string, maxExpiry: string): ExpiryValue {
   const allowed = allowedExpiryOptions(maxExpiry);

@@ -1,31 +1,23 @@
-// Tiny adapters between the Web Streams API (ReadableStream) and the
-// AsyncIterable<Uint8Array> convention used by the pipeline modules.
-// Browser-compatible; no Node.js-specific APIs.
+// Adapters between ReadableStream and the AsyncIterable<Uint8Array> the
+// pipeline modules use.
 
-// Runtime feature probe kept out of the caller so its `boolean` return does not
-// narrow the argument (a type guard would flag the fallback branch as `never`).
+// lib.dom declares the async iterator on every ReadableStream, so an inline
+// `Symbol.asyncIterator in rs` check would narrow rs to never in the fallback.
+// A plain boolean function keeps the fallback typed for older browsers.
 function supportsAsyncIterator(rs: ReadableStream<Uint8Array>): boolean {
   return Symbol.asyncIterator in rs;
 }
 
 /**
- * Wrap a ReadableStream<Uint8Array> as an AsyncIterable<Uint8Array>.
- * Uses the stream's built-in async iterator if available (Chromium ≥ 124),
- * otherwise falls back to a reader loop so every browser is covered.
+ * Wraps a ReadableStream as an AsyncIterable, using the stream's own iterator
+ * where the browser has one and a reader loop otherwise.
  */
 export function streamToAsyncIterable(
   rs: ReadableStream<Uint8Array>,
 ): AsyncIterable<Uint8Array> {
-  // The ReadableStream async iterator is defined in the Streams spec and
-  // available in modern browsers. lib.dom now declares it unconditionally on the
-  // type, so an inline `Symbol.asyncIterator in rs` check would narrow `rs` to
-  // `never` in the fallback branch. We probe through a plain boolean-returning
-  // helper (not a type guard) so the reader-loop fallback below stays typed for
-  // the older browsers that still need it.
   if (supportsAsyncIterator(rs)) {
     return rs as unknown as AsyncIterable<Uint8Array>;
   }
-  // Fallback: reader loop.
   return {
     [Symbol.asyncIterator]() {
       const reader = rs.getReader();
@@ -36,8 +28,6 @@ export function streamToAsyncIterable(
             reader.releaseLock();
             return { done: true as const, value: undefined };
           }
-          // Chunks from ReadableStream are Uint8Array at runtime; the cast
-          // satisfies TS 5.9's stricter Uint8Array<ArrayBuffer> requirement.
           return { done: false as const, value: value as Uint8Array };
         },
         async return() {
@@ -54,10 +44,7 @@ export function streamToAsyncIterable(
   };
 }
 
-/**
- * Wrap an AsyncIterable<Uint8Array> as a ReadableStream<Uint8Array>.
- * The stream pulls one chunk at a time from the iterator.
- */
+/** Wraps an AsyncIterable as a ReadableStream that pulls one chunk at a time. */
 export function asyncIterableToStream(
   it: AsyncIterable<Uint8Array>,
 ): ReadableStream<Uint8Array> {
@@ -68,7 +55,7 @@ export function asyncIterableToStream(
       if (done) {
         controller.close();
       } else {
-        // value is Uint8Array at runtime; cast satisfies TS 5.9 strict enqueue typing.
+        // The chunks are ArrayBuffer-backed; the cast satisfies enqueue's type.
         controller.enqueue(value as Uint8Array<ArrayBuffer>);
       }
     },

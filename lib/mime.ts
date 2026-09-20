@@ -1,12 +1,7 @@
-// Map a filename's extension to a content type for the types we can preview.
-// Used as a fallback at finalize time when the uploader's browser supplied no
-// (or an empty) content type — otherwise the file would never preview, since
-// both the preview gate and the inline Content-Type key off a known MIME. Mirrors
-// lib/preview.ts' allowlist; anything unknown returns null (generic binary).
-//
-// NOTE: this only assigns a MIME. The server's inline (?inline=1) gate uses the
-// STRICTER isServerInlineMime, so an "svg" mapping here still won't be served
-// inline by the server (SVG is client-blob-<img>-only). See lib/preview.ts.
+// Content types by extension for the types that can preview, used when the
+// browser supplied none; without a known type a file never previews. It follows
+// the allowlist in lib/preview.ts. Mapping svg here does not make it inline:
+// SVG only ever renders from a client-side blob in an <img>.
 const BY_EXT: Record<string, string> = {
   // Images.
   png: "image/png",

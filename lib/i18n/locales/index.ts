@@ -1,8 +1,6 @@
-// Central locale registry. To add a language:
-//   1. create ./<code>.ts exporting a `Translation` (TS enforces the full key set)
-//   2. import it and add one entry to LANGUAGES + resources below
-// The runtime parity test (test/locales.test.ts) guarantees no key is missing or
-// empty in any registered language.
+// To add a language, create ./<code>.ts exporting a Translation, whose type
+// enforces the full key set, then add it to LANGUAGES and resources below.
+// test/locales.test.ts checks that no key is missing or empty.
 import { en, type TranslationKey, type Translation } from "./en";
 import { de } from "./de";
 import { fr } from "./fr";
@@ -34,8 +32,8 @@ export type { TranslationKey, Translation };
 
 export interface Language {
   code: string;
-  label: string; // endonym — the language's own name
-  flag: string; // ISO 3166-1 alpha-2 region code used to pick the flag SVG
+  label: string; // the language's own name
+  flag: string; // ISO 3166-1 alpha-2 region code of the flag
   rtl?: boolean;
 }
 
@@ -71,10 +69,9 @@ export const LANGUAGES: Language[] = [
 
 export const DEFAULT_LANGUAGE = "en";
 
-// Supported language codes, in menu order — the single source for detection.
 export const SUPPORTED = LANGUAGES.map((l) => l.code);
 
-/** Whether a language code is right-to-left (Arabic, Hebrew, …). */
+/** Whether a language is written right to left, such as Arabic or Hebrew. */
 export const isRtl = (code: string): boolean =>
   LANGUAGES.find((l) => l.code === code)?.rtl ?? false;
 

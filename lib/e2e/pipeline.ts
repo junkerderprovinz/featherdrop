@@ -1,12 +1,10 @@
-// Client-side zero-knowledge pipeline: ties together crypto + blob-layout into
-// the two operations the UI performs. Pure (no DOM/network) so the whole
-// encrypt→blob→decrypt round-trip is unit-testable end-to-end.
+// The client-side encryption pipeline behind upload and download:
 //
-// Upload:   plaintext stream + meta  ->  { blob stream, share secret }
+// Upload:   plaintext stream + meta     ->  { blob stream, share secret }
 // Download: ciphertext stream + secret  ->  { meta, plaintext stream }
 //
-// The server only ever stores/serves the opaque `blob` bytes; the key never
-// reaches it (link mode: in the URL #fragment; password mode: derived client-side).
+// The server only stores the opaque blob. The key never reaches it: it rides in
+// the URL fragment in link mode and is derived from the password otherwise.
 
 import {
   ready,
@@ -29,41 +27,32 @@ import {
 import { assembleBlob, readBlobMeta } from "./blob-layout";
 import { encryptSeekable, decryptSeekable } from "./seekable";
 
-/** Wrapped content key for password mode (stored opaquely on the server). */
+/** The content key wrapped for password mode, stored opaquely on the server. */
 export interface WrappedKey {
   wrapped: Uint8Array;
   salt: Uint8Array;
 }
 
 export interface EncryptResult {
-  /** Opaque upload bytes: [varint(metaLen)][enc_meta][secretstream header][frames]. */
+  /** The upload bytes: [varint(metaLen)][enc_meta][content]. */
   blob: AsyncIterable<Uint8Array>;
-  /** base64url content key for the share URL `#k=` (link mode); "" in password mode. */
+  /** base64url content key for the `#k=` fragment; "" in password mode. */
   keyForUrl: string;
-  /** Present only in password mode — server stores this, the link carries no key. */
+  /** Password mode only: stored by the server, the link carries no key. */
   wrapped?: WrappedKey;
   /**
-   * base64url(SHA-256(K)) — sent to finalize so the server can demand the same
-   * proof (header `x-fd-key-verifier`) before counting a download. One-way:
-   * the server learns nothing that helps decryption.
+   * base64url(SHA-256(K)), sent to finalize so the server can require the same
+   * proof before counting a download.
    */
   keyVerifier: string;
 }
 
 /**
- * Encrypt a plaintext stream + metadata into the upload blob + share secret.
- *
- * `opts.seekable` selects the content encoding:
- *   - false / absent → cf=1 (libsodium secretstream, the original encoding). The
- *     enc_meta omits cf/baseNonce/chunkSize, so the blob is BYTE-IDENTICAL to
- *     what previous versions wrote. This path is unchanged.
- *   - true → cf=2 (per-chunk XChaCha20-Poly1305 AEAD, ./seekable.ts). enc_meta
- *     records cf:2, the per-file baseNonce (b64) and chunkSize so the download
- *     side can seek. `meta.size` should be set (the seekable decrypt verifies
- *     the authenticated length); if omitted it is not added.
- *
- * Both encodings live INSIDE the encrypted enc_meta, so the server can never
- * tell which one a blob uses (zero-knowledge preserved).
+ * Encrypts a plaintext stream and its metadata into the upload blob and share
+ * secret. Without opts.seekable the content is a cf=1 secretstream and the blob
+ * is byte-identical to what older versions wrote. With it the content is cf=2
+ * (./seekable.ts) and meta.size should be set, since the seekable decrypt
+ * checks it.
  */
 export async function encryptForUpload(
   content: AsyncIterable<Uint8Array>,
@@ -97,17 +86,15 @@ export async function encryptForUpload(
   return { blob, keyForUrl: encodeKey(key), keyVerifier };
 }
 
-/** The secret needed to decrypt a download: a link key, or a password + wrap. */
+/** The secret that decrypts a download: a link key, or a password and its wrap. */
 export type DownloadSecret =
   | { keyFromUrl: string }
   | { password: string; wrapped: Uint8Array; salt: Uint8Array };
 
 /**
- * Derive the raw content key K from the share secret — URL key (decode) or
- * password (Argon2id unwrap; throws on a wrong password). Exposed so the
- * download flow can derive K BEFORE fetching: it needs `computeKeyVerifier(K)`
- * for the request, and a wrong password must fail before any download is
- * counted server-side.
+ * Derives the content key from the share secret; a wrong password throws. The
+ * download flow calls it before fetching, because the request needs the key
+ * verifier and a wrong password must fail before anything is counted.
  */
 export async function deriveContentKey(secret: DownloadSecret): Promise<Uint8Array> {
   await ready();
@@ -116,24 +103,16 @@ export async function deriveContentKey(secret: DownloadSecret): Promise<Uint8Arr
     : unwrapKey(secret.wrapped, secret.salt, secret.password);
 }
 
-/** Decrypt a downloaded blob stream back into its metadata + plaintext stream. */
 export async function decryptFromDownload(
   ciphertext: AsyncIterable<Uint8Array>,
   secret: DownloadSecret,
 ): Promise<{ meta: FileMeta; plaintext: AsyncIterable<Uint8Array> }> {
-  // The content key is derivable from the secret alone (URL key, or unwrap with
-  // the password) — no server data needed beyond the opaque wrapped key/salt.
   return decryptWithKey(ciphertext, await deriveContentKey(secret));
 }
 
 /**
- * Decrypt with an already-derived content key (skips the Argon2id re-derive).
- *
- * Branches on the content-format `cf` carried INSIDE the (now-decrypted) enc_meta:
- *   - cf absent or 1 → the original secretstream path (decryptChunks). Every blob
- *     written before cf=2 existed has no `cf` field, so old links keep working.
- *   - cf === 2 → the seekable per-chunk path (decryptSeekable), using the
- *     baseNonce + authenticated size from enc_meta.
+ * Decrypts with an already derived key, skipping the Argon2id work. Blobs
+ * written before cf=2 existed have no cf and use the secretstream path.
  */
 export async function decryptWithKey(
   ciphertext: AsyncIterable<Uint8Array>,
@@ -154,7 +133,6 @@ export async function decryptWithKey(
     );
     return { meta, plaintext };
   }
-  // cf absent / cf === 1 → legacy secretstream path (untouched).
   const plaintext = decryptChunks(content, key);
   return { meta, plaintext };
 }

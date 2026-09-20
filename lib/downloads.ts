@@ -1,7 +1,6 @@
-// Optional download limit / burn-after-download. `max_downloads` is null for an
-// unlimited share; a positive integer caps how many times it can be downloaded,
-// after which the file and its DB row are deleted. The atomic count++/delete
-// lives in server/db.ts `registerDownload`; this module holds the pure helpers.
+// Download limits. max_downloads is null for an unlimited share; otherwise the
+// share is deleted after that many downloads. The server does the atomic count
+// and delete in store.RegisterDownload.
 
 const MAX_CAP = 10_000;
 
@@ -11,14 +10,13 @@ export function downloadsLeft(count: number, max: number | null): number | null 
   return Math.max(0, max - count);
 }
 
-/** Whether a finite-limit share has used up all its downloads. */
 export function isExhausted(count: number, max: number | null): boolean {
   return max !== null && count >= max;
 }
 
 /**
- * Normalise an uploader-supplied limit to a positive integer (1..MAX_CAP) or
- * null (= unlimited) for anything missing, zero, negative, or non-integer.
+ * Clamps an uploader-supplied limit to 1..MAX_CAP, or returns null, meaning
+ * unlimited, for a missing, zero, negative or fractional value.
  */
 export function parseMaxDownloads(
   input: number | null | undefined,

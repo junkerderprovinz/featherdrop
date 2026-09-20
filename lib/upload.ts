@@ -1,14 +1,8 @@
-// Whether a tus upload has fully arrived, judged from the ACTUAL bytes on disk
-// against the declared total length.
-//
-// Why not the sidecar's `offset`? @tus/file-store writes the `<id>.json` sidecar
-// with `offset` only at creation (= 0) and never updates it per write — it tracks
-// progress via the live file size instead (getUpload returns offset = stat.size).
-// So the sidecar's `offset` stays 0 even for a complete upload; trusting it makes
-// finalize reject every non-empty file with a false "upload not complete" (409).
-//
-// `declaredSize` is the sidecar's `size` (Upload-Length). When it is unknown
-// (deferred length / not a number) we cannot prove incompleteness, so we accept.
+// Whether a tus upload has fully arrived, judged by the bytes on disk against
+// the declared length. The sidecar's offset cannot be used: the tus file store
+// writes it once at creation as 0 and tracks progress by file size, so trusting
+// it would reject every non-empty upload as incomplete. An unknown declared
+// size, from a deferred length, cannot prove the upload incomplete and passes.
 export function isUploadComplete(
   actualSize: number,
   declaredSize: number | null | undefined,

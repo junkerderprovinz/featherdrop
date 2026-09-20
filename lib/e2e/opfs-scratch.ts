@@ -1,23 +1,17 @@
-// Browser-only OPFS scratch storage for the upload pipeline. Streams an encrypted
-// blob into a temporary Origin-Private-File-System file and returns a sliceable
-// File (the seekable source the resumable tus upload reads from) plus a cleanup.
-// Scratch names embed a timestamp so sweepStaleScratch() can garbage-collect
-// leftovers from uploads that were aborted before cleanup ran.
+// Scratch storage for the upload: the encrypted blob is streamed into a
+// temporary Origin Private File System file, which gives tus a sliceable File to
+// resume from. The names carry a timestamp so sweepStaleScratch() can remove
+// files left by aborted uploads.
 
 const PREFIX = "fd-scratch-";
 
-// FileSystemDirectoryHandle.entries() (the async iterator we rely on) is part
-// of TS's lib.dom now, so the handle is used directly.
 async function opfsRoot(): Promise<FileSystemDirectoryHandle> {
   return await navigator.storage.getDirectory();
 }
 
 /**
- * True when the Origin Private File System is usable. OPFS lives on
- * `navigator.storage`, which browsers expose only in a **secure context**
- * (HTTPS or localhost); on plain HTTP `navigator.storage` is undefined, so
- * touching it would throw "Cannot read properties of undefined (getDirectory)".
- * Callers use this to pick the in-memory fallback instead.
+ * Reports whether OPFS is usable. navigator.storage only exists in a secure
+ * context, so on plain HTTP callers take the in-memory fallback.
  */
 export function canUseOpfs(): boolean {
   return (
@@ -28,17 +22,14 @@ export function canUseOpfs(): boolean {
 }
 
 /**
- * In-memory fallback for contexts without OPFS (e.g. plain HTTP). Collects the
- * encrypted blob into a single File so the resumable tus upload still has a
- * sliceable source. The whole blob is held in memory, so callers must cap the
- * size before choosing this path. The cleanup is a no-op (GC reclaims it).
+ * Collects the encrypted blob into one in-memory File for contexts without
+ * OPFS. The whole blob sits in memory, so callers cap the size first.
  */
 export async function writeMemoryScratch(
   blob: AsyncIterable<Uint8Array>,
 ): Promise<{ file: File; cleanup: () => Promise<void> }> {
   const parts: BlobPart[] = [];
-  // Cast: chunks are real ArrayBuffer-backed Uint8Arrays at runtime; the cast
-  // satisfies TS 5.9's stricter Uint8Array<ArrayBuffer> requirement for BlobPart.
+  // The chunks are ArrayBuffer-backed; the cast satisfies the BlobPart type.
   for await (const chunk of blob) parts.push(chunk as Uint8Array<ArrayBuffer>);
   const file = new File(parts, "fd-upload.bin", {
     type: "application/octet-stream",
@@ -47,9 +38,8 @@ export async function writeMemoryScratch(
 }
 
 /**
- * Stream `blob` into a fresh OPFS scratch file. Returns the file (a sliceable
- * Blob) and a cleanup to delete it. On write failure the partial file is removed
- * and the error rethrown.
+ * Streams blob into a fresh OPFS scratch file and returns it with a cleanup.
+ * A failed write removes the partial file and rethrows.
  */
 export async function writeScratch(
   blob: AsyncIterable<Uint8Array>,
@@ -59,8 +49,6 @@ export async function writeScratch(
   const handle = await dir.getFileHandle(name, { create: true });
   const writable = await handle.createWritable();
   try {
-    // Chunks are real ArrayBuffer-backed Uint8Arrays at runtime; the cast
-    // satisfies TS 5.9's stricter Uint8Array<ArrayBuffer> requirement on write().
     for await (const chunk of blob) await writable.write(chunk as Uint8Array<ArrayBuffer>);
     await writable.close();
   } catch (err) {
@@ -87,7 +75,7 @@ export async function writeScratch(
   return { file, cleanup };
 }
 
-/** Delete scratch files older than `maxAgeMs` (GC after aborted uploads). */
+/** Deletes scratch files older than maxAgeMs. */
 export async function sweepStaleScratch(maxAgeMs: number): Promise<void> {
   const dir = await opfsRoot();
   const now = Date.now();

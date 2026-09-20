@@ -1,13 +1,13 @@
 import { customAlphabet } from "nanoid";
 
-// URL-safe, unambiguous alphabet (no 0/O/1/l/I) for human-friendly share links.
+// Leaves out 0, O, 1, l and I, which are easy to misread in a link.
 const ALPHABET = "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
 
-/** Generate a random public share slug, e.g. "k7Mx9qT2". */
+/** Generates a random share slug such as "k7Mx9qT2". */
 export const newSlug = customAlphabet(ALPHABET, 8);
 
-// tus upload ids and our stored filenames must never contain path separators
-// or traversal sequences — guard before touching the filesystem with them.
+// File paths are built from tus upload ids, so they must never hold a path
+// separator or a traversal sequence.
 const SAFE_ID = /^[A-Za-z0-9._-]+$/;
 
 export function isSafeId(id: string): boolean {

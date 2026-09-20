@@ -1,22 +1,18 @@
-// Remembered upload options (localStorage). The last-used expiry, download
-// limit and metadata-strip choice are restored on the next visit, so a regular
-// user sets them once instead of per upload. Deliberately NEVER the share
-// password — secrets don't belong in localStorage.
-//
-// Storage is injectable and every access is guarded: privacy modes can throw on
-// localStorage, and a corrupted value must never break the page — bad or
-// missing data just falls back to the caller's defaults (null fields).
+// The last-used expiry, download limit and metadata choice are kept in
+// localStorage so a regular user sets them once. The share password is never
+// stored there. Privacy modes can throw on localStorage access, and bad or
+// missing data falls back to the caller's defaults.
 
 import { isValidExpiry } from "./expiry";
 
 export const PREFS_STORAGE_KEY = "fd-upload-prefs";
 
 export interface UploadPrefs {
-  /** Last-used expiry key (validated), or null = no stored preference. */
+  /** Last-used expiry key, or null without a stored preference. */
   expiry: string | null;
-  /** Last-used download limit; null = unlimited/off. */
+  /** Last-used download limit; null for unlimited. */
   maxDownloads: number | null;
-  /** Strip photo metadata (EXIF/GPS) before encrypting; null = default (on). */
+  /** Strip photo metadata before encrypting; null for the default, on. */
   stripMetadata: boolean | null;
 }
 
@@ -64,6 +60,6 @@ export function savePrefs(
   try {
     store.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
   } catch {
-    // Quota/privacy errors: remembering preferences is best-effort.
+    // Quota and privacy errors; remembering preferences is best effort.
   }
 }

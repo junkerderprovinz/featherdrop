@@ -1,15 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-// Download-permission token for password-protected shares.
-//
-// Derived from the share's stored password hash — which never leaves the server
-// — so it cannot be forged from public information. (An earlier version used the
-// slug itself, which is in the URL and therefore trivially guessable: setting
-// the cookie to the slug bypassed the password entirely.)
-//
-// Deterministic, so verification needs no server-side session state: the GET
-// handler recomputes the expected token from the row's password_hash and
-// compares it (constant-time) to the cookie.
+// The download token for password-protected shares is derived from the stored
+// password hash, which never leaves the server, so it cannot be forged from the
+// slug in the URL. Being deterministic, it needs no session state: the handler
+// recomputes it from the row and compares it with the cookie.
 export function downloadToken(passwordHash: string): string {
   return createHash("sha256")
     .update(`featherdrop:dl:${passwordHash}`)
@@ -17,9 +11,8 @@ export function downloadToken(passwordHash: string): string {
 }
 
 /**
- * Constant-time check that a cookie value is the valid download token for a
- * password hash. Authorizing on cookie *presence* alone is a bypass — any
- * non-empty value would pass — so the value must equal the hash-derived token.
+ * Checks in constant time that a cookie holds the download token for a
+ * password hash. The mere presence of a cookie must not authorize a download.
  */
 export function tokenMatches(
   cookie: string | undefined,

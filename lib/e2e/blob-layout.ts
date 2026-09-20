@@ -1,4 +1,4 @@
-// lib/e2e/blob-layout.ts
+// A blob is [varint(metaLen)][enc_meta][content].
 
 /** Unsigned LEB128 varint encode. */
 export function encodeVarint(n: number): Uint8Array {
@@ -48,24 +48,17 @@ export async function* assembleBlob(
 }
 
 /**
- * Absolute byte offset (within the whole blob) at which the content region — the
- * encrypted frames/chunks after [varint(metaLen)][enc_meta] — begins. It is the
- * length of the varint plus `metaLen` bytes. Pure. The cf=2 seekable preview adds
- * this to a chunk's CONTENT-relative cipher byte range to get the ABSOLUTE blob
- * bytes to Range-fetch.
+ * Blob offset at which the content starts. The seekable preview adds it to a
+ * chunk's content-relative range to get the bytes to fetch.
  */
 export function contentOffsetForMetaLen(metaLen: number): number {
   return encodeVarint(metaLen).length + metaLen;
 }
 
 /**
- * Read just the header of a buffered blob PREFIX: decode the metaLen varint,
- * slice out enc_meta, and report where the content region begins. `prefix` must
- * contain the full [varint(metaLen)][enc_meta] header (the streaming-preview
- * mount fetches the first 8 KiB, which comfortably covers it). Pure +
- * synchronous, so the download mount can derive the contentOffset to pass to the
- * seekable preview without re-walking the stream. Throws if the prefix is too
- * short to hold the whole header.
+ * Reads enc_meta and the content offset from a buffered blob prefix, which
+ * must hold the whole header; the preview fetches the first 8 KiB for it.
+ * Throws if the prefix is too short.
  */
 export function peekBlobHeader(prefix: Uint8Array): {
   encMeta: Uint8Array;
@@ -82,7 +75,7 @@ export function peekBlobHeader(prefix: Uint8Array): {
   };
 }
 
-/** Peel off enc_meta from a blob stream; return it + the remaining content stream. */
+/** Splits a blob stream into enc_meta and the remaining content stream. */
 export async function readBlobMeta(
   source: AsyncIterable<Uint8Array>,
 ): Promise<{ encMeta: Uint8Array; content: AsyncGenerator<Uint8Array> }> {
@@ -96,7 +89,6 @@ export async function readBlobMeta(
     return true;
   }
 
-  // Ensure enough bytes to decode the length varint.
   let metaLen: number;
   let headerLen: number;
   for (;;) {
@@ -109,7 +101,6 @@ export async function readBlobMeta(
       if (!(await pullMore())) throw new Error("blob: truncated (no length)");
     }
   }
-  // Ensure the full enc_meta is buffered.
   while (buf.length < headerLen + metaLen) {
     if (!(await pullMore())) throw new Error("blob: truncated (incomplete meta)");
   }

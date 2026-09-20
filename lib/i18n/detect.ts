@@ -1,11 +1,10 @@
-// Pure language-resolution logic, shared by the server picker and tests.
-// Given an ordered list of candidate locale tags (e.g. Accept-Language entries
-// or a stored cookie), return the first one we actually support, matching either
-// the full tag or its base language. Region variants fall back to their base
-// (de-AT -> de); unknown candidates are skipped; nothing matches -> fallback.
-
 export const COOKIE = "fd_lang";
 
+/**
+ * Returns the first supported language among the candidates, most preferred
+ * first. A region variant falls back to its base (de-AT to de), and fallback
+ * is used when nothing matches.
+ */
 export function resolveLanguage(
   candidates: readonly string[],
   supported: readonly string[],
@@ -25,10 +24,9 @@ export function resolveLanguage(
 }
 
 /**
- * Parse an Accept-Language header into an ordered list of locale tags, most
- * preferred first. Q-values sort the list (default q=1); the wildcard and
- * malformed entries are dropped. A stable sort keeps the original order among
- * equal q-values. Safe to call on the server.
+ * Parses an Accept-Language header into locale tags sorted by q-value, most
+ * preferred first. Equal q-values keep their order, and the wildcard and
+ * malformed entries are dropped.
  */
 export function parseAcceptLanguage(
   header: string | null | undefined,
@@ -49,9 +47,8 @@ export function parseAcceptLanguage(
 }
 
 /**
- * Server-side language resolution from a cookie value and an Accept-Language
- * header: an explicit cookie choice wins, then the browser's header
- * preferences, then `fallback`.
+ * Picks a language from a cookie and an Accept-Language header: the cookie
+ * wins, then the header, then fallback.
  */
 export function pickLanguage(
   cookie: string | null | undefined,
@@ -66,7 +63,7 @@ export function pickLanguage(
   return resolveLanguage(candidates, supported, fallback);
 }
 
-/** Persist the chosen language for a year so it survives reloads (client only). */
+/** Keeps the chosen language for a year. */
 export function writeLanguageCookie(code: string): void {
   if (typeof document === "undefined") return;
   const maxAge = 60 * 60 * 24 * 365;

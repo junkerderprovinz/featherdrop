@@ -1,6 +1,5 @@
-// Upload orchestration: encrypt → OPFS scratch → tus upload → finalize.
-// This module is the glue the UI calls; it has no DOM/network dependencies of
-// its own — those are injected via UploadDeps so the flow is unit-testable.
+// Upload orchestration: encrypt, write to scratch storage, upload with tus,
+// finalize. Network access is injected through UploadDeps for tests.
 
 import { encryptForUpload, type EncryptResult } from "./pipeline";
 import { encryptFilesForUpload } from "./multi-pipeline";
@@ -8,58 +7,41 @@ import type { PackFile } from "./multi-file";
 import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
 
-// Without OPFS (e.g. on plain HTTP) the encrypted blob is buffered in memory, so
-// cap the original file size on that path to avoid exhausting the tab's memory.
-// OPFS (the secure-context path) is disk-backed and has no such limit.
-const MEMORY_FALLBACK_MAX_BYTES = 500 * 1024 * 1024; // 500 MB
+// Without OPFS, on plain HTTP, the encrypted blob sits in memory, so that path
+// is capped to keep the tab alive.
+const MEMORY_FALLBACK_MAX_BYTES = 500 * 1024 * 1024;
 
 export interface FinalizeRequest {
   uploadId: string;
   expiry: string;
   maxDownloads: number | null;
-  /** 2 = single file (legacy zero-knowledge); 3 = multi-file manifest blob. */
+  /** 2 for a single file, 3 for a multi-file manifest blob. */
   format: 2 | 3;
-  /** base64-encoded wrapped content key (password mode only). */
+  /** Password mode: the wrapped content key in base64. */
   wrappedKey?: string;
-  /** base64-encoded KDF salt (password mode only). */
+  /** Password mode: the KDF salt in base64. */
   kdfSalt?: string;
   /**
-   * base64url(SHA-256(content key)) — the server stores it and requires the
-   * same value (header `x-fd-key-verifier`) before counting a download, so a
-   * leaked slug alone can't burn the share. One-way; reveals nothing about K.
+   * base64url(SHA-256(content key)). The server requires the same value before
+   * counting a download, so a leaked slug alone cannot burn the share.
    */
   keyVerifier: string;
 }
 
 export interface UploadDeps {
-  /** Upload a File (e.g. via tus). Resolves to the server-assigned upload ID. */
+  /** Uploads a file and resolves to the server's upload id. */
   upload(file: File, onProgress: (sent: number, total: number) => void): Promise<string>;
-  /**
-   * POST /api/finalize. Resolves to the slug for the share URL. The content key
-   * is generated client-side (link mode: URL #fragment; password mode: derived
-   * from the password), so the server returns only the slug.
-   */
+  /** POST /api/finalize, resolving to the share slug. */
   finalize(body: FinalizeRequest): Promise<{ slug: string }>;
-  /** Base URL (no trailing slash), e.g. "https://drop.example.tld". */
+  /** Base URL without a trailing slash, e.g. "https://drop.example.tld". */
   baseUrl: string;
 }
 
 /**
- * Encrypt one or more files and upload them to the server under ONE share link.
- *
- * - Exactly 1 file  → format 2 (the legacy single-file path; bytes + FileMeta).
- *   Inline preview on download is preserved — this path is byte-for-byte
- *   identical to before.
- * - 2+ files        → format 3 (the multi-file manifest path): the files are
- *   packed into one opaque blob (manifest + concatenated bytes) and unpacked
- *   client-side on download. Still one slug, one key, one link.
- *
- * Phases:
- *  1. "encrypting" — stream the file(s) through the E2E pipeline into OPFS scratch.
- *  2. "uploading"  — tus-upload the scratch file; report progress via onPhase.
- *  3. Finalize and return the share URL.
- *
- * The scratch file is always cleaned up (try/finally), even on error.
+ * Encrypts files and uploads them under one share link. A single file becomes
+ * format 2 and keeps the inline preview; several files are packed into one
+ * format 3 blob and unpacked on download. The scratch file is removed even when
+ * the upload fails.
  */
 export async function uploadEncrypted(
   files: File[],
@@ -69,12 +51,8 @@ export async function uploadEncrypted(
 ): Promise<{ shareUrl: string }> {
   if (files.length === 0) throw new Error("uploadEncrypted: no files given");
 
-  // The combined plaintext size — what the in-memory fallback cap applies to.
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
-  // Phase 1: encrypt. One file uses the single-file pipeline (format 2,
-  // untouched); several use the multi-file pipeline (format 3). Both yield the
-  // same EncryptResult shape, so the OPFS/tus/finalize tail below is shared.
   onPhase?.("encrypting", 0);
   const password = opts.password ? { password: opts.password } : undefined;
   let result: EncryptResult;
@@ -83,15 +61,10 @@ export async function uploadEncrypted(
     const file = files[0];
     result = await encryptForUpload(
       streamToAsyncIterable(file.stream()),
-      // `size` (plaintext byte length) is embedded in the client-encrypted
-      // enc_meta so the download page can do exact Range math for the streaming
-      // large-video preview without trusting the server-visible ciphertext size.
-      // It stays inside the ZK envelope — the server never sees it.
+      // The encrypted size lets the video preview do exact Range math without
+      // relying on the ciphertext size the server sees.
       { name: file.name, type: file.type, size: file.size },
-      // Every NEW single-file share is cf=2 (seekable per-chunk AEAD) so large
-      // videos get TRUE random-access seeking in the streaming preview. The cf=2
-      // selector + baseNonce live inside enc_meta (zero-knowledge); old cf=1
-      // shares still decrypt via the secretstream path. password is forwarded.
+      // New shares are seekable so large videos can seek in the preview.
       { ...password, seekable: true },
     );
     format = 2;
@@ -108,10 +81,8 @@ export async function uploadEncrypted(
   const { blob, keyForUrl, wrapped, keyVerifier } = result;
   onPhase?.("encrypting", 1);
 
-  // Give tus a sliceable source for the encrypted blob. Prefer OPFS (disk-backed,
-  // any size); fall back to an in-memory File when OPFS is unavailable — e.g. on
-  // plain HTTP, which exposes no navigator.storage. The in-memory path is capped
-  // so a huge bundle can't exhaust the tab; point such users at the HTTPS address.
+  // tus needs a sliceable source. OPFS is disk-backed and has no size limit;
+  // without it the blob is held in memory.
   let scratchFile: File;
   let cleanup: () => Promise<void>;
   if (canUseOpfs()) {
@@ -127,17 +98,12 @@ export async function uploadEncrypted(
   }
 
   try {
-    // Phase 2: upload.
     onPhase?.("uploading", 0);
     const uploadId = await deps.upload(scratchFile, (sent, total) => {
       onPhase?.("uploading", total > 0 ? sent / total : 0);
     });
     onPhase?.("uploading", 1);
 
-    // Build the finalize body.  In password mode the server stores the wrapped
-    // key + salt (base64); in link mode they are omitted. The key verifier is
-    // always sent — it lets the server demand proof of key knowledge before
-    // counting a download (see FinalizeRequest.keyVerifier).
     const body: FinalizeRequest = {
       uploadId,
       expiry: opts.expiry,
@@ -146,16 +112,14 @@ export async function uploadEncrypted(
       keyVerifier,
     };
     if (wrapped) {
-      // Standard base64 (btoa) matches what the server expects for binary blobs.
       body.wrappedKey = btoa(String.fromCharCode(...wrapped.wrapped));
       body.kdfSalt = btoa(String.fromCharCode(...wrapped.salt));
     }
 
     const { slug } = await deps.finalize(body);
 
-    // Build the share URL.
-    // Link mode:    https://…/d/<slug>#k=<key>   (key in fragment, never sent to server)
-    // Password mode: https://…/d/<slug>           (no fragment — key derived from password)
+    // In link mode the key rides in the fragment, which never reaches the
+    // server; in password mode the link carries no key.
     const shareUrl =
       keyForUrl ? `${deps.baseUrl}/d/${slug}#k=${keyForUrl}` : `${deps.baseUrl}/d/${slug}`;
 

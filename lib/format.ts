@@ -1,5 +1,3 @@
-// Pure formatting helpers — safe to use in both server and client components.
-
 export function formatBytes(bytes: number): string {
   if (bytes <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -11,10 +9,8 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-// Locale-independent description of a relative expiry. The UI turns this into
-// text via i18next (keys relexp.never / relexp.expired / relexp.minutes|hours|
-// days with a {{count}}), so the wording — and pluralization — lives in the
-// locale files, not here.
+// A locale-independent relative expiry. The UI renders it through the relexp.*
+// i18next keys, so wording and plurals live in the locale files.
 export type ExpiryDescriptor =
   | { kind: "never" }
   | { kind: "expired" }

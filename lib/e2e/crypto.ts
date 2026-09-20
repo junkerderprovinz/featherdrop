@@ -1,37 +1,28 @@
-// libsodium-wrappers-sumo's ESM build uses top-level await. A STATIC
-// `import sodium from "..."` would make this module — and everything that
-// imports it, up through pipeline.ts → download-flow.ts → DownloadView — an
-// "async module". Next.js cannot resolve a Client Component that lives in an
-// async-module graph: its client reference resolves to `undefined`, so the
-// server renders `<undefined/>` and throws "Element type is invalid" (React
-// #306) on the download page. Loading sodium lazily via a dynamic import inside
-// ready() keeps the whole graph synchronous, which fixes the reference. It also
-// defers the WASM load until the first encrypt/decrypt actually needs it.
-// @types/libsodium-wrappers-sumo declares the module with `export =` (no
-// `default`), so the type of the namespace IS the sodium object.
+// libsodium's ESM build uses top-level await, so a static import would turn
+// this module and every importer into an async module. The dynamic import in
+// ready() avoids that and defers the WASM load until crypto is first needed.
+// The types declare the module with `export =`, so the namespace type is the
+// sodium object.
 type Sodium = typeof import("libsodium-wrappers-sumo");
 
-// The opaque secretstream state handle, derived from a method's return type so
-// we don't need a separate (interop-fragile) named type import from the module.
+// Derived from a return type to avoid a fragile named type import.
 type StateAddress =
   ReturnType<Sodium["crypto_secretstream_xchacha20poly1305_init_push"]>["state"];
 
-// Assigned by ready() before any synchronous function below runs. The definite-
-// assignment assertion lets the existing `sodium.xxx` call sites stay unchanged.
+// Assigned by ready() before any synchronous function below runs.
 let sodium!: Sodium;
 let readyPromise: Promise<void> | null = null;
 
-/** Plaintext chunk size for streaming content encryption (locked, spec §4). */
-export const PT_CHUNK = 65536; // 64 KiB
+/** Plaintext chunk size for streaming content encryption. */
+export const PT_CHUNK = 65536;
 
 /** Await once before calling any synchronous function in this module. */
 export async function ready(): Promise<void> {
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
     const mod = await import("libsodium-wrappers-sumo");
-    // Under esModuleInterop / bundler interop a dynamic import of this CJS
-    // module yields { default: <sodium> }; without interop it returns the
-    // object directly. Accept both.
+    // With bundler interop the CJS module arrives as { default }, without it
+    // as the object itself.
     const lib =
       (mod as unknown as { default?: Sodium }).default ??
       (mod as unknown as Sodium);
@@ -41,37 +32,25 @@ export async function ready(): Promise<void> {
   return readyPromise;
 }
 
-/** Fresh random 32-byte content key. Requires `ready()` first. */
 export function generateKey(): Uint8Array {
   return sodium.crypto_secretstream_xchacha20poly1305_keygen();
 }
 
-/**
- * XChaCha20-Poly1305-IETF nonce length (24 B). The seekable content format
- * (cf=2) uses one random base nonce of this size per file. Requires `ready()`.
- */
+/** Nonce length of XChaCha20-Poly1305-IETF (24 bytes), the seekable format's base nonce. */
 export function aeadNonceBytes(): number {
   return sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
 }
 
-/**
- * XChaCha20-Poly1305-IETF auth-tag length (16 B). Each emitted seekable chunk is
- * plaintext + this many tag bytes. Requires `ready()`.
- */
+/** Auth tag length (16 bytes) added to every seekable chunk. */
 export function aeadTagBytes(): number {
   return sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES;
 }
 
-/** Fresh random base nonce (24 B) for a seekable file. Requires `ready()`. */
 export function generateAeadBaseNonce(): Uint8Array {
   return sodium.randombytes_buf(aeadNonceBytes());
 }
 
-/**
- * AEAD-encrypt one seekable chunk: XChaCha20-Poly1305-IETF over `plaintext` with
- * additional data `aad`, nonce `nonce` and content key `key`. Returns
- * ciphertext+tag (plaintext.length + 16). No secret nonce. Requires `ready()`.
- */
+/** Encrypts one seekable chunk and returns ciphertext plus tag. */
 export function aeadEncrypt(
   plaintext: Uint8Array,
   aad: Uint8Array,
@@ -81,15 +60,15 @@ export function aeadEncrypt(
   return sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
     plaintext,
     aad,
-    null, // nsec — always null for this construction
+    null,
     nonce,
     key,
   );
 }
 
 /**
- * Reverse of aeadEncrypt. Throws on a wrong key, tampered ciphertext, wrong AAD
- * (e.g. a swapped/relabelled chunk), or wrong nonce. Requires `ready()`.
+ * Reverse of aeadEncrypt. Throws on a wrong key, nonce or AAD (a swapped chunk)
+ * and on tampered ciphertext.
  */
 export function aeadDecrypt(
   ciphertext: Uint8Array,
@@ -98,7 +77,7 @@ export function aeadDecrypt(
   key: Uint8Array,
 ): Uint8Array {
   return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-    null, // nsec
+    null,
     ciphertext,
     aad,
     nonce,
@@ -106,31 +85,28 @@ export function aeadDecrypt(
   );
 }
 
-/** Encode bytes as standard base64 (with padding) — used for enc_meta fields. */
+/** Standard padded base64, used for the enc_meta fields. */
 export function toBase64(bytes: Uint8Array): string {
   return sodium.to_base64(bytes, sodium.base64_variants.ORIGINAL);
 }
 
-/** Decode standard base64 (with padding) back to bytes. */
 export function fromBase64(s: string): Uint8Array {
   return sodium.from_base64(s, sodium.base64_variants.ORIGINAL);
 }
 
-/** Encode a key for the URL fragment (base64url, no padding). */
+/** Encodes a key for the URL fragment as unpadded base64url. */
 export function encodeKey(key: Uint8Array): string {
   return sodium.to_base64(key, sodium.base64_variants.URLSAFE_NO_PADDING);
 }
 
-/** Decode a key from the URL fragment. */
 export function decodeKey(s: string): Uint8Array {
   return sodium.from_base64(s, sodium.base64_variants.URLSAFE_NO_PADDING);
 }
 
 /**
- * Download-authorization proof: base64url(SHA-256(K)) of the raw content key —
- * 43 chars, unpadded. One-way: the server stores it at finalize and requires it
- * (header `x-fd-key-verifier`) before counting/burning a format=2 download, but
- * can never recover K from it. Requires `ready()` first.
+ * The download proof base64url(SHA-256(K)), 43 characters. The server requires
+ * it in `x-fd-key-verifier` before counting or burning a download but cannot
+ * recover K from it.
  */
 export function computeKeyVerifier(key: Uint8Array): string {
   return sodium.to_base64(
@@ -139,47 +115,27 @@ export function computeKeyVerifier(key: Uint8Array): string {
   );
 }
 
+/** The file metadata, encrypted into enc_meta so the server never sees it. */
 export interface FileMeta {
   name: string;
   type: string;
   /**
-   * Plaintext byte length of the file (format-2 single-file only). Lives INSIDE
-   * the client-encrypted enc_meta, so the server never sees it — zero-knowledge
-   * is preserved. Optional: shares uploaded before this field existed omit it,
-   * and consumers that need the exact plaintext length (e.g. the streaming video
-   * preview's Range math) must fall back when it is absent. Everything else
-   * ignores it, so adding it does not change any existing behavior.
+   * Plaintext length of a single-file share. Older shares lack it, so the video
+   * preview's Range math falls back when it is missing.
    */
   size?: number;
   /**
-   * Content-format selector (see ./seekable.ts). 1 = libsodium secretstream
-   * (sequential, the original encoding); 2 = per-chunk XChaCha20-Poly1305 AEAD
-   * (independently decryptable chunks → O(1) seek). ABSENT means cf=1 — every
-   * blob written before this field existed decrypts through the secretstream
-   * path unchanged. Lives INSIDE the encrypted enc_meta, so the server never
-   * learns which encoding a blob uses (zero-knowledge preserved).
+   * Content format (see ./seekable.ts): 1 is the sequential secretstream, 2 is
+   * per-chunk AEAD that can seek. Absent means 1.
    */
   cf?: 1 | 2;
-  /**
-   * cf=2 only: plaintext chunk size (always PT_CHUNK = 65536). Stored so a future
-   * format can change it without breaking old seekable blobs. Inside enc_meta.
-   */
+  /** cf=2 plaintext chunk size, stored so a later format can change it. */
   chunkSize?: number;
-  /**
-   * cf=2 only: the per-file random 24-byte base nonce, base64 (standard, no
-   * padding stripping needed — sodium round-trips it). Every chunk's nonce is
-   * derived from this + its index (see deriveNonce). Inside enc_meta, so the
-   * server never sees it (and it is useless without the content key K anyway).
-   */
+  /** cf=2 random base nonce in base64; each chunk's nonce derives from it. */
   baseNonce?: string;
 }
 
-/**
- * JSON-serialize `value` and encrypt it with the content key (secretbox; nonce
- * prefixed). The byte layout is unchanged from the inlined version, so existing
- * format-2 enc_meta blobs stay byte-identical — encryptMeta delegates here, and
- * the multi-file manifest crypto reuses it (no duplicated secretbox logic).
- */
+/** JSON-encodes value and seals it with secretbox, nonce first. */
 function encryptJson(value: unknown, key: Uint8Array): Uint8Array {
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
   const cipher = sodium.crypto_secretbox_easy(
@@ -193,7 +149,7 @@ function encryptJson(value: unknown, key: Uint8Array): Uint8Array {
   return out;
 }
 
-/** Reverse of encryptJson. Throws if the key is wrong or the blob is tampered. */
+/** Reverse of encryptJson. Throws on a wrong key or a tampered blob. */
 function decryptJson<T>(blob: Uint8Array, key: Uint8Array): T {
   const n = sodium.crypto_secretbox_NONCEBYTES;
   const nonce = blob.subarray(0, n);
@@ -202,20 +158,18 @@ function decryptJson<T>(blob: Uint8Array, key: Uint8Array): T {
   return JSON.parse(sodium.to_string(msg)) as T;
 }
 
-/** Encrypt {name,type} with the content key (secretbox; nonce prefixed). */
 export function encryptMeta(meta: FileMeta, key: Uint8Array): Uint8Array {
   return encryptJson(meta, key);
 }
 
-/** Reverse of encryptMeta. Throws if the key is wrong or the blob is tampered. */
+/** Reverse of encryptMeta. Throws on a wrong key or a tampered blob. */
 export function decryptMeta(blob: Uint8Array, key: Uint8Array): FileMeta {
   return decryptJson<FileMeta>(blob, key);
 }
 
 /**
- * Encrypt a multi-file manifest (format 3) with the content key — same secretbox
- * envelope as encryptMeta, just a richer object. Kept here so it shares the one
- * encryptJson helper. The Manifest type lives in ./multi-file to avoid a cycle.
+ * Encrypts a format 3 manifest in the same envelope as encryptMeta. The
+ * Manifest type lives in ./multi-file to avoid an import cycle.
  */
 export function encryptManifest(
   manifest: { files: { name: string; type: string; size: number }[] },
@@ -224,7 +178,7 @@ export function encryptManifest(
   return encryptJson(manifest, key);
 }
 
-/** Reverse of encryptManifest. Throws if the key is wrong or the blob is tampered. */
+/** Reverse of encryptManifest. Throws on a wrong key or a tampered blob. */
 export function decryptManifest<
   T extends { files: { name: string; type: string; size: number }[] },
 >(blob: Uint8Array, key: Uint8Array): T {
@@ -242,9 +196,9 @@ function concat(
 }
 
 /**
- * Encrypt a plaintext byte stream into [header][frames…] using secretstream.
- * Non-final frames are PT_CHUNK plaintext; the final frame carries TAG_FINAL
- * (so truncation is detectable). Works over any AsyncIterable of chunks.
+ * Encrypts a plaintext stream into a secretstream header and frames of
+ * PT_CHUNK plaintext each. The last frame carries TAG_FINAL, so truncation is
+ * detectable.
  */
 export async function* encryptChunks(
   source: AsyncIterable<Uint8Array>,
@@ -260,8 +214,7 @@ export async function* encryptChunks(
   let buffer: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
   for await (const part of source) {
     buffer = concat(buffer, part);
-    // Emit full chunks, but keep at least 1 byte (or one full chunk) back so the
-    // very last push can be tagged FINAL.
+    // Something always stays behind so the last push can carry TAG_FINAL.
     while (buffer.length > PT_CHUNK) {
       const chunk = buffer.subarray(0, PT_CHUNK);
       buffer = buffer.subarray(PT_CHUNK);
@@ -273,7 +226,6 @@ export async function* encryptChunks(
       );
     }
   }
-  // Flush the remainder (0..PT_CHUNK bytes) as the FINAL frame.
   yield sodium.crypto_secretstream_xchacha20poly1305_push(
     state,
     buffer,
@@ -283,8 +235,8 @@ export async function* encryptChunks(
 }
 
 /**
- * Decrypt a [header][frames…] stream produced by encryptChunks. Throws on a
- * wrong key, a tampered frame, or a stream missing its TAG_FINAL frame.
+ * Decrypts a stream produced by encryptChunks. Throws on a wrong key, a
+ * tampered frame or a missing TAG_FINAL frame.
  */
 export async function* decryptChunks(
   source: AsyncIterable<Uint8Array>,
@@ -311,12 +263,12 @@ export async function* decryptChunks(
         key,
       );
     }
-    // Process full frames, keeping at least one frame back for the FINAL check.
+    // One frame always stays behind for the TAG_FINAL check.
     while (buffer.length > CIPHER_CHUNK) {
       const frame = buffer.subarray(0, CIPHER_CHUNK);
       buffer = buffer.subarray(CIPHER_CHUNK);
-      // pull() returns `false` on auth failure (wrong key / tampered frame); the
-      // bundled @types omit this `| false`, hence the cast. Never yield on failure.
+      // pull() returns false on an auth failure, which the bundled types
+      // leave out.
       const r = sodium.crypto_secretstream_xchacha20poly1305_pull(
         state,
         frame,
@@ -338,13 +290,13 @@ export async function* decryptChunks(
   yield last.message;
 }
 
-// Argon2id parameters (spec §4 — tuned to still run on mobile browsers).
+// Argon2id parameters, sized to still run in mobile browsers.
 const PW_OPSLIMIT = 3;
-const PW_MEMLIMIT = 64 * 1024 * 1024; // 64 MiB
+const PW_MEMLIMIT = 64 * 1024 * 1024;
 
 function deriveKek(password: string, salt: Uint8Array): Uint8Array {
   return sodium.crypto_pwhash(
-    sodium.crypto_secretbox_KEYBYTES, // 32
+    sodium.crypto_secretbox_KEYBYTES,
     password,
     salt,
     PW_OPSLIMIT,
@@ -353,7 +305,7 @@ function deriveKek(password: string, salt: Uint8Array): Uint8Array {
   );
 }
 
-/** Wrap the content key with a password-derived key. Returns wrapped + salt. */
+/** Wraps the content key with a password-derived key. */
 export function wrapKey(
   key: Uint8Array,
   password: string,
@@ -368,7 +320,7 @@ export function wrapKey(
   return { wrapped, salt };
 }
 
-/** Unwrap the content key. Throws on a wrong password or tampered blob. */
+/** Unwraps the content key. Throws on a wrong password or a tampered blob. */
 export function unwrapKey(
   wrapped: Uint8Array,
   salt: Uint8Array,

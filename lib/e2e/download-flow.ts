@@ -1,33 +1,23 @@
-// Download orchestration: fetch encrypted blob → decrypt → save to disk.
-// Injected `fetchBlob` and `save` keep this module pure and testable without
-// a real server or browser download API.
+// Fetches an encrypted blob, decrypts it and saves it. fetchBlob and save are
+// injected so this runs in tests without a server or a browser download API.
 
 import { computeKeyVerifier } from "./crypto";
 import { deriveContentKey, decryptWithKey } from "./pipeline";
 import { streamToAsyncIterable, asyncIterableToStream } from "./stream-adapters";
 
 /**
- * The decryption secret: either the raw key from the URL fragment (link mode)
- * or a password + the wrapped key material stored on the server (password mode).
+ * The decryption secret: the key from the URL fragment in link mode, or a
+ * password with the wrapped key from the server in password mode.
  */
 export type DownloadSecret =
   | { keyFromUrl: string }
   | { password: string; wrapped: Uint8Array; salt: Uint8Array };
 
 /**
- * Download, decrypt, and save a file.
- *
- * Steps:
- *  1. Derive the content key K from the secret — BEFORE any network I/O, so a
- *     wrong password rejects here and never reaches the server (nothing is
- *     fetched, nothing is counted).
- *  2. Fetch the encrypted blob as a ReadableStream. `fetchBlob` receives
- *     base64url(SHA-256(K)) so every call site automatically sends it as the
- *     `x-fd-key-verifier` header — the server requires this proof of key
- *     knowledge before counting/burning the download.
- *  3. Decrypt with K (a tampered blob causes `decryptWithKey` to reject — the
- *     rejection propagates directly to the caller).
- *  4. Pass the plaintext stream to `save`; return the recovered metadata.
+ * Downloads, decrypts and saves a file. The key is derived before any request,
+ * so a wrong password fails without the download being counted. fetchBlob gets
+ * the key verifier for the `x-fd-key-verifier` header the server requires, and
+ * a tampered blob makes the decrypt reject.
  */
 export async function downloadDecrypted(
   fetchBlob: (keyVerifier: string) => Promise<ReadableStream<Uint8Array>>,

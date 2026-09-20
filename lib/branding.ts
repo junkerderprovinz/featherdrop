@@ -1,7 +1,5 @@
-// Custom branding for self-hosters. Each value falls back to the default
-// featherdrop branding when its env var is unset, blank, or (for the colour)
-// not a valid 6-digit hex. Resolved once on the server and handed to the client
-// via BrandingProvider so the wordmark/logo/accent reflect the operator's setup.
+// Custom branding for self-hosters. Each value falls back to the default when
+// its env var is unset or blank, or for the colour, not a 6-digit hex.
 export interface Branding {
   appName: string;
   logoUrl: string | null;
@@ -43,8 +41,9 @@ function toHex(r: number, g: number, b: number): string {
   return "#" + [r, g, b].map((x) => clamp(x).toString(16).padStart(2, "0")).join("");
 }
 
-// A 10-step Mantine colour tuple from a base hex: steps 0–5 blend toward white
-// (lightest first), step 6 is the base colour, steps 7–9 blend toward black.
+// A 10-step Mantine colour tuple from a base hex: steps 0 to 5 blend toward
+// white, lightest first, step 6 is the base colour, steps 7 to 9 blend toward
+// black.
 export function accentTuple(hex: string): string[] {
   const [r, g, b] = hexToRgb(hex);
   const lighten = (t: number) =>

@@ -1,7 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-// Password hashing for optional per-file protection. Uses scrypt from Node's
-// stdlib — no external dependency. Stored format: "scrypt$<saltHex>$<hashHex>".
+// Per-file password hashes, stored as "scrypt$<saltHex>$<hashHex>".
 const KEYLEN = 64;
 const SALT_BYTES = 16;
 
@@ -17,7 +16,5 @@ export function verifyPassword(password: string, stored: string): boolean {
   const salt = Buffer.from(parts[1], "hex");
   const expected = Buffer.from(parts[2], "hex");
   const actual = scryptSync(password, salt, expected.length);
-  // Lengths match by construction, but guard anyway before timingSafeEqual.
-  if (actual.length !== expected.length) return false;
   return timingSafeEqual(actual, expected);
 }

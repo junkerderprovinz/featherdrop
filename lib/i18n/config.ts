@@ -1,12 +1,10 @@
-// i18next instance for the client. Initialized once with the full resource set.
-// The initial language is decided on the server (cookie -> Accept-Language ->
-// fallback) and passed in, so the server and the first client render agree —
-// no hydration mismatch, and the page renders translated without JS.
+// The client's i18next instance, initialized once with every locale. The
+// caller passes the language it detected.
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import { DEFAULT_LANGUAGE, resources } from "./locales/index";
 
-// i18next wants resources shaped as { <lng>: { <ns>: { <key>: value } } }.
+// i18next wants { <lng>: { <ns>: { <key>: value } } }.
 const i18nResources = Object.fromEntries(
   Object.entries(resources).map(([code, dict]) => [code, { translation: dict }]),
 );
