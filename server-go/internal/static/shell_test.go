@@ -6,9 +6,8 @@ import (
 	"testing"
 )
 
-// rawTemplate mirrors the structure of the committed webroot/index.html: it must
-// carry every token RenderShell substitutes. (The real file is rendered in the
-// main package test; this exercises the substitution logic in isolation.)
+// rawTemplate has the structure and every token of webroot/index.html, which
+// the main package test renders for real.
 const rawTemplate = `<!doctype html>
 <html lang="%%LANG%%">
   <head>
@@ -41,8 +40,7 @@ func TestRenderShell_ReplacesAllTokens(t *testing.T) {
 	if !strings.Contains(out, `content="`+DefaultOGImage+`"`) {
 		t.Fatalf("og:image not applied:\n%s", out)
 	}
-	// The description is HTML-escaped on substitution (it contains an apostrophe),
-	// so assert against the escaped form, matching Next's metadata escaping.
+	// The apostrophe in the description comes out escaped.
 	if !strings.Contains(out, html.EscapeString(Description)) {
 		t.Fatalf("description not applied:\n%s", out)
 	}
@@ -55,15 +53,11 @@ func TestRenderShell_CustomAppNameReflected(t *testing.T) {
 		OGImage:     DefaultOGImage,
 		Lang:        DefaultLang,
 	})
-	// appName lands in title, og:title and og:site_name (all %%APP_NAME%%).
 	if n := strings.Count(out, "Acme Files"); n != 3 {
 		t.Fatalf("appName occurrences = %d, want 3 (title + og:title + og:site_name)", n)
 	}
 }
 
-// A malicious operator-set APP_NAME must not break out of the <title> element or
-// the content="..." attributes and inject markup/script into the shell. Next's
-// Metadata API HTML-escapes its output; RenderShell must do the same.
 func TestRenderShell_EscapesAppNameXSS(t *testing.T) {
 	out := RenderShell(rawTemplate, ShellTokens{
 		AppName:     `"><script>x</script>`,
@@ -74,13 +68,9 @@ func TestRenderShell_EscapesAppNameXSS(t *testing.T) {
 	if strings.Contains(out, "<script>x</script>") {
 		t.Fatalf("APP_NAME injected an unescaped <script> into the shell:\n%s", out)
 	}
-	// The raw closing-quote-then-tag sequence must not appear verbatim either,
-	// which would close the content="..." attribute and break out.
 	if strings.Contains(out, `"><script`) {
 		t.Fatalf("APP_NAME broke out of an attribute/element:\n%s", out)
 	}
-	// The escaped form should be present (proves the value was substituted, just
-	// safely encoded).
 	if !strings.Contains(out, "&lt;script&gt;") {
 		t.Fatalf("escaped APP_NAME not found in shell:\n%s", out)
 	}
@@ -106,7 +96,6 @@ func TestRenderShell_OGImageRelativeWithoutBaseURL(t *testing.T) {
 		Description: Description,
 		OGImage:     DefaultOGImage,
 		Lang:        DefaultLang,
-		// BaseURL unset -> leave OGImage relative, matching the TS fallback.
 	})
 	if !strings.Contains(out, `content="`+DefaultOGImage+`"`) {
 		t.Fatalf("og:image should stay relative when BaseURL is unset:\n%s", out)
