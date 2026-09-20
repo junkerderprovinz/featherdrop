@@ -1,26 +1,18 @@
 /**
- * Generates the featherdrop README banner pair (theme-adaptive, 1600x500):
+ * Generates the theme-adaptive README banner pair at 1600x500:
  *
- *   featherdrop-banner.svg / .png       light: white bg, gold feather + wordmark,
- *                                       grey claim            (README, light mode)
- *   featherdrop-banner-dark.svg / .png  dark: #0d1117 bg, the SAME gold feather +
- *                                       wordmark, light claim (README, dark mode)
+ *   featherdrop-banner.svg / .png       light: white background, grey claim
+ *   featherdrop-banner-dark.svg / .png  dark: #0d1117 background, light claim
  *
- * The feather + wordmark are hand-tuned art and live verbatim in the canonical
- * featherdrop-banner.svg — this script never redraws them. It (re)generates the
- * CLAIM, set in Lato (the shared claim font across the Bree-Serif/Bitter repos),
- * converted to SVG paths (opentype.js) so the SVG needs NO font and renders
- * identically with resvg or a browser. The dark variant is derived from the light
- * SVG by swapping ONLY the background and claim colours — the gold gradient reads
- * on both backgrounds, so the feather and wordmark stay byte-for-byte identical.
+ * The feather and wordmark are hand-tuned art kept in featherdrop-banner.svg;
+ * this script never redraws them. It only sets the claim in Lato, the claim
+ * font shared across the house banners, as SVG paths so the file needs no font.
+ * The dark variant swaps the background, claim and wordmark colours of the
+ * light one. featherdrop-banner-logo.svg is left alone.
  *
- * featherdrop-banner-logo.svg/.png (textless support-thread banner) is NOT
- * touched by this script.
- *
- * Deps (global): opentype.js, @resvg/resvg-js. Lato (OFL) is fetched at runtime
- * to the OS temp dir — NOT committed.
- *
- * To change the claim: edit CLAIM below and run `node .github/assets/gen-banner.mjs`.
+ * Needs opentype.js and @resvg/resvg-js installed globally; Lato is downloaded
+ * to the OS temp dir. To change the claim, edit CLAIM and run
+ * `node .github/assets/gen-banner.mjs`.
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -37,18 +29,13 @@ const { Resvg } = require(`${groot}/@resvg/resvg-js`);
 const __dir = dirname(fileURLToPath(import.meta.url));
 const svgPath = join(__dir, "featherdrop-banner.svg");
 
-// ---- content + styling -----------------------------------------------------
 const CLAIM = "Big files, zero baggage.";
 const W = 1600;
 const claimSize = 44;
-// Measured from the original banner so the claim keeps its left edge (x=638) and
-// baseline: pen origin x / baseline y for opentype.getPath at claimSize 44.
+// Pen origin and baseline that keep the claim's left edge at x=638.
 const textX = 633.974, claimBaseline = 364.406;
-// Theme pair (house rule): the canonical light SVG carries the light colours; the
-// dark variant swaps ONLY bg + claim (feather + wordmark keep their gold gradient).
 const LIGHT = { bg: "#ffffff", claim: "#5a5d5e" };
 const DARK = { bg: "#0d1117", claim: "#9aa4ad" };
-// ---------------------------------------------------------------------------
 
 const latoPath = join(tmpdir(), "featherdrop-Lato-Regular.ttf");
 if (!existsSync(latoPath)) {
@@ -59,7 +46,7 @@ if (!existsSync(latoPath)) {
 const lato = opentype.parse(readFileSync(latoPath));
 const claimPathData = lato.getPath(CLAIM, textX, claimBaseline, claimSize).toPathData(2);
 
-// Replace exactly one occurrence; anything else means the canonical SVG drifted.
+// Any count other than one means the canonical SVG has changed shape.
 function swapOnce(svg, re, replacement, what) {
   const matches = svg.match(new RegExp(re, "g")) || [];
   if (matches.length !== 1) throw new Error(`expected exactly one ${what}, found ${matches.length}`);
@@ -73,8 +60,6 @@ function emit(name, svg, bg) {
   console.log(`wrote ${name}.svg + .png`);
 }
 
-// Light: swap only the grey claim path in the canonical SVG; feather + wordmark
-// stay byte-for-byte.
 const lightSvg = swapOnce(
   readFileSync(svgPath, "utf8"),
   /<path d="[^"]+" fill="#5a5d5e"\/>/,
@@ -83,10 +68,9 @@ const lightSvg = swapOnce(
 );
 emit("featherdrop-banner", lightSvg, LIGHT.bg);
 
-// Dark: derived from the light SVG — background + claim colour only.
 let darkSvg = swapOnce(lightSvg, /fill="#ffffff"/, `fill="${DARK.bg}"`, "background fill");
 darkSvg = swapOnce(darkSvg, /fill="#5a5d5e"/, `fill="${DARK.claim}"`, "claim fill");
-// Wordmark = foreground colour (was a gold gradient); flip it light on the dark banner.
+// The dark wordmark would disappear on the dark background.
 darkSvg = swapOnce(darkSvg, /fill="#1f2328"/, `fill="#e6edf3"`, "wordmark fill");
 emit("featherdrop-banner-dark", darkSvg, DARK.bg);
 

@@ -1,11 +1,8 @@
 name: Go backend (build · test · smoke)
 
-# Validates the parallel Go backend (server-go/ + the Vite SPA it embeds) without
-# touching the published :latest image — the Next.js build.yml still ships the
-# release. This job: vets/tests the Go code, boot-smokes the native binary, and
-# builds + boot-smokes the Dockerfile.goserver image (the future drop-in). It does
-# NOT push. The swap to :latest happens only after the Go server passes the same
-# e2e (Phase 6).
+# Tests the Go server and the SPA it embeds: vet and tests, a boot smoke of the
+# native binary and of the image, and the browser e2e. It never pushes; only
+# build.yml publishes.
 
 on:
   push:
@@ -25,8 +22,7 @@ on:
       - "Dockerfile"
       - ".dockerignore"
       - ".github/workflows/go.yml"
-  # PRs run the same tests + browser e2e (this workflow never pushes to a registry
-  # — build.yml is the only publisher — so it is safe to run on pull_request).
+  # Safe on pull requests because nothing is pushed.
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -68,16 +64,14 @@ jobs:
       - name: go test
         run: CGO_ENABLED=0 go test ./... -count=1
 
-      # Fail the build on a known CVE in a dependency or the Go stdlib. Catches
-      # future advisories (e.g. the chi open-redirect that was fixed by the
-      # v5.2.2 bump) before they reach a release.
+      # A known CVE in a dependency or the standard library fails the build.
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           "$(go env GOPATH)/bin/govulncheck" ./...
 
-      # Boot-smoke the native binary (embeds the committed placeholder webroot —
-      # enough to prove the server starts, opens the DB, and serves /healthz).
+      # The placeholder webroot is enough to prove the server starts, opens the
+      # database and serves /healthz.
       - name: Native boot smoke
         run: |
           set -euo pipefail
@@ -106,8 +100,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
-      # Build the full multi-stage image (Vite SPA -> embedded webroot -> static
-      # binary). amd64 only here; arm64 is exercised at swap time in build.yml.
+      # amd64 only; build.yml boots arm64 before it publishes.
       - name: Build image (amd64, no push)
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
@@ -120,9 +113,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # A green build only proves it *builds* — boot it and require the real
-      # endpoints (the embedded SPA shell + the API) to answer.
-      - name: Boot smoke — server must serve /healthz, /, /api/config
+      # A green build only proves the image builds; the SPA shell and the API
+      # have to answer too.
+      - name: Boot smoke, server must serve /healthz, / and /api/config
         run: |
           set -euo pipefail
           docker run -d --name fd-go -p 3000:3000 featherdrop-go:smoke
@@ -131,9 +124,8 @@ jobs:
             if curl -fsS -o /dev/null http://localhost:3000/healthz; then ok=1; break; fi
             sleep 1
           done
-          if [ "$ok" != 1 ]; then echo "❌ /healthz never came up — logs:"; docker logs fd-go || true; docker rm -f fd-go; exit 1; fi
+          if [ "$ok" != 1 ]; then echo "❌ /healthz never came up, logs:"; docker logs fd-go || true; docker rm -f fd-go; exit 1; fi
           echo "✅ /healthz: $(curl -fsS http://localhost:3000/healthz)"
-          # The SPA shell (templated index.html) and the config API must answer.
           code_root="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)"
           code_cfg="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/config)"
           echo "/ -> $code_root ; /api/config -> $code_cfg"
@@ -164,11 +156,9 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      # Build the static SPA into server-go/webroot, then the Go binary embedding
-      # it, then run the SAME zero-knowledge browser round-trip the Next e2e uses
-      # (test/e2e/run.mjs is driven entirely by E2E_BASE_URL) — but against the Go
-      # server. Proves the real client crypto (cf=2 seekable upload, multi-file,
-      # inline preview) works end-to-end through the Go drop-in.
+      # Runs the browser round trip in test/e2e/run.mjs against the Go server:
+      # seekable upload, multi-file and inline preview with the real client
+      # crypto.
       - name: Build SPA + Go binary, run browser e2e against Go
         env:
           PORT: "3000"

@@ -1,8 +1,7 @@
 name: Release
 
-# Create a GitHub Release whenever a semver tag (vX.Y.Z) is pushed. The release
-# body comes from .github/release-notes/<tag>.md if present, otherwise notes are
-# auto-generated.
+# Creates a GitHub Release for every pushed vX.Y.Z tag, with the body from
+# .github/release-notes/<tag>.md or generated notes when there is none.
 
 on:
   push:
@@ -18,8 +17,8 @@ permissions:
   contents: write
 
 env:
-  # Opt JS-based actions into Node 24 ahead of the 2026-06-16 forced switch,
-  # silencing the Node 20 deprecation warning on checkout/gh-release.
+  # Runs JavaScript actions on Node 24 and silences the Node 20 deprecation
+  # warning.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
