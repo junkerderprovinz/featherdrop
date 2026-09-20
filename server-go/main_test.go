@@ -14,7 +14,6 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
 )
 
-// webrootSub returns the embedded webroot subtree the server serves from.
 func webrootSub(t *testing.T) fs.FS {
 	t.Helper()
 	sub, err := fs.Sub(webroot, "webroot")
@@ -64,9 +63,8 @@ func TestRenderShell_CustomAppName(t *testing.T) {
 	}
 }
 
-// newFullRouter builds the COMPLETE production router (newRouter) over a temp
-// data dir + real SQLite store, so tests exercise the same wiring main serves:
-// route precedence, rate-limit wrapping, and header behaviour.
+// newFullRouter builds the production router over a temp data dir and a real
+// SQLite store.
 func newFullRouter(t *testing.T, mutate func(*config.Config)) http.Handler {
 	t.Helper()
 	dataDir := t.TempDir()
@@ -102,7 +100,6 @@ func newFullRouter(t *testing.T, mutate func(*config.Config)) http.Handler {
 	return newRouter(cfg, db, tusHandler, assets, shell)
 }
 
-// get sends a GET through the router and returns the recorder.
 func get(h http.Handler, path string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodGet, path, nil)
 	req.RemoteAddr = "192.0.2.1:1234"
@@ -127,8 +124,6 @@ func TestRouter_Healthcheck(t *testing.T) {
 }
 
 func TestRouter_HealthcheckNeverRateLimited(t *testing.T) {
-	// Even with RATE_LIMIT active, the liveness probe must answer every poll —
-	// far past any bucket's burst.
 	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = true })
 
 	for i := 0; i < 100; i++ {
@@ -156,7 +151,6 @@ func TestRouter_RobotsTxt(t *testing.T) {
 func TestRouter_SharePageNoIndex(t *testing.T) {
 	h := newFullRouter(t, nil)
 
-	// The /d/<slug> SPA shell must carry the noindex header…
 	rec := get(h, "/d/some-slug")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("/d/some-slug status = %d, want 200 (SPA shell)", rec.Code)
@@ -164,24 +158,21 @@ func TestRouter_SharePageNoIndex(t *testing.T) {
 	if got := rec.Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
 		t.Fatalf("/d/<slug> X-Robots-Tag = %q, want noindex, nofollow", got)
 	}
-	// …and so must the meta/download APIs (uniform 404s here — no share seeded).
+	// No share is seeded, so these are the uniform 404s.
 	for _, path := range []string{"/api/d/some-slug", "/api/d/some-slug/meta"} {
 		rec := get(h, path)
 		if got := rec.Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
 			t.Fatalf("%s X-Robots-Tag = %q, want noindex, nofollow", path, got)
 		}
 	}
-	// The landing page is NOT noindex-tagged (robots.txt already disallows;
-	// the header is scoped to share-facing responses per the v6.1 contract).
+	// robots.txt covers the landing page; the header is for share responses.
 	if got := get(h, "/").Header().Get("X-Robots-Tag"); got != "" {
 		t.Fatalf("/ X-Robots-Tag = %q, want unset", got)
 	}
 }
 
 func TestRouter_DownloadRateLimited(t *testing.T) {
-	// With RATE_LIMIT on, the download/meta bucket (20/min, burst 10) kicks in
-	// after 10 rapid requests from one IP and answers 429 + Retry-After with
-	// the uniform JSON error body.
+	// The download bucket has a burst of 10.
 	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = true })
 
 	last := http.StatusOK
@@ -202,7 +193,6 @@ func TestRouter_DownloadRateLimited(t *testing.T) {
 }
 
 func TestRouter_RateLimitDisabled(t *testing.T) {
-	// RATE_LIMIT=false: no bucket ever fires (every response is the uniform 404).
 	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = false })
 
 	for i := 0; i < 50; i++ {
