@@ -8,56 +8,44 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 )
 
-// FileRecord mirrors the FileRecord interface in server/db.ts column-for-column.
-// Nullable columns use pointers (*T) so a Go nil round-trips to/from SQL NULL,
-// matching the TypeScript `T | null` fields; blob columns are []byte (nil =
-// NULL). Non-nullable columns are plain values.
+// FileRecord is one row of the files table. Nullable columns are pointers and
+// blob columns are nil for NULL.
 type FileRecord struct {
-	ID            string // stored filename under UploadsDir
+	ID            string // file name under UploadsDir
 	Slug          string // public share identifier
 	OriginalName  string
 	Size          int64
-	Mime          *string // null = unknown (zero-knowledge uploads)
-	PasswordHash  *string // null = no server-side password (always null in v2)
-	ExpiresAt     *int64  // unix ms, null = never
-	CreatedAt     int64   // unix ms
+	Mime          *string
+	PasswordHash  *string
+	ExpiresAt     *int64 // unix ms, nil for never
+	CreatedAt     int64  // unix ms
 	DownloadCount int64
-	MaxDownloads  *int64 // null = unlimited; delete after this many
-	// v1 at-rest encryption fields (legacy)
-	Encrypted     int64   // 0 = plaintext blob, 1 = age-encrypted
-	EncMode       *string // "link" | "password" | null
-	EncKeyWrapped *string // password-wrapped per-file key (password mode)
-	// Zero-knowledge v2 fields
-	Format     int64  // 1 = legacy at-rest, 2 = ZK single file, 3 = ZK multi-file
-	WrappedKey []byte // password mode: content key wrapped with Argon2id KEK
+	MaxDownloads  *int64 // nil for unlimited
+
+	// Server-side encryption of format 1 rows.
+	Encrypted     int64   // 1 for age-encrypted
+	EncMode       *string // "link", "password" or nil
+	EncKeyWrapped *string
+
+	Format     int64  // 1 server-encrypted, 2 single file, 3 multi-file
+	WrappedKey []byte // password mode: content key wrapped with the Argon2id KEK
 	KDFSalt    []byte // password mode: 16-byte Argon2id salt
-	// format>=2 download authorization: base64url(SHA-256(content key)).
-	KeyVerifier *string // null = legacy/no-verifier upload
-	// Kept as a drop-in column for schema compatibility. The early-delete
-	// management feature was removed (expiry handles removal), so finalize always
-	// writes NULL here and nothing reads it.
-	ManageTokenHash *string // always null for new rows
+	// KeyVerifier is base64url(SHA-256(content key)); nil for uploads made
+	// before verifiers existed.
+	KeyVerifier *string
+	// ManageTokenHash stays in the schema for existing databases; new rows
+	// leave it NULL.
+	ManageTokenHash *string
 }
 
-// DownloadResult mirrors server/db.ts DownloadResult.
+// DownloadResult is the outcome of RegisterDownload.
 type DownloadResult struct {
-	Allowed  bool   // false = no such share, or its limit was already reached
-	Burned   bool   // true = this was the final allowed download; row deleted
-	RecordID string // stored filename to remove from disk when burned
+	Allowed  bool   // false when the share is gone or its limit was reached
+	Burned   bool   // this was the last allowed download and the row is deleted
+	RecordID string // file to remove from disk when Burned
 }
 
-// Store wraps the *sql.DB with the files-table query methods. The methods are
-// also exposed as package functions taking a *sql.DB so callers holding the bare
-// db (as main.go does) can use either form.
-type Store struct {
-	DB *sql.DB
-}
-
-// New wraps an already-opened *sql.DB.
-func New(db *sql.DB) *Store { return &Store{DB: db} }
-
-// fileColumnsList is the canonical INSERT column order, mirroring the column
-// list in server/db.ts createFileRecord (download_count omitted: it defaults 0).
+// download_count is left out and defaults to 0.
 const insertSQL = `INSERT INTO files
 	(id, slug, original_name, size, mime, password_hash, expires_at,
 	 created_at, max_downloads, encrypted, enc_mode, enc_key_wrapped,
@@ -65,7 +53,7 @@ const insertSQL = `INSERT INTO files
  VALUES
 	(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-// selectAllSQL selects every column in a fixed order so Scan stays aligned.
+// selectAllSQL lists the columns in the order scanFileRecord expects.
 const selectAllSQL = `SELECT
 	id, slug, original_name, size, mime, password_hash, expires_at,
 	created_at, download_count, max_downloads, encrypted, enc_mode,
@@ -73,8 +61,7 @@ const selectAllSQL = `SELECT
 	manage_token_hash
  FROM files`
 
-// CreateFileRecord inserts a new share row. download_count defaults to 0 (not in
-// the column list). Mirrors server/db.ts createFileRecord.
+// CreateFileRecord inserts a new share row.
 func CreateFileRecord(db *sql.DB, rec FileRecord) error {
 	_, err := db.Exec(insertSQL,
 		rec.ID,
@@ -101,13 +88,7 @@ func CreateFileRecord(db *sql.DB, rec FileRecord) error {
 	return nil
 }
 
-// CreateFileRecord is the method form of the package function.
-func (s *Store) CreateFileRecord(rec FileRecord) error {
-	return CreateFileRecord(s.DB, rec)
-}
-
-// GetFileBySlug returns the share row for slug, or (nil, nil) when no such row
-// exists. Mirrors server/db.ts getFileBySlug (undefined -> nil).
+// GetFileBySlug returns the share row for slug, or nil when there is none.
 func GetFileBySlug(db *sql.DB, slug string) (*FileRecord, error) {
 	row := db.QueryRow(selectAllSQL+" WHERE slug = ?", slug)
 	rec, err := scanFileRecord(row)
@@ -120,23 +101,15 @@ func GetFileBySlug(db *sql.DB, slug string) (*FileRecord, error) {
 	return rec, nil
 }
 
-// GetFileBySlug is the method form of the package function.
-func (s *Store) GetFileBySlug(slug string) (*FileRecord, error) {
-	return GetFileBySlug(s.DB, slug)
-}
-
-// RegisterDownload atomically registers one download against a share's limit.
-// It bumps download_count only while still under max_downloads (NULL =
-// unlimited) and — when that was the last allowed download — deletes the row in
-// the SAME transaction, so concurrent downloads of a limited share can never
-// exceed the limit. The caller removes the blob from disk when Burned. Mirrors
-// server/db.ts registerDownload EXACTLY.
+// RegisterDownload counts one download against a share's limit. The count and,
+// on the last allowed download, the delete run in one transaction, so
+// concurrent downloads can never exceed the limit. The caller removes the blob
+// when the result is Burned.
 func RegisterDownload(db *sql.DB, slug string) (DownloadResult, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("register download: begin: %w", err)
 	}
-	// Roll back on any early return; a no-op after a successful Commit.
 	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.Exec(
@@ -152,8 +125,6 @@ func RegisterDownload(db *sql.DB, slug string) (DownloadResult, error) {
 		return DownloadResult{}, fmt.Errorf("register download: rows affected: %w", err)
 	}
 	if affected == 0 {
-		// No such share, or its limit was already reached. Commit the (empty)
-		// transaction so it closes cleanly.
 		if err := tx.Commit(); err != nil {
 			return DownloadResult{}, fmt.Errorf("register download: commit: %w", err)
 		}
@@ -185,15 +156,8 @@ func RegisterDownload(db *sql.DB, slug string) (DownloadResult, error) {
 	return DownloadResult{Allowed: true, Burned: burned, RecordID: id}, nil
 }
 
-// RegisterDownload is the method form of the package function.
-func (s *Store) RegisterDownload(slug string) (DownloadResult, error) {
-	return RegisterDownload(s.DB, slug)
-}
-
-// DeleteFileBySlug atomically deletes a share row by slug, returning its stored
-// file id so the caller can remove the blob. ok is false when no such row exists
-// (already gone / unknown slug). Mirrors server/db.ts deleteFileBySlug
-// (null -> ok=false). Used by the uploader's "delete early" route.
+// DeleteFileBySlug deletes a share row and returns its file id so the caller
+// can remove the blob. ok is false when there was no such row.
 func DeleteFileBySlug(db *sql.DB, slug string) (id string, ok bool, err error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -220,13 +184,7 @@ func DeleteFileBySlug(db *sql.DB, slug string) (id string, ok bool, err error) {
 	return id, true, nil
 }
 
-// DeleteFileBySlug is the method form of the package function.
-func (s *Store) DeleteFileBySlug(slug string) (string, bool, error) {
-	return DeleteFileBySlug(s.DB, slug)
-}
-
-// ListExpired returns the rows whose expiry has passed (expires_at not null and
-// <= nowMs). Mirrors server/db.ts listExpired.
+// ListExpired returns the rows whose expiry is at or before nowMs.
 func ListExpired(db *sql.DB, nowMs int64) ([]FileRecord, error) {
 	rows, err := db.Query(
 		selectAllSQL+" WHERE expires_at IS NOT NULL AND expires_at <= ?",
@@ -251,16 +209,9 @@ func ListExpired(db *sql.DB, nowMs int64) ([]FileRecord, error) {
 	return out, nil
 }
 
-// ListExpired is the method form of the package function.
-func (s *Store) ListExpired(nowMs int64) ([]FileRecord, error) {
-	return ListExpired(s.DB, nowMs)
-}
-
-// TotalStoredSize returns the sum of all stored share sizes in bytes (0 for an
-// empty table). It backs the STORAGE_QUOTA guardrail and is recomputed per call
-// rather than cached: the files table is small (one row per live share) and a
-// single-connection SUM is cheap, whereas a cache would need invalidation on
-// every finalize/burn/expiry. New for v6.1 — no server/db.ts counterpart.
+// TotalStoredSize returns the sum of all share sizes in bytes, for
+// STORAGE_QUOTA. It is not cached: the table has one row per live share, and a
+// cache would need invalidating on every finalize, burn and expiry.
 func TotalStoredSize(db *sql.DB) (int64, error) {
 	var total int64
 	if err := db.QueryRow(`SELECT COALESCE(SUM(size), 0) FROM files`).Scan(&total); err != nil {
@@ -269,17 +220,11 @@ func TotalStoredSize(db *sql.DB) (int64, error) {
 	return total, nil
 }
 
-// TotalStoredSize is the method form of the package function.
-func (s *Store) TotalStoredSize() (int64, error) {
-	return TotalStoredSize(s.DB)
-}
-
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.
 type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-// scanFileRecord scans one row in selectAllSQL's column order into a FileRecord.
 func scanFileRecord(s rowScanner) (*FileRecord, error) {
 	var rec FileRecord
 	if err := s.Scan(
@@ -307,9 +252,8 @@ func scanFileRecord(s rowScanner) (*FileRecord, error) {
 	return &rec, nil
 }
 
-// nullableBlob returns nil for an empty/absent blob so it stores as SQL NULL
-// (an empty, non-nil []byte would otherwise store as a zero-length BLOB, not
-// NULL — matching the TS Buffer|null contract).
+// nullableBlob turns a nil slice into an untyped nil so the driver stores NULL
+// rather than a zero-length BLOB.
 func nullableBlob(b []byte) any {
 	if b == nil {
 		return nil

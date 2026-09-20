@@ -7,7 +7,6 @@ import (
 	"testing"
 )
 
-// openTestDB opens a fresh schema-applied SQLite DB in a temp dir.
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := Open(filepath.Join(t.TempDir(), "db.sqlite"))
@@ -21,7 +20,7 @@ func openTestDB(t *testing.T) *sql.DB {
 func strp(s string) *string { return &s }
 func i64p(v int64) *int64   { return &v }
 
-// sampleRecord returns a fully-populated zero-knowledge (format=2) record.
+// sampleRecord returns a fully populated format 2 record.
 func sampleRecord(slug string) FileRecord {
 	return FileRecord{
 		ID:              slug + "-id",
@@ -109,7 +108,6 @@ func TestCreateNullBlobsStoreAsNull(t *testing.T) {
 		t.Fatalf("CreateFileRecord: %v", err)
 	}
 
-	// Verify the columns are SQL NULL, not zero-length blobs.
 	var wkNull, ksNull bool
 	if err := db.QueryRow(
 		"SELECT wrapped_key IS NULL, kdf_salt IS NULL FROM files WHERE slug=?",
@@ -184,7 +182,6 @@ func TestRegisterDownloadLimitOneBurnsAndDeletes(t *testing.T) {
 		t.Fatalf("CreateFileRecord: %v", err)
 	}
 
-	// First (and only allowed) download: allowed + burned, row deleted.
 	res, err := RegisterDownload(db, "limit1")
 	if err != nil {
 		t.Fatalf("RegisterDownload #1: %v", err)
@@ -196,7 +193,6 @@ func TestRegisterDownloadLimitOneBurnsAndDeletes(t *testing.T) {
 		t.Errorf("#1 RecordID = %q, want %q", res.RecordID, rec.ID)
 	}
 
-	// The row must be gone.
 	got, err := GetFileBySlug(db, "limit1")
 	if err != nil {
 		t.Fatalf("GetFileBySlug after burn: %v", err)
@@ -205,7 +201,6 @@ func TestRegisterDownloadLimitOneBurnsAndDeletes(t *testing.T) {
 		t.Errorf("row still present after burn: %+v", got)
 	}
 
-	// Second download: not allowed (row gone), not burned.
 	res2, err := RegisterDownload(db, "limit1")
 	if err != nil {
 		t.Fatalf("RegisterDownload #2: %v", err)
@@ -229,7 +224,6 @@ func TestRegisterDownloadLimitTwo(t *testing.T) {
 		t.Fatalf("CreateFileRecord: %v", err)
 	}
 
-	// #1: allowed, not burned (1 < 2).
 	r1, err := RegisterDownload(db, "limit2")
 	if err != nil {
 		t.Fatalf("#1: %v", err)
@@ -238,7 +232,6 @@ func TestRegisterDownloadLimitTwo(t *testing.T) {
 		t.Errorf("#1 = {Allowed:%v Burned:%v}, want {true,false}", r1.Allowed, r1.Burned)
 	}
 
-	// #2: allowed and burned (count reaches 2 == max), row deleted.
 	r2, err := RegisterDownload(db, "limit2")
 	if err != nil {
 		t.Fatalf("#2: %v", err)
@@ -251,7 +244,6 @@ func TestRegisterDownloadLimitTwo(t *testing.T) {
 		t.Errorf("row present after second burn: %+v", got)
 	}
 
-	// #3: not allowed.
 	r3, err := RegisterDownload(db, "limit2")
 	if err != nil {
 		t.Fatalf("#3: %v", err)
@@ -272,16 +264,10 @@ func TestRegisterDownloadMissingSlug(t *testing.T) {
 	}
 }
 
-// TestRegisterDownloadConcurrentLimit verifies that under concurrent download
-// pressure a limited share is bumped at most max_downloads times and burned
-// exactly once — the atomic count++/delete must never exceed the limit.
-//
-// This deliberately calls RegisterDownload from many goroutines with NO external
-// mutex, exercising the SAME store.Open the production main.go uses. Open now
-// configures busy_timeout + WAL + a single connection, so concurrent write
-// transactions serialize cleanly instead of failing with "database is locked"
-// (which previously surfaced as spurious 404s). The test therefore asserts BOTH
-// the limit invariant AND that every contending writer succeeds (errs == 0).
+// TestRegisterDownloadConcurrentLimit checks that concurrent downloads of a
+// limited share are counted at most max_downloads times, burn it once, and
+// that every contending writer waits instead of failing with "database is
+// locked".
 func TestRegisterDownloadConcurrentLimit(t *testing.T) {
 	db := openTestDB(t)
 	const limit = 5
@@ -356,7 +342,6 @@ func TestDeleteFileBySlug(t *testing.T) {
 		t.Errorf("row present after delete: %+v", got)
 	}
 
-	// Deleting again: not found.
 	id2, ok2, err := DeleteFileBySlug(db, "delme")
 	if err != nil {
 		t.Fatalf("second DeleteFileBySlug: %v", err)
@@ -380,16 +365,12 @@ func TestDeleteFileBySlugMissing(t *testing.T) {
 func TestListExpired(t *testing.T) {
 	db := openTestDB(t)
 
-	// expired at 1000
 	expired := sampleRecord("expired")
 	expired.ExpiresAt = i64p(1000)
-	// not yet expired
 	future := sampleRecord("future")
 	future.ExpiresAt = i64p(9999)
-	// never expires (NULL)
 	never := sampleRecord("never")
 	never.ExpiresAt = nil
-	// exactly at now (<= now is expired)
 	atNow := sampleRecord("atnow")
 	atNow.ExpiresAt = i64p(5000)
 
@@ -439,7 +420,6 @@ func TestListExpiredEmpty(t *testing.T) {
 func TestTotalStoredSize(t *testing.T) {
 	db := openTestDB(t)
 
-	// Empty table sums to 0 (COALESCE, not NULL/error).
 	total, err := TotalStoredSize(db)
 	if err != nil {
 		t.Fatalf("TotalStoredSize (empty): %v", err)
@@ -448,7 +428,6 @@ func TestTotalStoredSize(t *testing.T) {
 		t.Errorf("empty total = %d, want 0", total)
 	}
 
-	// Sum tracks inserts…
 	recA := sampleRecord("sizeA")
 	recA.Size = 100
 	recB := sampleRecord("sizeB")
@@ -467,7 +446,7 @@ func TestTotalStoredSize(t *testing.T) {
 		t.Errorf("total = %d, want 350", total)
 	}
 
-	// …and deletes (a burned/expired share frees its quota share).
+	// A burned or expired share frees its part of the quota.
 	if _, ok, err := DeleteFileBySlug(db, "sizeA"); err != nil || !ok {
 		t.Fatalf("DeleteFileBySlug: ok=%v err=%v", ok, err)
 	}
@@ -477,38 +456,5 @@ func TestTotalStoredSize(t *testing.T) {
 	}
 	if total != 250 {
 		t.Errorf("total after delete = %d, want 250", total)
-	}
-
-	// Method form stays covered.
-	if got, err := New(db).TotalStoredSize(); err != nil || got != 250 {
-		t.Errorf("Store.TotalStoredSize = (%d, %v), want (250, nil)", got, err)
-	}
-}
-
-// TestStoreMethodForms exercises the *Store method wrappers so both call styles
-// stay covered.
-func TestStoreMethodForms(t *testing.T) {
-	s := New(openTestDB(t))
-	rec := sampleRecord("methods")
-	rec.MaxDownloads = i64p(1)
-	if err := s.CreateFileRecord(rec); err != nil {
-		t.Fatalf("CreateFileRecord: %v", err)
-	}
-	got, err := s.GetFileBySlug("methods")
-	if err != nil || got == nil {
-		t.Fatalf("GetFileBySlug: got=%v err=%v", got, err)
-	}
-	res, err := s.RegisterDownload("methods")
-	if err != nil {
-		t.Fatalf("RegisterDownload: %v", err)
-	}
-	if !res.Allowed || !res.Burned {
-		t.Errorf("RegisterDownload = %+v, want allowed+burned", res)
-	}
-	if _, ok, err := s.DeleteFileBySlug("methods"); err != nil || ok {
-		t.Errorf("DeleteFileBySlug after burn = (ok=%v err=%v), want (false,nil)", ok, err)
-	}
-	if rows, err := s.ListExpired(1); err != nil || rows != nil {
-		t.Errorf("ListExpired = (%v, %v), want (nil, nil)", rows, err)
 	}
 }

@@ -6,13 +6,9 @@ import (
 	"testing"
 )
 
-// wantColumns lists every column the files table must have after ApplySchema,
-// mirroring server/schema.ts (base + additive migrations).
 var wantColumns = []string{
-	// base table
 	"id", "slug", "original_name", "size", "mime", "password_hash",
 	"expires_at", "created_at", "download_count",
-	// additive migrations
 	"encrypted", "enc_mode", "enc_key_wrapped",
 	"max_downloads",
 	"format", "wrapped_key", "kdf_salt",
@@ -63,7 +59,6 @@ func TestOpenAppliesSchemaIdempotently(t *testing.T) {
 	}
 	defer db.Close()
 
-	// ApplySchema a second time must be a no-op (idempotent).
 	if err := ApplySchema(db); err != nil {
 		t.Fatalf("second ApplySchema: %v", err)
 	}
@@ -81,7 +76,7 @@ func TestApplySchemaUpgradesOldDatabase(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Create only the legacy base table (pre-encryption), then upgrade.
+	// The base table as it was before the first migration.
 	if _, err := db.Exec(`
 		CREATE TABLE files (
 			id             TEXT PRIMARY KEY,
@@ -98,7 +93,6 @@ func TestApplySchemaUpgradesOldDatabase(t *testing.T) {
 		t.Fatalf("create legacy table: %v", err)
 	}
 
-	// Insert a legacy row to prove the additive migration preserves data.
 	if _, err := db.Exec(
 		`INSERT INTO files (id, slug, original_name, size, created_at)
 		 VALUES (?, ?, ?, ?, ?)`,
@@ -114,7 +108,6 @@ func TestApplySchemaUpgradesOldDatabase(t *testing.T) {
 	assertAllColumns(t, db)
 	assertIndexExists(t, db)
 
-	// The legacy row survives and new columns take their defaults.
 	var (
 		slug      string
 		encrypted int
