@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 # featherdrop: one static Go binary that serves the React client as embedded
 # assets plus the JSON/file API. Encryption happens in the browser. The /config
 # and /data volumes, database schema and blob layout stay those of earlier
@@ -8,8 +8,8 @@
 #   client:  node builds the Vite SPA into server-go/webroot
 #   gobuild: a CGO-free go build that embeds the webroot
 #   runtime: distroless static with only the binary
-ARG NODE_VERSION=24-slim
-ARG GO_VERSION=1.26
+ARG NODE_VERSION=24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
+ARG GO_VERSION=1.26@sha256:6c2a5538f964f1c82f97ad14988bf05de100d922d159d0e398b54c7b0ca0c6c9
 
 FROM node:${NODE_VERSION} AS client
 WORKDIR /app
