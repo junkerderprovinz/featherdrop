@@ -1,13 +1,13 @@
 module github.com/junkerderprovinz/featherdrop/server-go
 
-go 1.26
+go 1.26.0
 
 toolchain go1.27.1
 
 require (
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/tus/tusd/v2 v2.10.1
-	modernc.org/sqlite v1.59.0
+	modernc.org/sqlite v1.60.1
 )
 
 require (
@@ -17,8 +17,8 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	modernc.org/libc v1.75.7 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	modernc.org/libc v1.77.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
