@@ -89,6 +89,7 @@ KINDS = {
     # The middle of the orange in Unraid's logo, where white holds 3.4:1,
     # enough for type this large.
     "unraid":           (0, "unraid", "#f15a2c", "#ffffff", "Unraid", "Template", "Install from Unraid's Community Applications"),
+    "unraid-plugin":    (0, "unraid", "#f15a2c", "#ffffff", "Unraid", "Plugin", "Install the plugin from Unraid's Community Applications"),
     "docker":           (0, "docker", "#1d63ed", "#ffffff", "Docker", "Container", "Run it with Docker"),
     "compose":          (0, "docker", "#1d63ed", "#ffffff", "Docker", "compose file", "Download the docker-compose file"),
     # Slate, since GitHub's black vanishes in the dark theme.
@@ -134,6 +135,7 @@ SOON = {
     "f-droid": ("F-Droid soon", "On F-Droid soon"),
     "firefox": ("coming soon", "The add-on for Firefox, soon"),
     "unraid": ("coming soon", "In Unraid's Community Applications soon"),
+    "unraid-plugin": ("coming soon", "In Unraid's Community Applications soon"),
 }
 # Links that may lead away from the repository.
 STORES = ("play.google.com", "f-droid.org", "chromewebstore.google.com", "addons.mozilla.org", "microsoftedge.microsoft.com",
