@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Path audit (delete/finalize/download): constant-time token comparisons, uniform 404s, no unauthenticated mutation surface; rate limiter now covers key-verifier guessing.
 
+### Design
+
+- A shorter README with new pictures: download buttons at the top, three new screenshots, and only what a first start needs.
+
 ## [6.0.2] — 2026-07-12
 
 ### Added
