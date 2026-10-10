@@ -9,7 +9,7 @@
 #   gobuild: a CGO-free go build that embeds the webroot
 #   runtime: distroless static with only the binary
 ARG NODE_VERSION=24-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
-ARG GO_VERSION=1.27@sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
+ARG GO_VERSION=1.27@sha256:e432b43af23a9328d56a7c499be0476810aa344acbcf65fc7c455d4ff5a40602
 
 FROM node:${NODE_VERSION} AS client
 WORKDIR /app
