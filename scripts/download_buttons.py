@@ -9,9 +9,8 @@ REPO = "featherdrop"
 
 BUTTONS = {
     "unraid": "https://ca.unraid.net/apps/featherdrop-1fxtgu11wume2t",
-    # A browser cannot download an image, so this opens its Docker Hub page,
-    # which carries the pull command and every tag.
-    "docker": "https://hub.docker.com/r/junkerderprovinz/featherdrop/",
+    "mos": "https://mos-official.net/apps.html?search=featherdrop",
+    "compose": "https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/compose.yaml",
     # A release's "Source code (zip)" is the whole repository at that tag, and
     # GitHub gives the newest one no fixed address, so this leads to the release
     # that lists it.
