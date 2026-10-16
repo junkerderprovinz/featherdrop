@@ -128,6 +128,14 @@ proxy_request_buffering off;
 
 On an instance anyone can reach, `UPLOAD_PASSWORD` keeps strangers from uploading while every share link still works for its recipient. Behind a reverse proxy, set `TRUST_PROXY=true` so the rate limits count real visitors instead of the proxy.
 
+### Other Docker hosts
+
+[compose.yaml](compose.yaml) runs featherdrop on any Linux server with Docker. Put it in a folder of its own and start it with `docker compose up -d`. The folders are created next to the file.
+
+- **Synology:** in Container Manager, create a project from the file (DSM 7.2 or newer).
+- **Proxmox:** run it in a VM or an LXC container that has Docker.
+- **MOS:** install featherdrop from the [MOS Hub](https://mos-official.net/apps.html?search=featherdrop).
+
 <br>
 
 ## 4. How AI is used here

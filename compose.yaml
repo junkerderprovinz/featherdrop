@@ -1,0 +1,25 @@
+# Built from the Unraid template in junkerderprovinz/unraid-apps by
+# .github/gen-compose.py. Change the template there, not this file.
+#
+# Folders are created next to this file on the first start. Point the ones
+# that hold your own files (downloads, storage and the like) at real folders
+# first, and fill in every value marked "required".
+
+services:
+  featherdrop:
+    image: junkerderprovinz/featherdrop:latest
+    container_name: featherdrop
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./appdata/data:/data"
+      - "./appdata/config:/config"
+    environment:
+      CONFIG_DIR: /config
+      DEFAULT_EXPIRY: 7d
+      MAX_FILE_SIZE: "0"
+      MAX_EXPIRY: never
+      STORAGE_QUOTA: "0"
+      RATE_LIMIT: "true"
+      TRUST_PROXY: "false"
