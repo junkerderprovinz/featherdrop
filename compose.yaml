@@ -7,7 +7,7 @@
 
 services:
   featherdrop:
-    image: junkerderprovinz/featherdrop:latest@sha256:71f39ca894ee62b1f1094e32dae482909fd3acc51c0d5b54c01294ebf0d88bea
+    image: junkerderprovinz/featherdrop:latest@sha256:19bf1b8b38a2abf9ea2d73e26ffa7b7fb33ab50ec2bb528753ada8225ba43f92
     container_name: featherdrop
     restart: unless-stopped
     ports:
