@@ -26,7 +26,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: "24"
+          node-version: "26"
 
       # Lint and typecheck need no install scripts.
       - name: Install dependencies
@@ -48,7 +48,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: "24"
+          node-version: "26"
 
       # The tests need the libsodium file the postinstall copies.
       - name: Install dependencies
