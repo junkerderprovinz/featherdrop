@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
 - Tidied the code comments and log messages.
 
+### Security
+
+- The build tools use minimatch 11 and zod 4.6.7, which close two advisories. Neither ships in the image.
+
 ## [6.1.0] — 2026-07-15
 
 ### Added
