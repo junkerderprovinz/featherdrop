@@ -1,12 +1,15 @@
 name: Build & Push Docker Image
 
-# Builds the multi-arch image and pushes :latest and :sha-<short> to GHCR on
-# every push to main. With the DOCKERHUB_USERNAME variable and DOCKERHUB_TOKEN
-# secret set it also pushes to docker.io/<DOCKERHUB_USERNAME>/featherdrop.
+# Builds the multi-arch image and pushes it to GHCR. With the DOCKERHUB_USERNAME
+# variable and DOCKERHUB_TOKEN secret set it also pushes to
+# docker.io/<DOCKERHUB_USERNAME>/featherdrop. A push to main gets :edge and
+# :sha-<short>. A vX.Y.Z tag gets :X.Y.Z, :X.Y, :X and :sha-<short>, plus :latest
+# when it is the newest tag.
 
 on:
   push:
     branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
     paths-ignore:
       - "**.md"
       - "LICENSE"
@@ -53,6 +56,26 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # latest moves only for the newest tag, so re-cutting an older version
+      # cannot drag it backwards. checkout fetches no tags, and sort -V puts
+      # v8.10.0 after v8.9.0, but also v8.10.0-rc1 after v8.10.0, so only tags
+      # this workflow builds count.
+      - name: Is this the newest release tag?
+        id: newest
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch --tags --force --quiet
+          newest=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          echo "this tag: ${GITHUB_REF_NAME}"
+          echo "newest:   ${newest}"
+          if [ "$newest" = "${GITHUB_REF_NAME}" ]; then
+            echo "is_newest=true" >> "$GITHUB_OUTPUT"
+            echo "-> this build moves :latest"
+          else
+            echo "is_newest=false" >> "$GITHUB_OUTPUT"
+            echo "-> this build leaves :latest where it is"
+          fi
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
@@ -60,9 +83,22 @@ jobs:
           images: |
             ${{ env.IMAGE_NAME }}
             name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/featherdrop,enable=${{ vars.DOCKERHUB_USERNAME != '' }}
+          # latest is the newest release, so an unreleased merge never reaches
+          # people who pull it. The tip of main goes to edge. The action adds
+          # latest on its own for any semver tag unless the flavor turns that off.
+          #
+          # {{major}} and {{major}}.{{minor}} follow whichever tag built last, so
+          # re-cutting an old version moves them back. After that, re-run the
+          # newest tag's build.
+          flavor: |
+            latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
+            type=raw,value=edge,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && steps.newest.outputs.is_newest == 'true' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       # A green build only proves the image builds; the smoke test below proves
       # it starts before anything is pushed.
