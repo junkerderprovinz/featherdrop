@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
@@ -12,13 +13,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/cleanup"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/ratelimit"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/static"
@@ -82,13 +87,35 @@ func main() {
 
 	r := newRouter(cfg, db, tusHandler, assets, shell)
 
-	addr := ":" + cfg.Port
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	var background sync.WaitGroup
+	background.Go(func() { cleanup.Run(ctx, cfg, db, cleanup.Interval) })
+
+	srv := &http.Server{Addr: ":" + cfg.Port, Handler: r}
+	go func() {
+		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
+
 	log.Printf("featherdrop: data=%s db=%s", cfg.DataDir, cfg.DBPath)
 	printBanner()
 	printReady("HTTP", cfg.Port)
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("listen: %v", err)
+
+	<-ctx.Done()
+	// A second signal ends the process at once.
+	stop()
+
+	// docker stop kills after 10 s, so open downloads get a few seconds and
+	// the database still closes before that.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutdown: %v", err)
 	}
+	background.Wait()
 }
 
 // newRouter wires every route the server serves. It is separate from main so
@@ -235,7 +262,7 @@ func printBanner() {
 }
 
 // printReady prints the house ready line, the last output before the server
-// blocks in ListenAndServe.
+// waits for requests.
 func printReady(scheme, port string) {
 	fmt.Printf("  \033[0;32m✓ FEATHERDROP IS READY\033[0m - Open the WebUI now (%s %s)\n", scheme, port)
 	fmt.Println()
