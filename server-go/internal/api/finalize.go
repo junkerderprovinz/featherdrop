@@ -1,6 +1,6 @@
 // Package api holds the JSON and file HTTP handlers. The browser encrypts
 // before upload, so the server stores bytes and never sees a key or plaintext;
-// only formats 2 and 3 are served.
+// only formats 2, 3 and 4 are served.
 package api
 
 import (
@@ -119,15 +119,12 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		// Format 2 is a single file, 3 a multi-file manifest blob; both are
-		// plain bytes to the server.
 		format := int64(0)
 		if body.Format != nil {
 			format = *body.Format
 		}
-		if format != 2 && format != 3 {
-			writeJSONError(w, http.StatusBadRequest,
-				"unsupported format (this server is zero-knowledge only)")
+		if err := checkFormat(format, body, keyVerifier, tmpPath, size); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
