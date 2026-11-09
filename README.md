@@ -112,7 +112,7 @@ The files and links in these pictures are made up.
 - **Big files are fine.** Uploads go in resumable 64 MiB chunks, so a dropped connection picks up where it stopped and a size-capped CDN such as Cloudflare does not get in the way.
 - **Photos travel light.** JPEGs lose their EXIF and GPS data in the browser before encryption, unless you switch it off.
 - **Pleasant to use.** Paste a screenshot with Ctrl+V, install it as an app and share to it from Android, preview images, video, audio, text and PDF before downloading, and read it all in 26 languages.
-- **Safe to put online.** Per-IP rate limits, a storage quota, an expiry cap and an optional upload password. Share pages tell search engines to stay away.
+- **Safe to put online.** Per-IP rate limits, an optional daily upload cap per visitor, a storage quota, an expiry cap and an optional upload password. A strict Content-Security-Policy keeps foreign scripts off the page, and share pages tell search engines to stay away.
 - **One small container.** A static Go binary on a distroless base with a single SQLite file, for amd64 and arm64, with SBOM and provenance attestations and a CVE scan on every build.
 
 It has no user accounts, no OIDC or LDAP, no email and no S3 storage. If you need those, [Pingvin Share](https://github.com/stonith404/pingvin-share) is the bigger tool that inspired this one.
@@ -132,7 +132,7 @@ docker run -d --name featherdrop -p 3000:3000 \
   junkerderprovinz/featherdrop:latest
 ```
 
-Then open port 3000 and drop a file. `/data` holds the uploads and `/config` the small database, so the two can sit on different disks; leave out `CONFIG_DIR` and the `/config` mount to keep both in `/data`.
+Then open port 3000 and drop a file. `/data` holds the uploads and `/config` the small database, so the two can sit on different disks. To keep both in `/data`, set `CONFIG_DIR=/data` and leave out the `/config` mount.
 
 Put HTTPS in front of it before you share links outside your network. The browser needs a secure context for large uploads, streaming downloads and the clipboard, and over plain HTTP uploads stop at 500 MB. Set `BASE_URL` to the public address so the links point there, and in Nginx or Nginx Proxy Manager let big uploads through:
 
@@ -143,7 +143,29 @@ proxy_send_timeout 3600s;
 proxy_request_buffering off;
 ```
 
-On an instance anyone can reach, `UPLOAD_PASSWORD` keeps strangers from uploading while every share link still works for its recipient. Behind a reverse proxy, set `TRUST_PROXY=true` so the rate limits count real visitors instead of the proxy.
+On an instance anyone can reach, `UPLOAD_PASSWORD` keeps strangers from uploading while every share link still works for its recipient. Behind a reverse proxy, set `TRUST_PROXY` to the proxy's address so the rate limits count real visitors instead of the proxy.
+
+### Settings
+
+Everything is set through environment variables. A value the server cannot read stops it at boot with a message that names the variable.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `BASE_URL` | none | Public address for share links. Without it, links use the address the uploader opened. |
+| `DATA_DIR` | `/data` | Where the uploaded files live. |
+| `CONFIG_DIR` | `/config` | Where the SQLite database lives. |
+| `PORT` | `3000` | Port the server listens on. |
+| `MAX_FILE_SIZE` | `0` | Largest upload in bytes. `0` means no limit. |
+| `DEFAULT_EXPIRY` | `7d` | Expiry picked for a new share: `1h`, `6h`, `1d`, `7d`, `30d` or `never`. |
+| `MAX_EXPIRY` | none | Longest expiry an uploader can choose, from the same values. |
+| `STORAGE_QUOTA` | `0` | Bytes all shares together may use. `0` means no limit. |
+| `UPLOAD_PASSWORD` | none | Password needed to upload. Downloads never ask for it. |
+| `UPLOAD_LIMIT_PER_IP` | `0` | Bytes one visitor may upload in 24 hours. `0` means no limit. IPv6 visitors count per /64. The count stays in memory under a hash that changes with every restart, so the server never keeps an address. |
+| `RATE_LIMIT` | `true` | Per-visitor limits on creating uploads and on downloads. |
+| `TRUST_PROXY` | `false` | Which reverse proxies may name the visitor in `X-Forwarded-For`. `true` trusts any, or list the proxies as addresses and CIDR ranges, such as `172.16.0.0/12,10.0.0.5`. |
+| `APP_NAME` | `featherdrop` | Name shown on the page and in its title. |
+| `APP_LOGO` | none | Logo as an `https://` URL or an image `data:` URL. The page allows images from that URL's host and nothing else from it, and visitors' browsers load the logo from there. |
+| `ACCENT_COLOR` | `#d4af37` | Accent colour as a six-digit hex value. |
 
 ### Other Docker hosts
 
