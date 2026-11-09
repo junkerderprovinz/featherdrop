@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
   createManageToken,
-  hashManageToken,
   manageUrl,
   manageTokenFromFragment,
   revokeShare,
 } from "../lib/e2e/manage-link";
+import { cryptoWorker } from "./crypto-worker";
 
 const BASE64URL_43 = /^[A-Za-z0-9_-]{43}$/;
 
@@ -16,21 +16,18 @@ function sha256Base64Url(s: string): string {
 }
 
 test("createManageToken returns a 32-byte base64url token and its SHA-256", async () => {
-  const { token, hash } = await createManageToken();
+  const { token, hash } = await createManageToken(cryptoWorker());
 
   assert.match(token, BASE64URL_43);
   assert.equal(hash, sha256Base64Url(token));
 });
 
 test("createManageToken never repeats a token", async () => {
-  const a = await createManageToken();
-  const b = await createManageToken();
+  const worker = cryptoWorker();
+  const a = await createManageToken(worker);
+  const b = await createManageToken(worker);
 
   assert.notEqual(a.token, b.token);
-});
-
-test("hashManageToken matches the hash the server computes", async () => {
-  assert.equal(await hashManageToken("abc"), sha256Base64Url("abc"));
 });
 
 test("manageUrl puts the token in the fragment, out of the request path", () => {

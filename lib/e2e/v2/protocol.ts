@@ -1,23 +1,17 @@
-// The message protocol between the page and the crypto Web Worker. The worker
-// derives keys and seals and opens chunks; the page reads files, talks to the
-// server and passes the bytes through. create hands the page the blob state,
-// content key included, because resuming an upload after a reload needs it.
-// Every request carries an id and gets exactly one reply with the same id.
+// The message protocol between the page and the crypto Web Worker, which runs
+// every libsodium call of the client (./serve.ts answers the requests). The
+// worker derives keys and seals and opens chunks; the page reads files, talks
+// to the server and passes the bytes through. Keys travel as plain bytes:
+// create hands the page the blob state, content key included, because
+// resuming an upload after a reload needs it. Every request carries an id and
+// gets exactly one reply with the same id.
 
-import { ready, unwrapKey } from "../crypto";
-import {
-  createEncryptor,
-  openKeys,
-  ShareDecryptor,
-  RangeDecryptor,
-  readHeader,
-  sealSpan,
-  type BlobState,
-  type FileEntry,
-  type Header,
-  type Kind,
-} from "./share";
-import type { ShareKeys } from "./keys";
+import type { BlobState, FileEntry, Header, Kind } from "./layout";
+import type { ShareKeys } from "./token";
+import type { RequestKeys } from "./request-link";
+import type { FileMeta } from "../crypto";
+import type { Manifest } from "../multi-file";
+import type { DownloadSecret, WrappedKey } from "../pipeline";
 
 export type Request =
   /** Starts a share: a fresh link token and what reproduces every byte of its blob. */
@@ -39,8 +33,58 @@ export type Request =
   | { op: "range-write"; session: number; data: Uint8Array }
   | { op: "range-close"; session: number }
   | { op: "close"; session: number }
-  /** Unwraps the key of an older password share. */
-  | { op: "unwrap"; wrapped: Uint8Array; salt: Uint8Array; password: string };
+  /** Derives the keys of a link token, with Argon2id when it needs the password. */
+  | { op: "keys"; token: string; password?: string }
+  /** Opens the header in a blob's first headerLength bytes, outside any session. */
+  | { op: "header"; keys: ShareKeys; data: Uint8Array }
+  /** base64url(SHA-256(token)), the hash the server keeps of a manage or collect token. */
+  | { op: "hash-token"; token: string }
+  /** The key pair and collect token of a file request, derived from its secret. */
+  | { op: "request-keys"; secret: Uint8Array }
+  /** Seals the link token of an upload to a request's public key. */
+  | { op: "seal-token"; token: string; publicKey: Uint8Array }
+  | { op: "open-token"; sealed: Uint8Array; keys: RequestKeys }
+  /** The content key of a format 2 or 3 share, unwrapped with Argon2id in password mode, and its verifier. */
+  | { op: "legacy-key"; secret: DownloadSecret }
+  /** Opens the enc_meta of a format 2 share from the start of its blob. */
+  | { op: "legacy-meta"; key: Uint8Array; data: Uint8Array }
+  /** Opens the manifest of a format 3 share from the start of its blob. */
+  | { op: "legacy-manifest"; key: Uint8Array; data: Uint8Array }
+  /**
+   * Starts a format 2 share of one file or a format 3 share of several.
+   * legacy-write takes their plaintext laid end to end and returns blob bytes.
+   */
+  | { op: "legacy-encrypt"; session: number; format: 2 | 3; files: FileEntry[]; password?: string }
+  /** Starts decrypting a format 2 or 3 blob; legacy-write takes its bytes and returns plaintext. */
+  | { op: "legacy-decrypt"; session: number; format: 2 | 3; key: Uint8Array }
+  | { op: "legacy-write"; session: number; data: Uint8Array }
+  | { op: "legacy-close"; session: number }
+  /**
+   * Decrypts the plaintext range [start, end] of a seekable format 2 share
+   * from data, the blob bytes seekCipherByteRange names for it.
+   */
+  | {
+      op: "legacy-range";
+      key: Uint8Array;
+      baseNonce: Uint8Array;
+      size: number;
+      start: number;
+      end: number;
+      data: Uint8Array;
+    };
+
+/** The content key of a format 2 or 3 share with the verifier its downloads send. */
+export interface LegacyKey {
+  key: Uint8Array;
+  verifier: string;
+}
+
+/** What a legacy session made of the bytes so far. meta or manifest is set once, in the reply that opened it. */
+export interface LegacyOutput {
+  meta: FileMeta | null;
+  manifest: Manifest | null;
+  chunks: Uint8Array[];
+}
 
 export interface Responses {
   create: { token: string; verifier: string; state: BlobState };
@@ -54,10 +98,23 @@ export interface Responses {
   "range-write": { chunks: Uint8Array[] };
   "range-close": Record<string, never>;
   close: Record<string, never>;
-  unwrap: { key: Uint8Array };
+  keys: { keys: ShareKeys };
+  header: { header: Header; contentOffset: number };
+  "hash-token": { hash: string };
+  "request-keys": RequestKeys;
+  "seal-token": { sealed: Uint8Array };
+  "open-token": { token: string };
+  "legacy-key": LegacyKey;
+  "legacy-meta": { meta: FileMeta; contentOffset: number };
+  "legacy-manifest": { manifest: Manifest };
+  "legacy-encrypt": { keyForUrl: string; wrapped?: WrappedKey; keyVerifier: string };
+  "legacy-decrypt": Record<string, never>;
+  "legacy-write": LegacyOutput;
+  "legacy-close": LegacyOutput;
+  "legacy-range": { chunks: Uint8Array[] };
 }
 
-type Reply = { id: number; ok: true; result: unknown } | { id: number; ok: false; error: string };
+export type Reply = { id: number; ok: true; result: unknown } | { id: number; ok: false; error: string };
 
 /** The part of a Worker, a worker's global scope or a MessagePort used here. */
 export interface Port {
@@ -65,13 +122,6 @@ export interface Port {
   addEventListener(type: "message", listener: (e: { data: unknown }) => void): void;
   start?(): void;
 }
-
-type Session = {
-  keys: ShareKeys;
-  dec: ShareDecryptor;
-  seek?: { header: Header; contentOffset: number };
-  range?: RangeDecryptor;
-};
 
 /** The buffers of the byte arrays in v that can move instead of being copied. */
 export function transferables(v: unknown): ArrayBuffer[] {
@@ -90,90 +140,6 @@ export function transferables(v: unknown): ArrayBuffer[] {
   };
   visit(v);
   return [...out];
-}
-
-function openRange(s: Session): RangeDecryptor {
-  if (!s.range) throw new Error("v2: open a range before writing to it");
-  return s.range;
-}
-
-/** Answers protocol requests arriving on port. Requests run one at a time, in order. */
-export function serve(port: Port): void {
-  const sessions = new Map<number, Session>();
-
-  function get(id: number): Session {
-    const s = sessions.get(id);
-    if (!s) throw new Error(`no decrypt session ${id}`);
-    return s;
-  }
-
-  async function handle(req: Request): Promise<unknown> {
-    // Keys or a blob state from the page skip the derivation that would load libsodium.
-    await ready();
-    switch (req.op) {
-      case "create": {
-        const enc = await createEncryptor(req.files, { password: req.password, kind: req.kind });
-        return { token: enc.token, verifier: enc.verifier, state: enc.state };
-      }
-      case "seal":
-        return { data: sealSpan(req.state, req.start, req.end, req.plain) };
-      case "decrypt-open": {
-        if (sessions.has(req.session)) throw new Error(`session ${req.session} is already open`);
-        const keys = "keys" in req ? req.keys : await openKeys(req.token, req.password);
-        sessions.set(req.session, { keys, dec: new ShareDecryptor(keys) });
-        return { verifier: keys.verifier };
-      }
-      case "decrypt-write": {
-        const { dec } = get(req.session);
-        const before = dec.header;
-        const chunks = dec.push(req.data);
-        return { header: before === null ? dec.header : null, chunks };
-      }
-      case "decrypt-close":
-        get(req.session).dec.finish();
-        sessions.delete(req.session);
-        return {};
-      case "read-header": {
-        const s = get(req.session);
-        s.seek = readHeader(s.keys, req.data);
-        return s.seek;
-      }
-      case "range-open": {
-        const s = get(req.session);
-        if (!s.seek) throw new Error("v2: read the header before seeking");
-        s.range = new RangeDecryptor(s.keys, s.seek.header, s.seek.contentOffset, req.start, req.end);
-        return {};
-      }
-      case "range-write":
-        return { chunks: openRange(get(req.session)).push(req.data) };
-      case "range-close":
-        openRange(get(req.session)).finish();
-        sessions.delete(req.session);
-        return {};
-      case "close":
-        sessions.delete(req.session);
-        return {};
-      case "unwrap":
-        return { key: unwrapKey(req.wrapped, req.salt, req.password) };
-    }
-  }
-
-  let queue: Promise<void> = Promise.resolve();
-  port.addEventListener("message", (e) => {
-    const { id, ...req } = e.data as Request & { id: number };
-    queue = queue.then(async () => {
-      let reply: Reply;
-      try {
-        reply = { id, ok: true, result: await handle(req as Request) };
-      } catch (err) {
-        // A stream that failed once cannot continue.
-        if ("session" in req && req.op !== "decrypt-open") sessions.delete(req.session);
-        reply = { id, ok: false, error: err instanceof Error ? err.message : String(err) };
-      }
-      port.postMessage(reply, reply.ok ? transferables(reply.result) : []);
-    });
-  });
-  port.start?.();
 }
 
 export interface Client {

@@ -4,17 +4,18 @@
 
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, PT_CHUNK, fromBase64 } from "../lib/e2e/crypto";
+import { ready, fromBase64 } from "../lib/e2e/crypto";
+import {
+  PT_CHUNK,
+  cipherLengthForSize,
+  chunkByteRange,
+  chunksForPlaintextRange,
+} from "../lib/e2e/chunks";
 import { encryptForUpload, decryptWithKey } from "../lib/e2e/pipeline";
 import { deriveContentKey } from "../lib/e2e/pipeline";
 import { sliceRange, cipherPrefixEnd, seekCipherByteRange } from "../lib/e2e/stream-preview";
 import { peekBlobHeader } from "../lib/e2e/blob-layout";
-import {
-  cipherLengthForSize,
-  chunkByteRange,
-  chunksForPlaintextRange,
-  decryptSeekableRange,
-} from "../lib/e2e/seekable";
+import { decryptSeekableRange } from "../lib/e2e/seekable";
 
 before(async () => {
   await ready();

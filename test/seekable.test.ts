@@ -11,16 +11,13 @@ import {
   generateAeadBaseNonce,
   aeadNonceBytes,
   aeadTagBytes,
-  PT_CHUNK,
 } from "../lib/e2e/crypto";
+import { PT_CHUNK, chunkByteRange, chunksForPlaintextRange, CHUNK_TAG } from "../lib/e2e/chunks";
 import {
   deriveNonce,
-  chunkByteRange,
-  chunksForPlaintextRange,
   encryptSeekable,
   decryptSeekable,
   decryptSeekableRange,
-  CHUNK_TAG,
 } from "../lib/e2e/seekable";
 import { encryptForUpload, decryptWithKey, deriveContentKey } from "../lib/e2e/pipeline";
 

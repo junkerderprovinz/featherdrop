@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
 - Tidied the code comments and log messages.
 - Deleting an upload from a file request gives its place back, so a request someone filled with junk takes uploads again.
+- **All of the client's encryption runs in the crypto worker.** Formats 2 and 3, share listings, password unwrapping and the keys and hashes behind management links and file requests moved off the page as well, so libsodium ships once instead of twice. The main script drops from about 680 kB to about 490 kB gzipped. Existing shares open exactly as before, and the build stops if libsodium ever turns up twice.
 
 ### Removed
 

@@ -613,14 +613,14 @@ async function uploadAndListV2({ files: specs, maxDownloads, password }) {
   const before = await meta(slug);
   if (before.format !== 4) return { error: "meta format " + before.format };
   if (password) {
-    const wrong = await openLink(token, 4, "wrong horse battery");
-    const refused = await fetchLinkListing(slug, wrong).then(
+    const wrong = await openLink(cryptoWorker, token, 4, "wrong horse battery");
+    const refused = await fetchLinkListing(cryptoWorker, slug, wrong).then(
       () => false,
       (e) => /401/.test(String(e)),
     );
     if (!refused) return { error: "a wrong password listed the share" };
   }
-  const listed = await fetchLinkListing(slug, await openLink(token, 4, password));
+  const listed = await fetchLinkListing(cryptoWorker, slug, await openLink(cryptoWorker, token, 4, password));
   if (!listed.every((f, i) => f.name === files[i].name && f.size === files[i].size)) {
     return { error: "listing " + JSON.stringify(listed) };
   }

@@ -6,16 +6,18 @@ import { build } from "esbuild";
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { inlineWorker } from "../inline-worker.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..", "..");
 
-// ESM rather than IIFE, because libsodium uses top-level await. The module puts
-// the functions on globalThis for page.evaluate.
+// The module puts the functions on globalThis for page.evaluate. The crypto
+// worker is bundled into it as the client build does.
 const entryCode = `
 import { uploadEncrypted } from "./lib/e2e/upload-flow.ts";
 import { downloadDecrypted } from "./lib/e2e/download-flow.ts";
-globalThis.__FlowModules = { uploadEncrypted, downloadDecrypted };
+import { cryptoWorker } from "./lib/e2e/v2/crypto-worker.ts";
+globalThis.__FlowModules = { uploadEncrypted, downloadDecrypted, cryptoWorker };
 `;
 
 const bundleResult = await build({
@@ -28,6 +30,7 @@ const bundleResult = await build({
   format: "esm",
   platform: "browser",
   write: false,
+  plugins: [inlineWorker],
 });
 const clientBundle = bundleResult.outputFiles[0].text;
 
@@ -59,13 +62,13 @@ await page.addScriptTag({
   type: "module",
 });
 
-// The libsodium WASM loads asynchronously.
+// The module script runs asynchronously.
 await page.waitForFunction(() => typeof globalThis.__FlowModules !== "undefined", {
   timeout: 30_000,
 });
 
 const result = await page.evaluate(async () => {
-  const { uploadEncrypted, downloadDecrypted } = globalThis.__FlowModules;
+  const { uploadEncrypted, downloadDecrypted, cryptoWorker } = globalThis.__FlowModules;
 
   const CHUNK = 64 * 1024;
   const FRAMES = 32;
@@ -111,6 +114,7 @@ const result = await page.evaluate(async () => {
   function makeDeps(baseUrl = "https://x") {
     return {
       baseUrl,
+      crypto: cryptoWorker,
       async upload(source, { onProgress }) {
         const id = `upload-${++idCounter}`;
         const ab = await new Blob([await source.slice(0, source.size)]).arrayBuffer();
@@ -183,6 +187,7 @@ const result = await page.evaluate(async () => {
       let recoveredBytes;
       let sentVerifier;
       const { meta } = await downloadDecrypted(
+        cryptoWorker,
         (keyVerifier) => {
           sentVerifier = keyVerifier;
           return Promise.resolve(getBlobStream(body.uploadId));
@@ -258,6 +263,7 @@ const result = await page.evaluate(async () => {
     let recoveredBytes;
     let sentVerifier;
     const { meta } = await downloadDecrypted(
+      cryptoWorker,
       (keyVerifier) => {
         sentVerifier = keyVerifier;
         return Promise.resolve(getBlobStream(body.uploadId));
@@ -295,6 +301,7 @@ const result = await page.evaluate(async () => {
       let rejected = false;
       try {
         await downloadDecrypted(
+          cryptoWorker,
           () => Promise.resolve(getBlobStream(passwordUploadId)),
           { password: "wrong-password", wrapped, salt },
           async () => {},

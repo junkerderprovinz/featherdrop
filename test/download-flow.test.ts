@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { ready, computeKeyVerifier, decodeKey } from "../lib/e2e/crypto";
 import { encryptForUpload } from "../lib/e2e/pipeline";
 import { downloadDecrypted } from "../lib/e2e/download-flow";
+import { cryptoWorker } from "./crypto-worker";
 
 before(async () => {
   await ready();
@@ -66,6 +67,7 @@ test("downloadDecrypted hands fetchBlob the verifier of the link key", async () 
   let seenVerifier: string | undefined;
   let saved: Uint8Array | undefined;
   const { meta } = await downloadDecrypted(
+    cryptoWorker(),
     (keyVerifier) => {
       seenVerifier = keyVerifier;
       return Promise.resolve(streamOf(cipher));
@@ -90,6 +92,7 @@ test("downloadDecrypted (password mode) sends the same verifier the upload store
 
   let seenVerifier: string | undefined;
   await downloadDecrypted(
+    cryptoWorker(),
     (v) => {
       seenVerifier = v;
       return Promise.resolve(streamOf(cipher));
@@ -113,6 +116,7 @@ test("a wrong password rejects before fetchBlob is called", async () => {
   let fetched = false;
   await assert.rejects(() =>
     downloadDecrypted(
+      cryptoWorker(),
       () => {
         fetched = true;
         return Promise.resolve(streamOf(cipher));

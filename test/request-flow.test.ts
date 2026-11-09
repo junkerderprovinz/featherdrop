@@ -18,7 +18,7 @@ import {
 } from "../lib/e2e/request-flow";
 import { downloadDecryptedV2 } from "../lib/e2e/download-flow";
 import { readNote } from "../lib/e2e/note";
-import { headerLength } from "../lib/e2e/v2/share";
+import { headerLength } from "../lib/e2e/v2/layout";
 import type { UploadSource } from "../lib/e2e/upload-flow";
 import { recordingWorker } from "./crypto-worker";
 import { readZip } from "./zip-reader";
@@ -117,7 +117,7 @@ async function bytesOf(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 
 test("files sent to a request come back through the collect link", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "7d", maxUploads: 5, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "7d", maxUploads: 5, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   assert.match(links.requestUrl, /^https:\/\/drop\.example\/r\/req0#p=[A-Za-z0-9_-]{46}$/);
   assert.match(links.collectUrl, /^https:\/\/drop\.example\/c\/req0#c=[A-Za-z0-9_-]{46}$/);
 
@@ -127,7 +127,7 @@ test("files sent to a request come back through the collect link", async () => {
   await sendToRequest([file("a.bin", a), file("b.txt", b, "text/plain")], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
 
   const collect = parseCollectUrl(links.collectUrl);
-  const listing = await listRequestUploads(collect, srv.fetchImpl);
+  const listing = await listRequestUploads(srv.crypto, collect, srv.fetchImpl);
   assert.equal(listing.uploads.length, 1);
   const up = opened(listing.uploads[0]);
   assert.deepEqual(
@@ -136,7 +136,7 @@ test("files sent to a request come back through the collect link", async () => {
   );
 
   let zip: { name: string; bytes: Uint8Array } | null = null;
-  await downloadDecryptedV2(srv.crypto, fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }, async (s, name) => {
+  await downloadDecryptedV2(srv.crypto, fetchUploadBlob(srv.crypto, collect, up.id, srv.fetchImpl), { keys: up.keys }, async (s, name) => {
     zip = { name, bytes: await bytesOf(s) };
   });
   assert.equal(zip!.name, "files.zip");
@@ -148,30 +148,31 @@ test("files sent to a request come back through the collect link", async () => {
 
 test("a note sent to a request is read as a note", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   await sendToRequest("the code is 4711", parseRequestUrl(links.requestUrl), { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const collect = parseCollectUrl(links.collectUrl);
-  const up = opened((await listRequestUploads(collect, srv.fetchImpl)).uploads[0]);
+  const up = opened((await listRequestUploads(srv.crypto, collect, srv.fetchImpl)).uploads[0]);
   assert.equal(up.header.kind, "text");
-  assert.equal(await readNote(srv.crypto, fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }), "the code is 4711");
+  assert.equal(await readNote(srv.crypto, fetchUploadBlob(srv.crypto, collect, up.id, srv.fetchImpl), { keys: up.keys }), "the code is 4711");
 });
 
 test("files sent to a request are sealed in the crypto worker", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
+  const before = srv.ops.length;
   await sendToRequest([file("x.bin", new Uint8Array(70_000))], parseRequestUrl(links.requestUrl), {
     upload: srv.upload,
     crypto: srv.crypto,
     fetchImpl: srv.fetchImpl,
   });
-  assert.deepEqual([...new Set(srv.ops)], ["create", "seal"]);
+  assert.deepEqual([...new Set(srv.ops.slice(before))], ["create", "seal", "seal-token"]);
 });
 
 test("creating a request sends the public key and the collect hash, never the secret", async () => {
   const srv = fakeServer();
   const links = await createRequest(
     { expiry: "1d", maxUploads: 3, maxSize: 10_000 },
-    { baseUrl: BASE, fetchImpl: srv.fetchImpl, uploadToken: "letmein" },
+    { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl, uploadToken: "letmein" },
   );
   const sent = srv.seen[0];
   assert.equal(sent.headers.get("x-fd-upload-token"), "letmein");
@@ -186,7 +187,7 @@ test("creating a request sends the public key and the collect hash, never the se
 
 test("the uploader sends the request key with every request and nothing that collects", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
   const before = srv.seen.length;
   await sendToRequest([file("x.bin", new Uint8Array(10))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
@@ -201,7 +202,7 @@ test("the uploader sends the request key with every request and nothing that col
 
 test("a request link is no collect link", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   assert.throws(() => parseCollectUrl(links.requestUrl), /collect link/);
   assert.throws(() => parseRequestUrl(links.collectUrl), /request link/);
   assert.throws(() => parseRequestUrl(`${BASE}/r/req0`), /request link/);
@@ -209,13 +210,13 @@ test("a request link is no collect link", async () => {
 
 test("the collect link rebuilds the request link", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
-  assert.equal(await requestUrl(BASE, parseCollectUrl(links.collectUrl)), links.requestUrl);
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
+  assert.equal(await requestUrl(srv.crypto, BASE, parseCollectUrl(links.collectUrl)), links.requestUrl);
 });
 
 test("an upload over the request's size cap is refused before it is sent", async () => {
   const srv = fakeServer({ maxSize: 8000 });
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: 8000 }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: 8000 }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
   await assert.rejects(
     sendToRequest([file("big.bin", new Uint8Array(9000))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl }),
@@ -226,7 +227,7 @@ test("an upload over the request's size cap is refused before it is sent", async
 
 test("a closed request refuses before anything is encrypted", async () => {
   const srv = fakeServer({ open: false });
-  const links = await createRequest({ expiry: "1d", maxUploads: 1, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: 1, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
   assert.deepEqual(await fetchRequestInfo(link, srv.fetchImpl), { expiresAt: 1, maxSize: null, open: false });
   await assert.rejects(
@@ -237,15 +238,15 @@ test("a closed request refuses before anything is encrypted", async () => {
 
 test("closing a request needs the collect link", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
-  assert.equal(await closeRequest(parseCollectUrl(links.collectUrl), srv.fetchImpl), "closed");
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
+  assert.equal(await closeRequest(srv.crypto, parseCollectUrl(links.collectUrl), srv.fetchImpl), "closed");
   assert.equal(srv.requests.size, 0);
-  assert.equal(await closeRequest(parseCollectUrl(links.collectUrl), srv.fetchImpl), "notfound");
+  assert.equal(await closeRequest(srv.crypto, parseCollectUrl(links.collectUrl), srv.fetchImpl), "notfound");
 });
 
 test("an upload that does not open is listed as unreadable and can be deleted", async () => {
   const srv = fakeServer();
-  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
   await sendToRequest([file("good.bin", new Uint8Array(5))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   // Anyone with the request link can attach a sealed key that opens nothing.
@@ -257,11 +258,11 @@ test("an upload that does not open is listed as unreadable and can be deleted", 
   });
 
   const collect = parseCollectUrl(links.collectUrl);
-  const { uploads } = await listRequestUploads(collect, srv.fetchImpl);
+  const { uploads } = await listRequestUploads(srv.crypto, collect, srv.fetchImpl);
   assert.deepEqual(uploads.map((u) => [u.id, u.readable]), [["junk", false], [good.id, true]]);
   assert.equal(opened(uploads[1]).header.files[0].name, "good.bin");
 
-  assert.equal(await deleteRequestUpload(collect, "junk", srv.fetchImpl), "deleted");
-  assert.deepEqual((await listRequestUploads(collect, srv.fetchImpl)).uploads.map((u) => u.id), [good.id]);
-  assert.equal(await deleteRequestUpload(collect, "junk", srv.fetchImpl), "notfound");
+  assert.equal(await deleteRequestUpload(srv.crypto, collect, "junk", srv.fetchImpl), "deleted");
+  assert.deepEqual((await listRequestUploads(srv.crypto, collect, srv.fetchImpl)).uploads.map((u) => u.id), [good.id]);
+  assert.equal(await deleteRequestUpload(srv.crypto, collect, "junk", srv.fetchImpl), "notfound");
 });

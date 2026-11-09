@@ -27,7 +27,8 @@ async function bundle(contents) {
 const pageBundle = await bundle(`
 import CryptoWorker from "./lib/e2e/v2/worker.ts?worker&inline";
 import { connect } from "./lib/e2e/v2/protocol.ts";
-import { cipherRange, blobLength, plainSpan, openKeys } from "./lib/e2e/v2/share.ts";
+import { cipherRange, blobLength, plainSpan } from "./lib/e2e/v2/layout.ts";
+import { openKeys } from "./lib/e2e/v2/share.ts";
 globalThis.__V2 = { CryptoWorker, connect, cipherRange, blobLength, plainSpan, openKeys };
 `);
 

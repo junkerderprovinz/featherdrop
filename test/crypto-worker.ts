@@ -3,7 +3,8 @@
 // transferred as it would be across a Web Worker boundary.
 import { after } from "node:test";
 import { MessageChannel } from "node:worker_threads";
-import { serve, connect, type Client, type Port } from "../lib/e2e/v2/protocol";
+import { connect, type Client, type Port } from "../lib/e2e/v2/protocol";
+import { serve } from "../lib/e2e/v2/serve";
 
 const channels: MessageChannel[] = [];
 after(() => {

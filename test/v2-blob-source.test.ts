@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveKeys } from "../lib/e2e/v2/keys";
-import { buildEncryptor, encryptStream, blobSource, type FileEntry } from "../lib/e2e/v2/share";
+import { buildEncryptor, encryptStream, sealSpan } from "../lib/e2e/v2/share";
+import { blobSource as layoutSource, type BlobState, type FileEntry } from "../lib/e2e/v2/layout";
+
+// The page passes a seal that runs in the crypto worker; here it runs inline.
+const blobSource = (state: BlobState, read: (start: number, end: number) => Promise<Uint8Array>) =>
+  layoutSource(state, read, (s, e, p) => sealSpan(state, s, e, p));
 
 function bytes(n: number, seed = 0): Uint8Array {
   return new Uint8Array(n).map((_, i) => (i * 7 + seed) % 251);

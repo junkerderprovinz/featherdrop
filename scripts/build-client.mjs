@@ -13,6 +13,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statS
 import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { addIntegrity } from "./client-integrity.mjs";
+import { checkSodiumOnce, sodiumWasm } from "./sodium-once.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const clientDist = join(repoRoot, "client-dist");
@@ -44,4 +45,18 @@ const read = (path) => (files.includes(path) ? readFileSync(join(webroot, path))
 const indexPath = join(webroot, "index.html");
 writeFileSync(indexPath, addIntegrity(readFileSync(indexPath, "utf8"), files, read));
 
-console.log(`build:webroot: wrote ${files.length} files to server-go/webroot/, index.html pinned with SRI`);
+const sodium = join(repoRoot, "node_modules", "libsodium-sumo", "dist", "modules-sumo-esm", "libsodium-sumo.mjs");
+const scripts = files.filter((p) => p.startsWith("assets/") && p.endsWith(".js"));
+try {
+  checkSodiumOnce(
+    scripts.map((path) => ({ path, text: readFileSync(join(webroot, path), "utf8") })),
+    sodiumWasm(readFileSync(sodium, "utf8")),
+  );
+} catch (err) {
+  console.error(`build:webroot: ${err.message}`);
+  process.exit(1);
+}
+
+console.log(
+  `build:webroot: wrote ${files.length} files to server-go/webroot/, index.html pinned with SRI, libsodium once`,
+);

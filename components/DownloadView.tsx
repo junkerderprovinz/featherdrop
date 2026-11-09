@@ -46,13 +46,13 @@ import { Logo } from "@/components/Logo";
 import { useBranding } from "@/components/BrandingProvider";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { downloadDecrypted, type DownloadSecret } from "@/lib/e2e/download-flow";
-import { decryptFilesWithKey, type MultiDownload } from "@/lib/e2e/multi-pipeline";
-import { deriveContentKey, decryptWithKey } from "@/lib/e2e/pipeline";
-import { computeKeyVerifier, fromBase64 } from "@/lib/e2e/crypto";
-import { peekBlobHeader } from "@/lib/e2e/blob-layout";
+import type { MultiDownload } from "@/lib/e2e/multi-pipeline";
+import { fromBase64 } from "@/lib/e2e/base64";
 import { fetchShareListing, type ListedFile } from "@/lib/e2e/share-listing";
 import { fetchResumable } from "@/lib/e2e/resumable-fetch";
-import { isV2Link } from "@/lib/e2e/v2/keys";
+import { isV2Link } from "@/lib/e2e/v2/token";
+import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
+import { decryptBundleInWorker } from "@/lib/e2e/v2/remote";
 import { V2Download } from "@/components/V2Download";
 import { streamToAsyncIterable, watchConsumed } from "@/lib/e2e/stream-adapters";
 import { zipStream, zipLength, type ZipEntry } from "@/lib/e2e/zip";
@@ -216,6 +216,7 @@ export function DownloadView({
       }
 
       const { meta } = await downloadDecrypted(
+        cryptoWorker,
         (keyVerifier) =>
           fetchResumable(downloadUrl, {
             headers: { "x-fd-key-verifier": keyVerifier },
@@ -282,14 +283,15 @@ export function DownloadView({
   const fetchMultiDownload = async (
     secret: DownloadSecret,
   ): Promise<MultiDownload> => {
-    const key = await deriveContentKey(secret);
+    const { key, verifier } = await cryptoWorker.request({ op: "legacy-key", secret });
     const res = await fetchResumable(downloadUrl, {
-      headers: { "x-fd-key-verifier": computeKeyVerifier(key) },
+      headers: { "x-fd-key-verifier": verifier },
     });
     if (!res.ok) throw new Error(`fetch ${res.status}`);
-    return decryptFilesWithKey(
-      streamToAsyncIterable(res.body as ReadableStream<Uint8Array>),
+    return decryptBundleInWorker(
+      cryptoWorker,
       key,
+      streamToAsyncIterable(res.body as ReadableStream<Uint8Array>),
     );
   };
 
@@ -485,8 +487,8 @@ export function DownloadView({
     let cancelled = false;
     void (async () => {
       try {
-        const key = await deriveContentKey({ keyFromUrl: linkKey });
-        const files = await fetchShareListing(slug, key, isV3 ? 3 : 2);
+        const key = await cryptoWorker.request({ op: "legacy-key", secret: { keyFromUrl: linkKey } });
+        const files = await fetchShareListing(cryptoWorker, slug, key, isV3 ? 3 : 2);
         if (cancelled) return;
         if (isV3) {
           setManifest(
@@ -562,6 +564,7 @@ export function DownloadView({
       try {
         const chunks: Uint8Array<ArrayBuffer>[] = [];
         const { meta } = await downloadDecrypted(
+          cryptoWorker,
           (keyVerifier) =>
             fetchResumable(downloadUrl, {
               headers: { "x-fd-key-verifier": keyVerifier },
@@ -620,10 +623,10 @@ export function DownloadView({
       try {
         // Only the header is needed for the metadata. The whole header fits in
         // the first 8 KiB, and ?preview=1 keeps the request uncounted.
-        const key = await deriveContentKey({ keyFromUrl: linkKey });
+        const key = await cryptoWorker.request({ op: "legacy-key", secret: { keyFromUrl: linkKey } });
         const res = await fetch(`${downloadUrl}?preview=1`, {
           headers: {
-            "x-fd-key-verifier": computeKeyVerifier(key),
+            "x-fd-key-verifier": key.verifier,
             Range: "bytes=0-8191",
           },
           signal: abort.signal,
@@ -632,11 +635,7 @@ export function DownloadView({
         // The same prefix gives the content offset and the decrypted header.
         const prefix = new Uint8Array(await res.arrayBuffer());
         abort.abort();
-        const { contentOffset } = peekBlobHeader(prefix);
-        async function* fromPrefix(): AsyncGenerator<Uint8Array> {
-          yield prefix;
-        }
-        const { meta } = await decryptWithKey(fromPrefix(), key);
+        const { meta, contentOffset } = await cryptoWorker.request({ op: "legacy-meta", key: key.key, data: prefix });
         if (cancelled) return;
         setRevealedName(meta.name);
         setRevealedMime(meta.type);
@@ -645,8 +644,9 @@ export function DownloadView({
         // before meta.size existed lack; those get no streaming preview.
         if (typeof meta.size !== "number" || meta.size <= 0) return;
         handle = await registerVideoPreview({
+          crypto: cryptoWorker,
           downloadUrl,
-          secret: { keyFromUrl: linkKey },
+          key,
           mime: meta.type,
           size: meta.size,
           // The size prop is the ciphertext length on disk.

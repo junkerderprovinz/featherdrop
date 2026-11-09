@@ -4,36 +4,15 @@
 // subkey of R, so no key serves two primitives. See docs/encryption-format.md.
 
 import { loadSodium } from "../crypto";
-
-export type Mode = "link" | "link+password";
-
-export interface LinkToken {
-  mode: Mode;
-  secret: Uint8Array;
-}
-
-export interface KdfParams {
-  alg: "argon2id13";
-  ops: number;
-  mem: number;
-}
-
-export interface ShareKeys {
-  mode: Mode;
-  /** The Argon2id parameters used, null in link mode. */
-  kdf: KdfParams | null;
-  header: Uint8Array;
-  content: Uint8Array;
-  /** base64url, 43 characters; the server compares it before serving the blob. */
-  verifier: string;
-}
-
-export const FORMAT_VERSION = 0x02;
-
-const MODE_BYTES: Record<Mode, number> = { link: 0x01, "link+password": 0x02 };
-const SECRET_BYTES = 32;
-const TOKEN_BYTES = 2 + SECRET_BYTES;
-const TOKEN_CHARS = 46;
+import { toBase64url } from "../base64";
+import {
+  MODE_BYTES,
+  SECRET_BYTES,
+  normalizePassword,
+  type LinkToken,
+  type Mode,
+  type ShareKeys,
+} from "./token";
 
 /**
  * The time and memory cost of RFC 9106's second recommended setting (t=3,
@@ -41,9 +20,6 @@ const TOKEN_CHARS = 46;
  * runs one, and 64 MiB still fits the WASM heap of a mobile browser tab.
  */
 export const ARGON2ID = { ops: 3, mem: 64 * 1024 * 1024 } as const;
-
-/** NIST SP 800-63B's floor; the password is a second factor next to S. */
-export const MIN_PASSWORD_LENGTH = 8;
 
 const ROOT_LABEL = "CastleParcel v2 root";
 const SALT_CONTEXT = "CPv2salt";
@@ -54,47 +30,9 @@ const SUBKEY_VERIFIER = 3;
 
 const utf8 = new TextEncoder();
 
-// Without normalization a password typed on macOS (NFD) would not match the
-// same password typed elsewhere (NFC).
-function normalize(password: string): string {
-  return password.normalize("NFC");
-}
-
-export function isPasswordLongEnough(password: string): boolean {
-  return [...normalize(password)].length >= MIN_PASSWORD_LENGTH;
-}
-
 export async function newToken(mode: Mode): Promise<LinkToken> {
   const sodium = await loadSodium();
   return { mode, secret: sodium.randombytes_buf(SECRET_BYTES) };
-}
-
-/** base64url of version, mode byte and S: 46 characters for the URL fragment. */
-export function encodeToken(token: LinkToken): string {
-  const raw = new Uint8Array(TOKEN_BYTES);
-  raw[0] = FORMAT_VERSION;
-  raw[1] = MODE_BYTES[token.mode];
-  raw.set(token.secret, 2);
-  return base64url(raw);
-}
-
-/**
- * Whether the #k= value of a link is a v2 token. Older links carry a bare
- * 43-character key, so the length alone tells them apart; decodeToken then
- * checks the version and mode.
- */
-export function isV2Link(k: string): boolean {
-  return k.length === TOKEN_CHARS;
-}
-
-export function decodeToken(s: string): LinkToken {
-  if (!/^[A-Za-z0-9_-]+$/.test(s)) throw new Error("link token: not base64url");
-  const raw = fromBase64url(s);
-  if (raw.length !== TOKEN_BYTES) throw new Error("link token: wrong length");
-  if (raw[0] !== FORMAT_VERSION) throw new Error("link token: unknown version");
-  const mode = (Object.keys(MODE_BYTES) as Mode[]).find((m) => MODE_BYTES[m] === raw[1]);
-  if (!mode) throw new Error("link token: unknown mode");
-  return { mode, secret: raw.slice(2) };
 }
 
 /**
@@ -127,7 +65,7 @@ export async function rootKey(token: LinkToken, password?: string): Promise<Uint
     ({ ops, mem } = ARGON2ID);
     stretched = sodium.crypto_pwhash(
       32,
-      utf8.encode(normalize(password)),
+      utf8.encode(normalizePassword(password)),
       await passwordSalt(token.secret),
       ops,
       mem,
@@ -155,18 +93,6 @@ export async function deriveKeys(token: LinkToken, password?: string): Promise<S
     kdf: token.mode === "link+password" ? { alg: "argon2id13", ...ARGON2ID } : null,
     header: sub(SUBKEY_HEADER),
     content: sub(SUBKEY_CONTENT),
-    verifier: base64url(sub(SUBKEY_VERIFIER)),
+    verifier: toBase64url(sub(SUBKEY_VERIFIER)),
   };
-}
-
-function base64url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromBase64url(s: string): Uint8Array {
-  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
-  const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }

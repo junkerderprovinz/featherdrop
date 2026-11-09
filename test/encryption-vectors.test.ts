@@ -9,11 +9,15 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { ready } from "../lib/e2e/crypto";
 import { padme } from "../lib/e2e/v2/padding";
-import { decodeToken, deriveKeys, passwordSalt, rootKey } from "../lib/e2e/v2/keys";
-import { buildEncryptor, encryptStream, decryptShare, openKeys, type FileEntry, type Kind } from "../lib/e2e/v2/share";
+import { deriveKeys, passwordSalt, rootKey } from "../lib/e2e/v2/keys";
+import { decodeToken } from "../lib/e2e/v2/token";
+import { buildEncryptor, encryptStream, decryptShare, openKeys } from "../lib/e2e/v2/share";
+import type { FileEntry, Kind } from "../lib/e2e/v2/layout";
 import { decryptFromDownload, deriveContentKey } from "../lib/e2e/pipeline";
 import { decryptFilesFromDownload } from "../lib/e2e/multi-pipeline";
 import { computeKeyVerifier } from "../lib/e2e/crypto";
+import { decryptFileInWorker, decryptBundleInWorker } from "../lib/e2e/v2/remote";
+import { cryptoWorker } from "./crypto-worker";
 
 interface KeyVector {
   name: string;
@@ -136,6 +140,33 @@ for (const l of legacy.blobs) {
       assert.equal(sha256(await collect(plaintext)), l.sha256[0]);
     } else {
       const { manifest, files } = await decryptFilesFromDownload(one(unb64(l.blob)), secret);
+      assert.deepEqual(manifest, l.meta);
+      const got: string[] = [];
+      for await (const f of files) got.push(sha256(await collect(f.bytes)));
+      assert.deepEqual(got, l.sha256);
+    }
+  });
+}
+
+for (const l of legacy.blobs) {
+  test(`the legacy blob "${l.name}" decrypts through the crypto worker`, async () => {
+    const worker = cryptoWorker();
+    const secret =
+      "keyFromUrl" in l.secret
+        ? l.secret
+        : { password: l.secret.password, wrapped: unb64(l.secret.wrapped), salt: unb64(l.secret.salt) };
+    const { key, verifier } = await worker.request({ op: "legacy-key", secret });
+    assert.equal(verifier, l.verifier);
+    const blob = unb64(l.blob);
+    async function* sliced() {
+      for (let at = 0; at < blob.length; at += 777) yield blob.slice(at, at + 777);
+    }
+    if (l.format === 2) {
+      const { meta, plaintext } = await decryptFileInWorker(worker, key, sliced());
+      assert.deepEqual(meta, l.meta);
+      assert.equal(sha256(await collect(plaintext)), l.sha256[0]);
+    } else {
+      const { manifest, files } = await decryptBundleInWorker(worker, key, sliced());
       assert.deepEqual(manifest, l.meta);
       const got: string[] = [];
       for await (const f of files) got.push(sha256(await collect(f.bytes)));
