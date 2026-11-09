@@ -78,7 +78,6 @@ const namePath = pathData(nameFont.getPath(NAME, 0, 0, nameSize));
 const claimPath = pathData(claimFont.getPath(CLAIM, 0, 0, claimSize));
 if (/NaN/.test(namePath + claimPath)) throw new Error("a glyph came out as NaN");
 
-// embedLogo places the logo at (x,y,w,h) and keeps its own viewBox.
 function embedLogo(x, y, w, h) {
   const raw = readFileSync(join(__dir, LOGO), "utf8").replace(/<\?xml[^>]*\?>\s*/, "");
   return raw.replace(
