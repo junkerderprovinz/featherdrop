@@ -1,6 +1,7 @@
 // Package cleanup deletes expired shares, used-up shares with no download left
-// to resume, and abandoned tus uploads, so their bytes leave the disk and stop
-// counting toward STORAGE_QUOTA.
+// to resume, expired file requests with their uploads, and abandoned tus
+// uploads, so their bytes leave the disk and stop counting toward
+// STORAGE_QUOTA.
 package cleanup
 
 import (
@@ -29,8 +30,9 @@ const (
 
 // Result counts what one Sweep removed.
 type Result struct {
-	Shares  int
-	Uploads int
+	Shares   int
+	Requests int
+	Uploads  int
 }
 
 // Run sweeps once right away and then every interval until ctx is done. It
@@ -44,8 +46,8 @@ func Run(ctx context.Context, cfg config.Config, db *sql.DB, interval time.Durat
 		if err != nil {
 			log.Printf("cleanup: %v", err)
 		}
-		if res.Shares > 0 || res.Uploads > 0 {
-			log.Printf("cleanup: removed %d shares, %d stale uploads", res.Shares, res.Uploads)
+		if res.Shares > 0 || res.Requests > 0 || res.Uploads > 0 {
+			log.Printf("cleanup: removed %d shares, %d requests, %d stale uploads", res.Shares, res.Requests, res.Uploads)
 		}
 		select {
 		case <-ctx.Done():
@@ -56,12 +58,14 @@ func Run(ctx context.Context, cfg config.Config, db *sql.DB, interval time.Durat
 }
 
 // Sweep deletes the shares expired at now, the used-up shares whose resume
-// tokens have all run out, and the tus uploads untouched for StaleUploadAge. A
-// failure in one part does not stop the others.
+// tokens have all run out, the requests expired at now with their uploads, and
+// the tus uploads untouched for StaleUploadAge. A failure in one part does not
+// stop the others.
 func Sweep(cfg config.Config, db *sql.DB, now time.Time) (Result, error) {
 	shares, sharesErr := deleteShares(cfg.UploadsDir, db, now.UnixMilli())
+	requests, requestsErr := deleteRequests(cfg.UploadsDir, db, now.UnixMilli())
 	uploads, uploadsErr := removeStaleUploads(cfg.TmpDir, now.Add(-StaleUploadAge))
-	return Result{Shares: shares, Uploads: uploads}, errors.Join(sharesErr, uploadsErr)
+	return Result{Shares: shares, Requests: requests, Uploads: uploads}, errors.Join(sharesErr, requestsErr, uploadsErr)
 }
 
 // deleteShares removes each blob before its row. A download that has the blob
@@ -99,6 +103,45 @@ func deleteShares(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 	}
 	if stuck > 0 {
 		return deleted, fmt.Errorf("kept %d shares whose blobs could not be removed", stuck)
+	}
+	return deleted, nil
+}
+
+// deleteRequests removes the blobs of each expired request's uploads before
+// its rows, as deleteShares does. A request with a blob that cannot be
+// removed keeps its rows for the next pass.
+func deleteRequests(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
+	expired, err := store.ListExpiredRequests(db, nowMs)
+	if err != nil {
+		return 0, err
+	}
+	deleted, stuck := 0, 0
+	for _, rec := range expired {
+		ups, err := store.ListRequestUploads(db, rec.Slug)
+		if err != nil {
+			return deleted, err
+		}
+		removed := true
+		for _, up := range ups {
+			err := os.Remove(filepath.Join(uploadsDir, up.FileID))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				removed = false
+			}
+		}
+		if !removed {
+			stuck++
+			continue
+		}
+		ok, err := store.DeleteRequest(db, rec.Slug)
+		if err != nil {
+			return deleted, err
+		}
+		if ok {
+			deleted++
+		}
+	}
+	if stuck > 0 {
+		return deleted, fmt.Errorf("kept %d requests whose uploads could not be removed", stuck)
 	}
 	return deleted, nil
 }
