@@ -585,22 +585,67 @@ export async function* decryptRange(
 ): AsyncGenerator<Uint8Array> {
   const plan = cipherRange(header, contentOffset, start, end);
   if (plan === null) return;
-  const { from, to, first, last } = plan;
+  const fetched = await fetchRange(plan.from, plan.to);
+  if (fetched.length !== plan.to - plan.from + 1) throw new Error("v2: range fetch returned the wrong length");
+  yield* decryptRangeStream(keys, header, contentOffset, [fetched], start, end);
+}
+
+/**
+ * Yields the plaintext of the inclusive range [start, end] from cipher, which
+ * holds exactly the blob bytes cipherRange names for it, in any slicing. Each
+ * chunk is opened as soon as it is complete, so a large range never sits in
+ * memory whole.
+ */
+export async function* decryptRangeStream(
+  keys: ShareKeys,
+  header: Header,
+  contentOffset: number,
+  cipher: AsyncIterable<Uint8Array> | Iterable<Uint8Array>,
+  start: number,
+  end: number,
+): AsyncGenerator<Uint8Array> {
+  const plan = cipherRange(header, contentOffset, start, end);
+  if (plan === null) return;
+  const { first, last } = plan;
   const s = Math.max(0, start);
   const e = Math.min(header.size - 1, end);
   const n = chunkCount(paddedContentLength(header.size), header.chunk);
-  const fetched = await fetchRange(from, to);
-  if (fetched.length !== to - from + 1) throw new Error("v2: range fetch returned the wrong length");
-
   const baseNonce = fromBase64(header.nonce);
-  let off = 0;
-  for (let i = first; i <= last; i++) {
-    const len = cipherChunkLength(header, n, i);
-    const plain = openChunk(keys, header, baseNonce, n, i, fetched.subarray(off, off + len));
-    off += len;
-    const chunkStart = i * header.chunk;
-    const a = Math.max(0, s - chunkStart);
-    const b = Math.min(plain.length, e + 1 - chunkStart);
-    if (b > a) yield plain.subarray(a, b);
+  const short = () => new Error("v2: range fetch returned the wrong length");
+
+  let pending: Uint8Array[] = [];
+  let buffered = 0;
+  let i = first;
+  const open = function* (): Generator<Uint8Array> {
+    while (i <= last) {
+      const len = cipherChunkLength(header, n, i);
+      if (buffered < len) return;
+      const joined = pending.length === 1 ? pending[0] : new Uint8Array(buffered);
+      if (pending.length > 1) {
+        let at = 0;
+        for (const p of pending) {
+          joined.set(p, at);
+          at += p.length;
+        }
+      }
+      const plain = openChunk(keys, header, baseNonce, n, i, joined.subarray(0, len));
+      pending = buffered > len ? [joined.subarray(len)] : [];
+      buffered -= len;
+      const chunkStart = i * header.chunk;
+      const a = Math.max(0, s - chunkStart);
+      const b = Math.min(plain.length, e + 1 - chunkStart);
+      i++;
+      if (b > a) yield plain.subarray(a, b);
+    }
+  };
+
+  for await (const part of cipher) {
+    if (part.length === 0) continue;
+    if (i > last) throw short();
+    pending.push(part);
+    buffered += part.length;
+    yield* open();
   }
+  if (i <= last || buffered > 0) throw short();
 }
+
