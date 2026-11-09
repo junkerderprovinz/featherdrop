@@ -12,9 +12,6 @@ svg { display: block; }
 
 .cp { min-height: 100vh; display: flex; flex-direction: column; }
 .cp-head { display: flex; align-items: center; gap: .6rem; height: 3.75rem; padding: 0 1.25rem; flex: none; }
-.cp-brand { display: flex; align-items: center; gap: .6rem; height: 2.5rem; padding: 0 .4rem; border-radius: var(--radius-control); text-decoration: none; }
-.cp-brand:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.cp-brand-name { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
 .cp-spacer { flex: 1; }
 .cp-logo { display: block; flex: none; }
 .cp-insecure { width: min(44rem, calc(100% - 2rem)); margin: 0 auto 1rem; }

@@ -3,6 +3,6 @@
 import { defineComponent, h } from "vue";
 
 export const Button = defineComponent({
-  props: { label: { type: String, required: true }, labelKey: { type: String, default: null } },
-  setup: (props) => () => h("button", { type: "button" }, props.label),
+  props: { label: { type: String, required: true }, labelKey: { type: String, default: null }, href: { type: String, default: undefined } },
+  setup: (props) => () => (props.href ? h("a", { href: props.href }, props.label) : h("button", { type: "button" }, props.label)),
 });
