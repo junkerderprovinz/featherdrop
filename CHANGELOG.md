@@ -11,15 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **See what a share holds before you spend a download.** `GET /api/d/{slug}/header` returns only the encrypted names and sizes at the start of a share, never a byte of the files, and does not count as a download. It needs the same key proof as the download. Limited link shares use it to show their file names and sizes right away.
 - **The management link is back.** Next to the share link you get a second, private link that deletes the share and its file before it expires. Its secret is created in your browser and travels only in the link's `#` part; the server keeps a hash of it and nothing else. `DELETE /api/m/{slug}` with the token in `x-fd-manage-token` answers `204`, and a wrong token, a missing share or one without a management link all get the same `404`.
+- **Upload cap per visitor.** `UPLOAD_LIMIT_PER_IP` limits how many bytes one visitor can upload in 24 hours (413 for a single file over the cap, 429 with `Retry-After` once the budget is used up). IPv6 visitors count per /64. The count stays in memory under an HMAC of the address with a key drawn at every start, so no address is kept or logged. While the cap is on, an upload has to declare its size up front.
+- **Trusted proxy list.** `TRUST_PROXY` also takes a comma-separated list of proxy addresses and CIDR ranges. Only a connection from one of them may name the visitor in `X-Forwarded-For`, and entries left of the last trusted proxy, which a client could have forged, are skipped. `true` and `false` work as before.
 
 ### Changed
 
 - **A download counts once it has arrived.** A share's download counter goes up, and a one-time share is deleted, only after the whole file was sent. A dropped connection costs nothing and the recipient can try again. While a limited share's last remaining download is running, a second attempt gets `409 download in progress` instead of a second copy.
+- The upload server logs errors only, so the container log no longer lists every upload with its id and size.
+- The README has a table of all settings.
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
 - Tidied the code comments and log messages.
 
+### Removed
+
+- The modules and tests of the retired Node server: master key mode, server-side encryption, password hashing, manage tokens and the upload gate.
+
 ### Security
 
+- **Strict security headers on every response.** A Content-Security-Policy that allows only the app's own scripts and connections, plus `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `X-Frame-Options: DENY`, a Permissions-Policy that switches off camera, microphone, location and other unused features, and `X-Content-Type-Options: nosniff`.
+- An `APP_LOGO` on another host is allowed for images and nothing else. A value that is neither an http(s) URL, an image `data:` URL nor a path is ignored with a warning at boot.
 - The build tools use minimatch 11 and zod 4.6.7, which close two advisories. Neither ships in the image.
 
 ## [1.9.0] - 2026-07-15

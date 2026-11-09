@@ -174,6 +174,44 @@ func TestRouter_SharePageNoIndex(t *testing.T) {
 	}
 }
 
+func TestRouter_SecurityHeadersOnEveryResponse(t *testing.T) {
+	h := newFullRouter(t, nil)
+
+	paths := []string{
+		"/", "/d/some-slug", "/icon-512.png", "/healthz", "/robots.txt",
+		"/api/healthcheck", "/api/config", "/api/d/some-slug", "/api/nope", "/files/unknown",
+	}
+	for _, path := range paths {
+		rec := get(h, path)
+		csp := rec.Header().Get("Content-Security-Policy")
+		if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "frame-ancestors 'none'") {
+			t.Errorf("%s Content-Security-Policy = %q", path, csp)
+		}
+		for name, want := range map[string]string{
+			"Referrer-Policy":            "no-referrer",
+			"Cross-Origin-Opener-Policy": "same-origin",
+			"X-Frame-Options":            "DENY",
+			"X-Content-Type-Options":     "nosniff",
+		} {
+			if got := rec.Header().Get(name); got != want {
+				t.Errorf("%s %s = %q, want %q", path, name, got, want)
+			}
+		}
+		if rec.Header().Get("Permissions-Policy") == "" {
+			t.Errorf("%s has no Permissions-Policy", path)
+		}
+	}
+}
+
+func TestRouter_ExternalLogoAllowedAsImageOnly(t *testing.T) {
+	h := newFullRouter(t, func(c *config.Config) { c.AppLogo = "https://cdn.example.com/brand/logo.png" })
+
+	csp := get(h, "/").Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "img-src 'self' blob: data: https://cdn.example.com;") {
+		t.Errorf("Content-Security-Policy = %q, want the logo origin in img-src", csp)
+	}
+}
+
 func TestRouter_DownloadRateLimited(t *testing.T) {
 	// The download bucket has a burst of 10.
 	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = true })

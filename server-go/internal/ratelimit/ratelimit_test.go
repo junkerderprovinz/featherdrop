@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 )
 
 type fakeClock struct{ t time.Time }
@@ -104,41 +106,10 @@ func TestLimiter_SweepDropsIdleBuckets(t *testing.T) {
 	}
 }
 
-func TestClientIP_TrustProxy(t *testing.T) {
-	tests := []struct {
-		name       string
-		remoteAddr string
-		xff        string
-		trustProxy bool
-		want       string
-	}{
-		{"no proxy: RemoteAddr host", "10.0.0.9:12345", "", false, "10.0.0.9"},
-		{"no proxy: XFF ignored (spoofable)", "10.0.0.9:12345", "1.2.3.4", false, "10.0.0.9"},
-		{"proxy: first XFF entry wins", "10.0.0.9:12345", "1.2.3.4, 5.6.7.8", true, "1.2.3.4"},
-		{"proxy: single XFF entry", "10.0.0.9:12345", "1.2.3.4", true, "1.2.3.4"},
-		{"proxy: whitespace trimmed", "10.0.0.9:12345", "  1.2.3.4 , 5.6.7.8", true, "1.2.3.4"},
-		{"proxy: no XFF falls back to RemoteAddr", "10.0.0.9:12345", "", true, "10.0.0.9"},
-		{"portless RemoteAddr used verbatim", "10.0.0.9", "", false, "10.0.0.9"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodGet, "/", nil)
-			r.RemoteAddr = tt.remoteAddr
-			if tt.xff != "" {
-				r.Header.Set("X-Forwarded-For", tt.xff)
-			}
-			if got := ClientIP(r, tt.trustProxy); got != tt.want {
-				t.Errorf("ClientIP(%q, xff=%q, trust=%v) = %q, want %q",
-					tt.remoteAddr, tt.xff, tt.trustProxy, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestMiddleware_429WithRetryAfter(t *testing.T) {
 	clock := newFakeClock()
 	l := NewLimiter(30, 2, clock.now)
-	h := Middleware(l, false, "", okHandler())
+	h := Middleware(l, clientip.Proxies{}, "", okHandler())
 
 	send := func() *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, "/x", nil)
@@ -171,7 +142,7 @@ func TestMiddleware_429WithRetryAfter(t *testing.T) {
 func TestMiddleware_PerIPIsolation(t *testing.T) {
 	clock := newFakeClock()
 	l := NewLimiter(30, 1, clock.now)
-	h := Middleware(l, false, "", okHandler())
+	h := Middleware(l, clientip.Proxies{}, "", okHandler())
 
 	send := func(addr string) int {
 		req := httptest.NewRequest(http.MethodGet, "/x", nil)
@@ -206,7 +177,7 @@ func TestMiddleware_XFFOnlyWithTrustProxy(t *testing.T) {
 
 	// Without trustProxy a rotating XFF does not dodge the limit.
 	clock := newFakeClock()
-	untrusted := Middleware(NewLimiter(30, 1, clock.now), false, "", okHandler())
+	untrusted := Middleware(NewLimiter(30, 1, clock.now), clientip.Proxies{}, "", okHandler())
 	if code := send(untrusted, "1.1.1.1"); code != http.StatusOK {
 		t.Fatalf("first request = %d, want 200", code)
 	}
@@ -214,7 +185,11 @@ func TestMiddleware_XFFOnlyWithTrustProxy(t *testing.T) {
 		t.Fatalf("spoofed-XFF second request = %d, want 429 (XFF must be ignored)", code)
 	}
 
-	trusted := Middleware(NewLimiter(30, 1, clock.now), true, "", okHandler())
+	trustAll, err := clientip.Parse("true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	trusted := Middleware(NewLimiter(30, 1, clock.now), trustAll, "", okHandler())
 	if code := send(trusted, "1.1.1.1"); code != http.StatusOK {
 		t.Fatalf("trusted first client = %d, want 200", code)
 	}
@@ -229,7 +204,7 @@ func TestMiddleware_XFFOnlyWithTrustProxy(t *testing.T) {
 func TestMiddleware_MethodFilter(t *testing.T) {
 	clock := newFakeClock()
 	l := NewLimiter(30, 1, clock.now)
-	h := Middleware(l, false, http.MethodPost, okHandler())
+	h := Middleware(l, clientip.Proxies{}, http.MethodPost, okHandler())
 
 	send := func(method string) int {
 		req := httptest.NewRequest(method, "/files", nil)

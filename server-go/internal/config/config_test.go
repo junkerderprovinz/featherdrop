@@ -1,6 +1,8 @@
 package config
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +12,7 @@ import (
 var configEnvVars = []string{
 	"DATA_DIR", "CONFIG_DIR", "MAX_FILE_SIZE", "DEFAULT_EXPIRY", "BASE_URL",
 	"UPLOAD_PASSWORD", "APP_NAME", "APP_LOGO", "ACCENT_COLOR", "PORT",
-	"MAX_EXPIRY", "STORAGE_QUOTA", "RATE_LIMIT", "TRUST_PROXY",
+	"MAX_EXPIRY", "STORAGE_QUOTA", "RATE_LIMIT", "TRUST_PROXY", "UPLOAD_LIMIT_PER_IP",
 }
 
 // clearConfigEnv unsets every config variable for the test, so Load sees its
@@ -198,6 +200,42 @@ func TestValidate_StorageQuota(t *testing.T) {
 	}
 }
 
+func TestValidate_UploadLimitPerIP(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		want    int64
+		wantErr bool
+	}{
+		{"empty = off", "", 0, false},
+		{"zero = off", "0", 0, false},
+		{"bytes", "10737418240", 10737418240, false},
+		{"negative", "-1", 0, true},
+		{"unit suffix", "10GB", 0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConfigEnv(t)
+			if tt.value != "" {
+				t.Setenv("UPLOAD_LIMIT_PER_IP", tt.value)
+			}
+			cfg, _, err := loadAndValidate(t)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Validate err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				if !strings.Contains(err.Error(), "UPLOAD_LIMIT_PER_IP") {
+					t.Errorf("error %q must name UPLOAD_LIMIT_PER_IP", err)
+				}
+				return
+			}
+			if cfg.UploadLimitPerIP != tt.want {
+				t.Errorf("UploadLimitPerIP = %d, want %d", cfg.UploadLimitPerIP, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidate_RateLimit(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -235,15 +273,18 @@ func TestValidate_RateLimit(t *testing.T) {
 
 func TestValidate_TrustProxy(t *testing.T) {
 	tests := []struct {
-		name    string
-		value   string
-		want    bool
-		wantErr bool
+		name       string
+		value      string
+		wantClient string
+		wantErr    bool
 	}{
-		{"empty defaults false", "", false, false},
-		{"true", "true", true, false},
-		{"false", "false", false, false},
-		{"invalid", "yes please", false, true},
+		{"empty trusts no proxy", "", "10.0.0.9", false},
+		{"true trusts every proxy", "true", "1.2.3.4", false},
+		{"false trusts no proxy", "false", "10.0.0.9", false},
+		{"CIDR list covering the peer", "192.168.0.0/16, 10.0.0.0/8", "1.2.3.4", false},
+		{"CIDR list missing the peer", "192.168.0.0/16", "10.0.0.9", false},
+		{"invalid word", "yes please", "", true},
+		{"invalid CIDR", "10.0.0.0/33", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -261,8 +302,11 @@ func TestValidate_TrustProxy(t *testing.T) {
 				}
 				return
 			}
-			if cfg.TrustProxy != tt.want {
-				t.Errorf("TrustProxy = %v, want %v", cfg.TrustProxy, tt.want)
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.RemoteAddr = "10.0.0.9:1234"
+			r.Header.Set("X-Forwarded-For", "1.2.3.4")
+			if got := cfg.TrustedProxies.ClientIP(r); got != tt.wantClient {
+				t.Errorf("client IP = %q, want %q", got, tt.wantClient)
 			}
 		})
 	}
@@ -335,6 +379,43 @@ func TestValidate_BaseURL(t *testing.T) {
 			}
 			if got := hasWarning(warnings, "BASE_URL"); got != tt.wantWarn {
 				t.Errorf("BASE_URL warning present = %v, want %v (warnings %v)", got, tt.wantWarn, warnings)
+			}
+		})
+	}
+}
+
+func TestValidate_AppLogo(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		wantKept string
+		wantWarn bool
+	}{
+		{"empty ok", "", "", false},
+		{"same-origin path kept", "/icon-512.png", "/icon-512.png", false},
+		{"data URL kept", "data:image/svg+xml;base64,PHN2Zz4=", "data:image/svg+xml;base64,PHN2Zz4=", false},
+		{"https kept", "https://cdn.example.com/logo.png", "https://cdn.example.com/logo.png", false},
+		{"relative path ignored", "logo.png", "", true},
+		{"protocol-relative ignored", "//cdn.example.com/logo.png", "", true},
+		{"script URL ignored", "javascript:alert(1)", "", true},
+		{"non-image data URL ignored", "data:text/html,<p>", "", true},
+		{"host with policy syntax ignored", "https://cdn.example.com;script-src/x.png", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConfigEnv(t)
+			if tt.value != "" {
+				t.Setenv("APP_LOGO", tt.value)
+			}
+			cfg, warnings, err := loadAndValidate(t)
+			if err != nil {
+				t.Fatalf("Validate: %v", err)
+			}
+			if cfg.AppLogo != tt.wantKept {
+				t.Errorf("AppLogo = %q, want %q", cfg.AppLogo, tt.wantKept)
+			}
+			if got := hasWarning(warnings, "APP_LOGO"); got != tt.wantWarn {
+				t.Errorf("APP_LOGO warning present = %v, want %v (warnings %v)", got, tt.wantWarn, warnings)
 			}
 		})
 	}

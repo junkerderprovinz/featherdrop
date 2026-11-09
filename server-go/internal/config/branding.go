@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -53,4 +54,32 @@ func ResolveBranding(appName, appLogo, accentColor string) Branding {
 // Branding returns the resolved branding of c.
 func (c Config) Branding() Branding {
 	return ResolveBranding(c.AppName, c.AppLogo, c.AccentColor)
+}
+
+// The host lands verbatim in the Content-Security-Policy, so it may hold
+// nothing that policy syntax gives a meaning to.
+var logoHostRe = regexp.MustCompile(`^([A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(:[0-9]+)?$`)
+
+// LogoOrigin returns the origin of an absolute http(s) APP_LOGO, which the
+// Content-Security-Policy then allows for images, or "" for a same-origin path,
+// a data URL or no logo.
+func (c Config) LogoOrigin() string {
+	u, err := url.Parse(strings.TrimSpace(c.AppLogo))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !logoHostRe.MatchString(u.Host) {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+// validLogo reports whether logo is something the page can show under its
+// Content-Security-Policy: a same-origin path, an image data URL or an absolute
+// http(s) URL.
+func validLogo(logo string) bool {
+	switch {
+	case strings.HasPrefix(logo, "/"):
+		return !strings.HasPrefix(logo, "//")
+	case strings.HasPrefix(logo, "data:image/"):
+		return true
+	}
+	return Config{AppLogo: logo}.LogoOrigin() != ""
 }

@@ -7,12 +7,12 @@ package ratelimit
 
 import (
 	"math"
-	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 )
 
 // sweepInterval bounds how often Allow drops idle buckets, which keeps the map
@@ -92,36 +92,17 @@ func (l *Limiter) sweepLocked(now time.Time) {
 	}
 }
 
-// ClientIP returns the key a request is limited by: the connection peer, or
-// with trustProxy the first X-Forwarded-For entry. On a directly exposed server
-// the client controls that header, so it is only read when the operator opts in.
-func ClientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			first, _, _ := strings.Cut(xff, ",")
-			if ip := strings.TrimSpace(first); ip != "" {
-				return ip
-			}
-		}
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
-}
-
-// Middleware limits next with l, keyed by ClientIP. A non-empty method limits
-// only that method, so the tus handler can limit upload creation while resumes
-// stay free. A refused request gets 429 with Retry-After and the API's JSON
-// error body.
-func Middleware(l *Limiter, trustProxy bool, method string, next http.Handler) http.HandlerFunc {
+// Middleware limits next with l, keyed by the client IP. A non-empty method
+// limits only that method, so the tus handler can limit upload creation while
+// resumes stay free. A refused request gets 429 with Retry-After and the API's
+// JSON error body.
+func Middleware(l *Limiter, proxies clientip.Proxies, method string, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if method != "" && r.Method != method {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if allowed, retryAfter := l.Allow(ClientIP(r, trustProxy)); !allowed {
+		if allowed, retryAfter := l.Allow(proxies.ClientIP(r)); !allowed {
 			secs := int(math.Ceil(retryAfter.Seconds()))
 			if secs < 1 {
 				secs = 1

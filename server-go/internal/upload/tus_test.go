@@ -1,15 +1,19 @@
 package upload
 
 import (
+	"bytes"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
@@ -205,5 +209,144 @@ func TestTus_Quota_Unlimited_201(t *testing.T) {
 	rec := tusCreateLen(srv, 1<<40)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("POST /files (no quota) = %d, want 201; body=%q", rec.Code, rec.Body.String())
+	}
+}
+
+func TestTus_LogsOnlyErrors(t *testing.T) {
+	cfg := openCfg(t)
+	var logs bytes.Buffer
+	h, err := newHandler(cfg, nil, &logs)
+	if err != nil {
+		t.Fatalf("newHandler: %v", err)
+	}
+	r := chi.NewRouter()
+	r.Handle("/files", h)
+	r.Handle("/files/*", h)
+
+	create := tusCreate(r, "")
+	if create.Code != http.StatusCreated {
+		t.Fatalf("create = %d, want 201", create.Code)
+	}
+	patch := httptest.NewRequest(http.MethodPatch, create.Header().Get("Location"), strings.NewReader("hello world"))
+	patch.Header.Set("Tus-Resumable", "1.0.0")
+	patch.Header.Set("Upload-Offset", "0")
+	patch.Header.Set("Content-Type", "application/offset+octet-stream")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, patch)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("patch = %d, want 204; body=%q", rec.Code, rec.Body.String())
+	}
+	if logs.Len() != 0 {
+		t.Fatalf("a normal upload logged:\n%s", logs.String())
+	}
+
+	// A file where the store expects its directory is a real failure the
+	// operator should see.
+	if err := os.RemoveAll(cfg.TmpDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg.TmpDir, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if rec := tusCreate(r, ""); rec.Code != http.StatusInternalServerError {
+		t.Fatalf("create without a store dir = %d, want 500", rec.Code)
+	}
+	if !strings.Contains(logs.String(), "InternalServerError") {
+		t.Fatalf("the store failure was not logged: %q", logs.String())
+	}
+}
+
+func limitCfg(t *testing.T, limit int64) config.Config {
+	t.Helper()
+	return config.Config{TmpDir: t.TempDir(), UploadLimitPerIP: limit}
+}
+
+// tusCreateFrom sends a tus create of length bytes from remoteAddr, with any
+// extra headers.
+func tusCreateFrom(srv http.Handler, remoteAddr string, length int64, header map[string]string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/files", nil)
+	req.RemoteAddr = remoteAddr
+	req.Header.Set("Tus-Resumable", "1.0.0")
+	req.Header.Set("Upload-Length", strconv.FormatInt(length, 10))
+	for k, v := range header {
+		req.Header.Set(k, v)
+	}
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestTus_UploadLimit_OverBudget_429(t *testing.T) {
+	srv := newTestRouter(t, limitCfg(t, 20), nil)
+
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, nil); rec.Code != http.StatusCreated {
+		t.Fatalf("first create = %d, want 201", rec.Code)
+	}
+	rec := tusCreateFrom(srv, "203.0.113.7:1001", 11, nil)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("create past the limit = %d, want 429", rec.Code)
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Error("429 without Retry-After")
+	}
+	if got := rec.Body.String(); got != `{"error":"upload limit reached"}` {
+		t.Errorf("429 body = %q", got)
+	}
+	if rec := tusCreateFrom(srv, "198.51.100.2:1000", 11, nil); rec.Code != http.StatusCreated {
+		t.Errorf("another client = %d, want 201", rec.Code)
+	}
+}
+
+func TestTus_UploadLimit_LargerThanTheLimit_413(t *testing.T) {
+	srv := newTestRouter(t, limitCfg(t, 10), nil)
+
+	rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, nil)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("create over the limit = %d, want 413", rec.Code)
+	}
+	if got := rec.Body.String(); got != `{"error":"upload larger than the limit"}` {
+		t.Errorf("413 body = %q", got)
+	}
+}
+
+func TestTus_UploadLimit_RefusedCreateCostsNothing(t *testing.T) {
+	srv := newTestRouter(t, limitCfg(t, 11), nil)
+
+	bad := tusCreateFrom(srv, "203.0.113.7:1000", 11, map[string]string{"Tus-Resumable": "0.0.1"})
+	if bad.Code == http.StatusCreated {
+		t.Fatal("tusd accepted an unsupported protocol version")
+	}
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, nil); rec.Code != http.StatusCreated {
+		t.Errorf("create after a refused one = %d, want 201", rec.Code)
+	}
+}
+
+func TestTus_UploadLimit_DeferredLength_400(t *testing.T) {
+	srv := newTestRouter(t, limitCfg(t, 100), nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/files", nil)
+	req.Header.Set("Tus-Resumable", "1.0.0")
+	req.Header.Set("Upload-Defer-Length", "1")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("deferred-length create = %d, want 400", rec.Code)
+	}
+}
+
+func TestTus_UploadLimit_CountsTheClientBehindAProxy(t *testing.T) {
+	cfg := limitCfg(t, 11)
+	proxies, err := clientip.Parse("10.0.0.0/8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.TrustedProxies = proxies
+	srv := newTestRouter(t, cfg, nil)
+
+	for _, client := range []string{"203.0.113.7", "198.51.100.2"} {
+		rec := tusCreateFrom(srv, "10.0.0.2:1000", 11, map[string]string{"X-Forwarded-For": client})
+		if rec.Code != http.StatusCreated {
+			t.Errorf("create for %s through the proxy = %d, want 201", client, rec.Code)
+		}
 	}
 }

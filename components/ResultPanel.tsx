@@ -55,8 +55,11 @@ export function ResultPanel({
     let cancelled = false;
     void import("canvas-confetti").then(({ default: confetti }) => {
       if (cancelled) return;
+      // The default cannon draws in a worker loaded from a blob: URL, which
+      // the Content-Security-Policy refuses.
+      const fire = confetti.create(undefined, { resize: true });
       const colors = ["#F6D981", "#D4AF37", "#A97C0A", "#7C3AED"];
-      confetti({
+      fire({
         particleCount: 90,
         spread: 72,
         startVelocity: 42,
@@ -64,7 +67,7 @@ export function ResultPanel({
         colors,
         disableForReducedMotion: true,
       });
-      confetti({
+      fire({
         particleCount: 55,
         spread: 110,
         startVelocity: 30,

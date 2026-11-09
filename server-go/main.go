@@ -25,6 +25,7 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/cleanup"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/headers"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/ratelimit"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/static"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
@@ -122,6 +123,7 @@ func main() {
 // tests can run the real routing, rate limits included.
 func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs.FS, shell []byte) chi.Router {
 	r := chi.NewRouter()
+	r.Use(headers.Middleware(headers.ContentSecurityPolicy(cfg.LogoOrigin())))
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
@@ -152,12 +154,12 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 		createLimiter := ratelimit.NewLimiter(30, 10, nil)
 		finalizeLimiter := ratelimit.NewLimiter(60, 10, nil)
 		downloadLimiter := ratelimit.NewLimiter(20, 10, nil)
-		files = ratelimit.Middleware(createLimiter, cfg.TrustProxy, http.MethodPost, files)
-		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustProxy, "", finalize)
-		download = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", download)
-		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", meta)
-		header = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", header)
-		revoke = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", revoke)
+		files = ratelimit.Middleware(createLimiter, cfg.TrustedProxies, http.MethodPost, files)
+		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustedProxies, "", finalize)
+		download = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", download)
+		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", meta)
+		header = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", header)
+		revoke = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", revoke)
 	}
 
 	// chi keeps the full request path, which tusd matches against its

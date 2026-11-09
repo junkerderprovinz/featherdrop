@@ -9,7 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 )
 
@@ -34,17 +36,20 @@ type Config struct {
 	MaxExpiry string
 	// StorageQuota caps the total stored bytes; 0 means unlimited.
 	StorageQuota int64
+	// UploadLimitPerIP caps the bytes one client may upload per 24 hours; 0
+	// means unlimited.
+	UploadLimitPerIP int64
 	// RateLimit turns on the per-client-IP token buckets.
 	RateLimit bool
-	// TrustProxy takes the client IP from the first X-Forwarded-For entry,
-	// which is only safe behind a proxy that sets it.
-	TrustProxy bool
+	// TrustedProxies are the proxies whose X-Forwarded-For names the client.
+	TrustedProxies clientip.Proxies
 
 	// Load keeps these verbatim and Validate parses them, because an invalid
 	// value has to stop the boot and Load returns no error.
-	rawStorageQuota string
-	rawRateLimit    string
-	rawTrustProxy   string
+	rawStorageQuota     string
+	rawRateLimit        string
+	rawTrustProxy       string
+	rawUploadLimitPerIP string
 
 	UploadPassword  string
 	UploadProtected bool
@@ -89,12 +94,12 @@ func Load() Config {
 		DefaultExpiry: getenv("DEFAULT_EXPIRY", "7d"),
 		BaseURL:       getenv("BASE_URL", ""),
 
-		MaxExpiry:       getenv("MAX_EXPIRY", ""),
-		RateLimit:       true,
-		TrustProxy:      false,
-		rawStorageQuota: getenv("STORAGE_QUOTA", ""),
-		rawRateLimit:    getenv("RATE_LIMIT", ""),
-		rawTrustProxy:   getenv("TRUST_PROXY", ""),
+		MaxExpiry:           getenv("MAX_EXPIRY", ""),
+		RateLimit:           true,
+		rawStorageQuota:     getenv("STORAGE_QUOTA", ""),
+		rawRateLimit:        getenv("RATE_LIMIT", ""),
+		rawTrustProxy:       getenv("TRUST_PROXY", ""),
+		rawUploadLimitPerIP: getenv("UPLOAD_LIMIT_PER_IP", ""),
 
 		UploadPassword:  uploadPassword,
 		UploadProtected: len(uploadPassword) > 0,
@@ -129,6 +134,16 @@ func (c *Config) Validate() (warnings []string, err error) {
 		c.StorageQuota = n
 	}
 
+	if c.rawUploadLimitPerIP != "" {
+		n, perr := strconv.ParseInt(c.rawUploadLimitPerIP, 10, 64)
+		if perr != nil || n < 0 {
+			return warnings, fmt.Errorf(
+				"UPLOAD_LIMIT_PER_IP=%q is invalid: accepted values are a non-negative integer byte count (empty or 0 = unlimited)",
+				c.rawUploadLimitPerIP)
+		}
+		c.UploadLimitPerIP = n
+	}
+
 	if c.rawRateLimit != "" {
 		v, perr := strconv.ParseBool(c.rawRateLimit)
 		if perr != nil {
@@ -138,15 +153,13 @@ func (c *Config) Validate() (warnings []string, err error) {
 		}
 		c.RateLimit = v
 	}
-	if c.rawTrustProxy != "" {
-		v, perr := strconv.ParseBool(c.rawTrustProxy)
-		if perr != nil {
-			return warnings, fmt.Errorf(
-				`TRUST_PROXY=%q is invalid: accepted values are "true" and "false" (default false)`,
-				c.rawTrustProxy)
-		}
-		c.TrustProxy = v
+	proxies, perr := clientip.Parse(c.rawTrustProxy)
+	if perr != nil {
+		return warnings, fmt.Errorf(
+			`TRUST_PROXY=%q is invalid (%v): accepted values are "true", "false" or a comma-separated list of proxy addresses and CIDR ranges (default false)`,
+			c.rawTrustProxy, perr)
 	}
+	c.TrustedProxies = proxies
 
 	// Clamping instead of refusing keeps an install booting when a stricter cap
 	// meets its old default. An unknown token would store no expiry, so it is
@@ -166,6 +179,12 @@ func (c *Config) Validate() (warnings []string, err error) {
 				"BASE_URL=%q is not an absolute http(s) URL; ignoring it", c.BaseURL))
 			c.BaseURL = ""
 		}
+	}
+
+	if logo := strings.TrimSpace(c.AppLogo); logo != "" && !validLogo(logo) {
+		warnings = append(warnings, fmt.Sprintf(
+			"APP_LOGO=%q is not a path starting with /, an image data URL or an absolute http(s) URL; ignoring it", c.AppLogo))
+		c.AppLogo = ""
 	}
 
 	if c.UploadProtected && len(c.UploadPassword) < 8 {
