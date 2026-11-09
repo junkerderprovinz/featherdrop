@@ -1,5 +1,6 @@
-// Package cleanup deletes expired shares and abandoned tus uploads, so their
-// bytes leave the disk and stop counting toward STORAGE_QUOTA.
+// Package cleanup deletes expired shares, used-up shares with no download left
+// to resume, and abandoned tus uploads, so their bytes leave the disk and stop
+// counting toward STORAGE_QUOTA.
 package cleanup
 
 import (
@@ -44,7 +45,7 @@ func Run(ctx context.Context, cfg config.Config, db *sql.DB, interval time.Durat
 			log.Printf("cleanup: %v", err)
 		}
 		if res.Shares > 0 || res.Uploads > 0 {
-			log.Printf("cleanup: removed %d expired shares, %d stale uploads", res.Shares, res.Uploads)
+			log.Printf("cleanup: removed %d shares, %d stale uploads", res.Shares, res.Uploads)
 		}
 		select {
 		case <-ctx.Done():
@@ -54,31 +55,37 @@ func Run(ctx context.Context, cfg config.Config, db *sql.DB, interval time.Durat
 	}
 }
 
-// Sweep deletes the shares expired at now and the tus uploads untouched for
-// StaleUploadAge. A failure in one half does not stop the other.
+// Sweep deletes the shares expired at now, the used-up shares whose resume
+// tokens have all run out, and the tus uploads untouched for StaleUploadAge. A
+// failure in one part does not stop the others.
 func Sweep(cfg config.Config, db *sql.DB, now time.Time) (Result, error) {
-	shares, sharesErr := deleteExpiredShares(cfg.UploadsDir, db, now.UnixMilli())
+	shares, sharesErr := deleteShares(cfg.UploadsDir, db, now.UnixMilli())
 	uploads, uploadsErr := removeStaleUploads(cfg.TmpDir, now.Add(-StaleUploadAge))
 	return Result{Shares: shares, Uploads: uploads}, errors.Join(sharesErr, uploadsErr)
 }
 
-// deleteExpiredShares removes each blob before its row. A download that has
-// the blob open still streams it whole, one that comes later finds no blob and
-// answers 404, and a crash in between leaves only a row for the next pass. A
-// blob that cannot be removed keeps its row, so the quota still counts it.
-func deleteExpiredShares(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
+// deleteShares removes each blob before its row. A download that has the blob
+// open still streams it whole, one that comes later finds no blob and answers
+// 404, and a crash in between leaves only a row for the next pass. A blob that
+// cannot be removed keeps its row, so the quota still counts it.
+func deleteShares(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 	expired, err := store.ListExpired(db, nowMs)
 	if err != nil {
 		return 0, err
 	}
+	abandoned, err := store.ListAbandoned(db, nowMs)
+	if err != nil {
+		return 0, err
+	}
 	deleted, stuck := 0, 0
-	for _, rec := range expired {
+	for _, rec := range append(expired, abandoned...) {
 		err := os.Remove(filepath.Join(uploadsDir, rec.ID))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			stuck++
 			continue
 		}
-		// ok is false when a burning download deleted the row first.
+		// ok is false when a burning download, or the other list, deleted
+		// the row first.
 		_, ok, err := store.DeleteFileBySlug(db, rec.Slug)
 		if err != nil {
 			return deleted, err
@@ -87,8 +94,11 @@ func deleteExpiredShares(uploadsDir string, db *sql.DB, nowMs int64) (int, error
 			deleted++
 		}
 	}
+	if _, err := store.DeleteStaleResumes(db, nowMs); err != nil {
+		return deleted, err
+	}
 	if stuck > 0 {
-		return deleted, fmt.Errorf("kept %d expired shares whose blobs could not be removed", stuck)
+		return deleted, fmt.Errorf("kept %d shares whose blobs could not be removed", stuck)
 	}
 	return deleted, nil
 }

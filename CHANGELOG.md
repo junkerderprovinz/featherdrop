@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **A download counts once it has arrived.** A share's download counter goes up, and a one-time share is deleted, only after the whole file was sent. A dropped connection costs nothing and the recipient can try again. While a limited share's last remaining download is running, a second attempt gets `409 download in progress` instead of a second copy.
+- **A download counts as soon as it starts, and a broken one picks up where it stopped.** The response carries a resume token that stays in the open page. With it the download continues by Range without counting again, for half an hour after the last byte arrived and at most a day. A one-time share keeps its file until that download is complete or the token runs out, and a second attempt meanwhile gets `409 download in progress`. Cutting the connection just before the end no longer lets anyone read a limited share without spending a download.
 - The upload server logs errors only, so the container log no longer lists every upload with its id and size.
 - The README has a table of all settings.
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.

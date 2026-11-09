@@ -18,6 +18,7 @@ import (
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
@@ -212,6 +213,54 @@ func TestSweepKeepsExpiredRowWhenBlobCannotBeRemoved(t *testing.T) {
 	assertStoredSize(t, db, 100)
 }
 
+// startOnceOnly stores a once-only share and starts its one download at nowMs,
+// as a download that breaks off right away leaves it.
+func startOnceOnly(t *testing.T, cfg config.Config, db *sql.DB, slug string, expiresAt *int64, nowMs int64) {
+	t.Helper()
+	addShare(t, cfg, db, slug, 100, expiresAt)
+	if _, err := db.Exec(`UPDATE files SET max_downloads = 1 WHERE slug = ?`, slug); err != nil {
+		t.Fatalf("limit %s: %v", slug, err)
+	}
+	got, err := store.StartDownload(db, slug, slug+"-token", nowMs)
+	if err != nil || got != store.DownloadStarted {
+		t.Fatalf("start %s: %v, %v", slug, got, err)
+	}
+}
+
+func TestSweepKeepsAUsedUpShareWhileItsDownloadCanResume(t *testing.T) {
+	cfg, db := newTestEnv(t)
+	startOnceOnly(t, cfg, db, "pending", nil, 0)
+
+	window := share.ResumeIdle.Milliseconds()
+	if _, err := Sweep(cfg, db, time.UnixMilli(window-1)); err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	assertShareKept(t, cfg, db, "pending")
+
+	res, err := Sweep(cfg, db, time.UnixMilli(window))
+	if err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	if res.Shares != 1 {
+		t.Errorf("Shares = %d, want 1", res.Shares)
+	}
+	assertShareGone(t, cfg, db, "pending")
+	assertStoredSize(t, db, 0)
+}
+
+func TestSweepDeletesAnExpiredShareWithAPendingResume(t *testing.T) {
+	cfg, db := newTestEnv(t)
+	startOnceOnly(t, cfg, db, "expiring", i64p(1_000), 0)
+
+	if _, err := Sweep(cfg, db, time.UnixMilli(1_000)); err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	assertShareGone(t, cfg, db, "expiring")
+	if ok, _ := store.ResumeDownload(db, "expiring", "expiring-token", 1_000); ok {
+		t.Errorf("the resume outlived its expired share")
+	}
+}
+
 func TestSweepRemovesUploadsUntouchedForADay(t *testing.T) {
 	cfg, db := newTestEnv(t)
 	now := time.Now()
@@ -321,7 +370,7 @@ func TestRunSweepsAtStartAndOnEveryTickUntilCancelled(t *testing.T) {
 		synctest.Wait()
 		assertShareGone(t, cfg, db, "atstart")
 		assertShareKept(t, cfg, db, "later")
-		if got := logs.take(); got != "cleanup: removed 1 expired shares, 0 stale uploads\n" {
+		if got := logs.take(); got != "cleanup: removed 1 shares, 0 stale uploads\n" {
 			t.Errorf("startup log = %q", got)
 		}
 

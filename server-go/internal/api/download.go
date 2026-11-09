@@ -24,6 +24,19 @@ import (
 // proof that it knows the key. The client sends it from lib/e2e.
 const keyVerifierHeader = "x-fd-key-verifier"
 
+// resumeTokenHeader carries the resume token: in the response that counts a
+// download, and in each request that continues it.
+const resumeTokenHeader = "x-fd-resume-token"
+
+const (
+	// sendChunk is how much a download sends between looks at the clock. A
+	// chunk read straight from the file keeps sendfile in play.
+	sendChunk = 8 << 20
+	// keepEvery is how often a running download pushes its resume window out,
+	// so one that takes longer than share.ResumeIdle is not swept mid-stream.
+	keepEvery = time.Minute
+)
+
 type byteRange struct {
 	start, end    int64
 	unsatisfiable bool // respond 416
@@ -97,43 +110,28 @@ func isExpired(rec *store.FileRecord, nowMs int64) bool {
 
 // DownloadHandler builds GET /api/d/{slug}, which serves the raw ciphertext.
 // The real file name and type live inside the encrypted blob, so
-// Content-Disposition uses a fixed name. A download counts, and a share at its
-// limit burns, only once the whole blob is delivered. The handler holds the
-// downloads in flight, so a server builds one. A nil now means time.Now.
+// Content-Disposition uses a fixed name. A download counts, and uses up a
+// limited share, as soon as it starts. Its response carries a resume token, and
+// a request with that token continues the download by Range without counting
+// it again. A share with no downloads left keeps its blob until the last token
+// is finished or runs out (share.ResumeIdle, share.ResumeLifetime). A nil now
+// means time.Now.
 func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.HandlerFunc {
 	if now == nil {
 		now = time.Now
 	}
-	slots := newDownloadSlots(db)
 	return func(w http.ResponseWriter, r *http.Request) {
 		rec, blobPath, ok := readableShare(w, r, cfg, db, now().UnixMilli())
 		if !ok {
 			return
 		}
-
-		if r.URL.Query().Get("preview") == "1" {
-			servePreview(w, r, rec, blobPath)
-			return
-		}
-
-		state, err := slots.acquire(rec.Slug)
 		switch {
-		case err != nil || state == slotGone:
-			writeJSONError(w, http.StatusNotFound, "not found")
-			return
-		case state == slotBusy:
-			writeJSONError(w, http.StatusConflict, "download in progress")
-			return
-		}
-
-		delivered := serveWhole(w, rec, blobPath)
-		dl, err := slots.finish(rec.Slug, delivered)
-		if err != nil {
-			log.Printf("download: register: %v", err)
-			return
-		}
-		if dl.Burned {
-			_ = os.Remove(blobPath)
+		case r.URL.Query().Get("preview") == "1":
+			servePreview(w, r, rec, blobPath)
+		case r.Header.Get(resumeTokenHeader) != "":
+			serveResume(w, r, db, rec, blobPath, now)
+		default:
+			serveCounted(w, db, rec, blobPath, now)
 		}
 	}
 }
@@ -263,28 +261,143 @@ func commonPreviewHeaders(w http.ResponseWriter) {
 	h.Set("Accept-Ranges", "bytes")
 }
 
-// serveWhole streams the whole blob for a counted download and reports whether
-// it was delivered: every byte written and flushed to the connection. A client
-// that stops short of the last byte misses the final chunk and its
-// authentication tag, so it never holds the complete file uncounted.
-func serveWhole(w http.ResponseWriter, rec *store.FileRecord, blobPath string) bool {
+// download is one counted download, known by the hash of its resume token.
+type download struct {
+	db        *sql.DB
+	tokenHash string
+	now       func() time.Time
+}
+
+// serveCounted counts a new download and streams the whole blob with a fresh
+// resume token. A share with nothing left gets 404, and one whose last
+// download can still be resumed gets 409.
+func serveCounted(w http.ResponseWriter, db *sql.DB, rec *store.FileRecord, blobPath string, now func() time.Time) {
 	f, err := os.Open(blobPath)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "not found")
+		return
+	}
+	token, tokenHash := share.NewResumeToken()
+	res, err := store.StartDownload(db, rec.Slug, tokenHash, now().UnixMilli())
+	if err != nil || res != store.DownloadStarted {
+		f.Close()
+		switch {
+		case err != nil:
+			log.Printf("download: start: %v", err)
+			writeJSONError(w, http.StatusNotFound, "not found")
+		case res == store.DownloadBusy:
+			writeJSONError(w, http.StatusConflict, "download in progress")
+		default:
+			writeJSONError(w, http.StatusNotFound, "not found")
+		}
+		return
+	}
+
+	h := blobHeaders(w)
+	h.Set(resumeTokenHeader, token)
+	h.Set("Content-Length", strconv.FormatInt(rec.Size, 10))
+	w.WriteHeader(http.StatusOK)
+	d := download{db: db, tokenHash: tokenHash, now: now}
+	d.end(d.send(w, f, 0, rec.Size), blobPath)
+}
+
+// serveResume continues a counted download for the holder of its token. An
+// unknown, finished or expired token gets the same 404 as a missing share.
+func serveResume(w http.ResponseWriter, r *http.Request, db *sql.DB, rec *store.FileRecord, blobPath string, now func() time.Time) {
+	tokenHash := share.HashResumeToken(r.Header.Get(resumeTokenHeader))
+	live, err := store.ResumeDownload(db, rec.Slug, tokenHash, now().UnixMilli())
+	if err != nil {
+		log.Printf("download: resume: %v", err)
+	}
+	if !live {
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return
+	}
+
+	rng := parseByteRange(r.Header.Get("Range"), rec.Size)
+	if rng.unsatisfiable {
+		h := w.Header()
+		h.Set("Content-Range", "bytes */"+strconv.FormatInt(rec.Size, 10))
+		h.Set("Accept-Ranges", "bytes")
+		w.WriteHeader(http.StatusRequestedRangeNotSatisfiable)
+		return
+	}
+	f, err := os.Open(blobPath)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return
+	}
+
+	start, end := int64(0), rec.Size-1
+	h := blobHeaders(w)
+	h.Set("Accept-Ranges", "bytes")
+	if rng.none {
+		h.Set("Content-Length", strconv.FormatInt(rec.Size, 10))
+		w.WriteHeader(http.StatusOK)
+	} else {
+		start, end = rng.start, rng.end
+		h.Set("Content-Range", "bytes "+strconv.FormatInt(start, 10)+"-"+
+			strconv.FormatInt(end, 10)+"/"+strconv.FormatInt(rec.Size, 10))
+		h.Set("Content-Length", strconv.FormatInt(end-start+1, 10))
+		w.WriteHeader(http.StatusPartialContent)
+	}
+	d := download{db: db, tokenHash: tokenHash, now: now}
+	sent := d.send(w, f, start, end-start+1)
+	d.end(sent && end == rec.Size-1, blobPath)
+}
+
+// send streams length bytes of f from start and closes f, so a burn that
+// follows can remove the blob on Windows too. It reports whether every byte
+// was written and flushed.
+func (d download) send(w http.ResponseWriter, f *os.File, start, length int64) bool {
+	defer f.Close()
+	if _, err := f.Seek(start, io.SeekStart); err != nil {
 		return false
 	}
-	defer f.Close()
+	next := d.now().Add(keepEvery)
+	for length > 0 {
+		n, err := io.CopyN(w, f, min(length, sendChunk))
+		length -= n
+		if err != nil {
+			return false
+		}
+		if now := d.now(); !now.Before(next) {
+			d.keep(now)
+			next = now.Add(keepEvery)
+		}
+	}
+	return http.NewResponseController(w).Flush() == nil
+}
 
+// end finishes the download once it has reached the last byte, burning a
+// used-up share whose last download it was. A download that broke off gets
+// its resume window from the moment of the break.
+func (d download) end(complete bool, blobPath string) {
+	if !complete {
+		d.keep(d.now())
+		return
+	}
+	res, err := store.FinishDownload(d.db, d.tokenHash)
+	if err != nil {
+		log.Printf("download: finish: %v", err)
+		return
+	}
+	if res.Burned {
+		_ = os.Remove(blobPath)
+	}
+}
+
+func blobHeaders(w http.ResponseWriter) http.Header {
 	h := w.Header()
 	h.Set("Content-Type", "application/octet-stream")
 	h.Set("Content-Disposition", `attachment; filename="download"`)
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Cache-Control", "private, no-store")
-	h.Set("Content-Length", strconv.FormatInt(rec.Size, 10))
-	w.WriteHeader(http.StatusOK)
-	n, err := io.Copy(w, f)
-	if err != nil || n != rec.Size {
-		return false
+	return h
+}
+
+func (d download) keep(now time.Time) {
+	if err := store.KeepResumable(d.db, d.tokenHash, now.UnixMilli()); err != nil {
+		log.Printf("download: keep resumable: %v", err)
 	}
-	return http.NewResponseController(w).Flush() == nil
 }

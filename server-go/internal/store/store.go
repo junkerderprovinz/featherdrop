@@ -13,7 +13,7 @@ import (
 //
 // SQLite allows one writer at a time, and without a busy timeout a second
 // writer fails at once with "database is locked", which showed up as spurious
-// 404s from RegisterDownload under overlapping downloads. WAL keeps readers
+// 404s from the download count under overlapping downloads. WAL keeps readers
 // from blocking the writer, busy_timeout makes a contending writer wait, and a
 // single pooled connection serializes the writes.
 func Open(dbPath string) (*sql.DB, error) {
@@ -33,8 +33,9 @@ func Open(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 
-// ApplySchema creates the files table and index and adds each later column
-// when it is missing, so it is safe to run on every start and on old databases.
+// ApplySchema creates the tables and indexes and adds each later column of
+// files when it is missing, so it is safe to run on every start and on old
+// databases.
 func ApplySchema(db *sql.DB) error {
 	if _, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS files (
@@ -86,6 +87,20 @@ func ApplySchema(db *sql.DB) error {
 		if err := addColumn(m.name, m.ddl); err != nil {
 			return err
 		}
+	}
+
+	// A counted download's resume token, by hash. until is when it runs out
+	// unless used again, deadline the latest it may ever run out.
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS resumes (
+			token_hash TEXT PRIMARY KEY,
+			file_id    TEXT NOT NULL REFERENCES files (id) ON DELETE CASCADE,
+			until      INTEGER NOT NULL,
+			deadline   INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_resumes_file_id ON resumes (file_id);
+	`); err != nil {
+		return fmt.Errorf("create resumes table: %w", err)
 	}
 	return nil
 }

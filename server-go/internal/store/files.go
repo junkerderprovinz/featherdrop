@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 )
 
 // FileRecord is one row of the files table. Nullable columns are pointers and
@@ -36,13 +34,6 @@ type FileRecord struct {
 	// ManageTokenHash is base64url(SHA-256(manage token)); nil for a share
 	// without a management link.
 	ManageTokenHash *string
-}
-
-// DownloadResult is the outcome of RegisterDownload.
-type DownloadResult struct {
-	Allowed  bool   // false when the share is gone or its limit was reached
-	Burned   bool   // this was the last allowed download and the row is deleted
-	RecordID string // file to remove from disk when Burned
 }
 
 // download_count is left out and defaults to 0.
@@ -101,63 +92,9 @@ func GetFileBySlug(db *sql.DB, slug string) (*FileRecord, error) {
 	return rec, nil
 }
 
-// RegisterDownload counts one download against a share's limit. The count and,
-// on the last allowed download, the delete run in one transaction, so
-// concurrent downloads can never exceed the limit. The caller removes the blob
-// when the result is Burned.
-func RegisterDownload(db *sql.DB, slug string) (DownloadResult, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return DownloadResult{}, fmt.Errorf("register download: begin: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	res, err := tx.Exec(
-		`UPDATE files SET download_count = download_count + 1
-		 WHERE slug = ? AND (max_downloads IS NULL OR download_count < max_downloads)`,
-		slug,
-	)
-	if err != nil {
-		return DownloadResult{}, fmt.Errorf("register download: update: %w", err)
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return DownloadResult{}, fmt.Errorf("register download: rows affected: %w", err)
-	}
-	if affected == 0 {
-		if err := tx.Commit(); err != nil {
-			return DownloadResult{}, fmt.Errorf("register download: commit: %w", err)
-		}
-		return DownloadResult{Allowed: false, Burned: false, RecordID: ""}, nil
-	}
-
-	var (
-		id           string
-		count        int64
-		maxDownloads *int64
-	)
-	err = tx.QueryRow(
-		`SELECT id, download_count, max_downloads FROM files WHERE slug = ?`,
-		slug,
-	).Scan(&id, &count, &maxDownloads)
-	if err != nil {
-		return DownloadResult{}, fmt.Errorf("register download: reselect: %w", err)
-	}
-
-	burned := share.IsExhausted(count, maxDownloads)
-	if burned {
-		if _, err := tx.Exec(`DELETE FROM files WHERE slug = ?`, slug); err != nil {
-			return DownloadResult{}, fmt.Errorf("register download: delete: %w", err)
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return DownloadResult{}, fmt.Errorf("register download: commit: %w", err)
-	}
-	return DownloadResult{Allowed: true, Burned: burned, RecordID: id}, nil
-}
-
-// DeleteFileBySlug deletes a share row and returns its file id so the caller
-// can remove the blob. ok is false when there was no such row.
+// DeleteFileBySlug deletes a share row, and with it its resume tokens, and
+// returns its file id so the caller can remove the blob. ok is false when there
+// was no such row.
 func DeleteFileBySlug(db *sql.DB, slug string) (id string, ok bool, err error) {
 	tx, err := db.Begin()
 	if err != nil {

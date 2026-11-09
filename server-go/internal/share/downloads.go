@@ -1,7 +1,8 @@
 package share
 
 // The download limit helpers follow lib/downloads.ts. A nil max is an unlimited
-// share; store.RegisterDownload does the atomic count and burn.
+// share; store.StartDownload and store.FinishDownload do the atomic count and
+// burn.
 
 const maxDownloadsCap = int64(10_000)
 

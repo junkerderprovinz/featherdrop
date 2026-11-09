@@ -15,6 +15,15 @@ var manageTokenRe = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
 // NewManageToken returns 32 random bytes as unpadded base64url. It panics only
 // if the system CSPRNG fails.
 func NewManageToken() string {
+	return randomToken()
+}
+
+// HashManageToken returns base64url(SHA-256(token)), the value that is stored.
+func HashManageToken(token string) string {
+	return hashToken(token)
+}
+
+func randomToken() string {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
 		panic("share: crypto/rand failed: " + err.Error())
@@ -22,8 +31,9 @@ func NewManageToken() string {
 	return base64.RawURLEncoding.EncodeToString(buf)
 }
 
-// HashManageToken returns base64url(SHA-256(token)), the value that is stored.
-func HashManageToken(token string) string {
+// hashToken is enough for a token of 32 random bytes, which no one can guess
+// from its hash, so a slow password hash would buy nothing.
+func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return base64.RawURLEncoding.EncodeToString(sum[:])
 }

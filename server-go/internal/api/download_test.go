@@ -16,30 +16,37 @@ import (
 )
 
 // brokenWriter accepts limit bytes and then fails every write, like a client
-// that drops the connection mid-stream.
+// that drops the connection mid-stream. beforeBreak runs once, just before the
+// first failing write.
 type brokenWriter struct {
-	header http.Header
-	limit  int
-	got    bytes.Buffer
+	header      http.Header
+	code        int
+	limit       int
+	got         bytes.Buffer
+	beforeBreak func()
 }
 
 func newBrokenWriter(limit int) *brokenWriter {
 	return &brokenWriter{header: http.Header{}, limit: limit}
 }
 
-func (b *brokenWriter) Header() http.Header { return b.header }
-func (b *brokenWriter) WriteHeader(int)     {}
+func (b *brokenWriter) Header() http.Header  { return b.header }
+func (b *brokenWriter) WriteHeader(code int) { b.code = code }
 
 func (b *brokenWriter) Write(p []byte) (int, error) {
 	room := b.limit - b.got.Len()
+	if len(p) <= room {
+		return b.got.Write(p)
+	}
+	if b.beforeBreak != nil {
+		b.beforeBreak()
+		b.beforeBreak = nil
+	}
 	if room <= 0 {
 		return 0, errors.New("connection reset")
 	}
-	if len(p) > room {
-		b.got.Write(p[:room])
-		return room, errors.New("connection reset")
-	}
-	return b.got.Write(p)
+	b.got.Write(p[:room])
+	return room, errors.New("connection reset")
 }
 
 // unflushableWriter takes every byte but fails the final flush, as a real
@@ -84,69 +91,243 @@ func getShare(t *testing.T, h http.Handler, w http.ResponseWriter, slug string) 
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil))
 }
 
-func TestDownload_BrokenStreamCountsNothing(t *testing.T) {
+// resume sends a download request that carries token and, unless empty, a
+// Range header.
+func (e *testEnv) resume(t *testing.T, now func() time.Time, slug, token, rng string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
+	if token != "" {
+		req.Header.Set(resumeTokenHeader, token)
+	}
+	if rng != "" {
+		req.Header.Set("Range", rng)
+	}
+	rec := httptest.NewRecorder()
+	e.router(now).ServeHTTP(rec, req)
+	return rec
+}
+
+// abort starts a download of slug that breaks after n bytes and returns its
+// resume token.
+func (e *testEnv) abort(t *testing.T, now func() time.Time, slug string, n int) string {
+	t.Helper()
+	w := newBrokenWriter(n)
+	getShare(t, e.router(now), w, slug)
+	if w.code != http.StatusOK {
+		t.Fatalf("aborted download: status %d, want 200", w.code)
+	}
+	token := w.header.Get(resumeTokenHeader)
+	if !share.IsValidManageToken(token) {
+		t.Fatalf("aborted download: resume token %q", token)
+	}
+	return token
+}
+
+func blobExists(t *testing.T, e *testEnv, id string) bool {
+	t.Helper()
+	_, err := os.Stat(filepath.Join(e.cfg.UploadsDir, id))
+	return err == nil
+}
+
+func TestDownload_AbortedDownloadCounts(t *testing.T) {
 	tests := []struct {
 		name  string
 		limit func(*store.FileRecord)
+		w     func() http.ResponseWriter
 	}{
-		{"unlimited share", nil},
-		{"once-only share", limitedTo(1)},
+		{"unlimited share", nil, func() http.ResponseWriter { return newBrokenWriter(500) }},
+		{"once-only share", limitedTo(1), func() http.ResponseWriter { return newBrokenWriter(500) }},
+		{"one byte short", limitedTo(1), func() http.ResponseWriter { return newBrokenWriter(999) }},
+		{"failed final flush", limitedTo(1), func() http.ResponseWriter { return unflushableWriter{httptest.NewRecorder()} }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := newTestEnv(t)
-			content := bytes.Repeat([]byte("ciphertext"), 100)
-			slug := e.seedV2(t, content, tt.limit)
+			slug := e.seedV2(t, bytes.Repeat([]byte("ciphertext"), 100), tt.limit)
 
-			getShare(t, e.router(nil), newBrokenWriter(len(content)/2), slug)
+			getShare(t, e.router(nil), tt.w(), slug)
 
 			row, err := store.GetFileBySlug(e.db, slug)
 			if err != nil || row == nil {
-				t.Fatalf("share must survive a broken download (row %v, err %v)", row, err)
+				t.Fatalf("the share must wait for a resume (row %v, err %v)", row, err)
 			}
-			if row.DownloadCount != 0 {
-				t.Fatalf("download_count = %d, want 0", row.DownloadCount)
+			if row.DownloadCount != 1 {
+				t.Fatalf("download_count = %d, want 1", row.DownloadCount)
 			}
-			if _, err := os.Stat(filepath.Join(e.cfg.UploadsDir, row.ID)); err != nil {
-				t.Fatalf("blob must survive a broken download: %v", err)
+			if !blobExists(t, e, row.ID) {
+				t.Fatalf("the blob must wait for a resume")
 			}
 		})
 	}
 }
 
-func TestDownload_FailedFinalFlushCountsNothing(t *testing.T) {
+func TestDownload_ResumeWithTokenCompletesWithoutASecondCount(t *testing.T) {
 	e := newTestEnv(t)
-	slug := e.seedV2(t, []byte("all bytes written, never flushed"), limitedTo(1))
-
-	getShare(t, e.router(nil), unflushableWriter{httptest.NewRecorder()}, slug)
-
+	content := bytes.Repeat([]byte("0123456789abcdef"), 256)
+	slug := e.seedV2(t, content, limitedTo(1))
 	row, _ := store.GetFileBySlug(e.db, slug)
-	if row == nil || row.DownloadCount != 0 {
-		t.Fatalf("a download whose flush failed must not count or burn, row = %+v", row)
+
+	token := e.abort(t, nil, slug, 100)
+
+	// Each request builds its handlers afresh, as after a restart.
+	rec := e.resume(t, nil, slug, token, "bytes=100-")
+	if rec.Code != http.StatusPartialContent {
+		t.Fatalf("resume: status %d, want 206", rec.Code)
+	}
+	if cr := rec.Header().Get("Content-Range"); cr != "bytes 100-4095/4096" {
+		t.Fatalf("Content-Range = %q", cr)
+	}
+	if !bytes.Equal(rec.Body.Bytes(), content[100:]) {
+		t.Fatalf("resume body: %d bytes, want the %d after the break", rec.Body.Len(), len(content)-100)
+	}
+	if r, _ := store.GetFileBySlug(e.db, slug); r != nil {
+		t.Fatalf("the completed download must burn the share, row = %+v", r)
+	}
+	if blobExists(t, e, row.ID) {
+		t.Fatalf("the burned blob must be removed")
+	}
+	if again := e.resume(t, nil, slug, token, "bytes=0-"); again.Code != http.StatusNotFound {
+		t.Fatalf("token after completion: status %d, want 404", again.Code)
 	}
 }
 
-func TestDownload_OnceOnlyShareSurvivesBrokenStreamForRetry(t *testing.T) {
+func TestDownload_ResumeOfAnUnlimitedShareIsNotCountedAgain(t *testing.T) {
 	e := newTestEnv(t)
-	content := bytes.Repeat([]byte("x"), 4096)
-	slug := e.seedV2(t, content, limitedTo(1))
+	content := bytes.Repeat([]byte("u"), 2048)
+	slug := e.seedV2(t, content, nil)
+
+	token := e.abort(t, nil, slug, 10)
+	rec := e.resume(t, nil, slug, token, "")
+	if rec.Code != http.StatusOK || !bytes.Equal(rec.Body.Bytes(), content) {
+		t.Fatalf("resume without a range: status %d, %d bytes, want 200 with the whole blob", rec.Code, rec.Body.Len())
+	}
+	if row, _ := store.GetFileBySlug(e.db, slug); row == nil || row.DownloadCount != 1 {
+		t.Fatalf("row = %+v, want download_count 1", row)
+	}
+	if again := e.resume(t, nil, slug, token, ""); again.Code != http.StatusNotFound {
+		t.Fatalf("token after completion: status %d, want 404", again.Code)
+	}
+}
+
+func TestDownload_ResumeWithoutTokenIsRefused(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.seedV2(t, bytes.Repeat([]byte("x"), 1000), limitedTo(1))
+	e.abort(t, nil, slug, 100)
+
+	rec := e.resume(t, nil, slug, "", "bytes=100-")
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("range without a token: status %d, want 409", rec.Code)
+	}
+	if row, _ := store.GetFileBySlug(e.db, slug); row == nil || row.DownloadCount != 1 {
+		t.Fatalf("row = %+v, want download_count 1", row)
+	}
+}
+
+func TestDownload_ResumeWithWrongTokenIsRefused(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, bytes.Repeat([]byte("x"), 1000), limitedTo(2))
+	other := e.seedV2(t, bytes.Repeat([]byte("y"), 1000), nil)
+	token := e.abort(t, c.now, slug, 100)
+	otherToken := e.abort(t, c.now, other, 100)
+
+	tests := []struct {
+		name  string
+		token string
+		later time.Duration
+	}{
+		{"made-up token", share.NewManageToken(), 0},
+		{"malformed token", "x", 0},
+		{"token of another share", otherToken, 0},
+		{"token idle for the whole window", token, share.ResumeIdle},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.advance(tt.later)
+			if rec := e.resume(t, c.now, slug, tt.token, "bytes=100-"); rec.Code != http.StatusNotFound {
+				t.Fatalf("status %d, want 404", rec.Code)
+			}
+			if row, _ := store.GetFileBySlug(e.db, slug); row == nil || row.DownloadCount != 1 {
+				t.Fatalf("row = %+v, want download_count 1", row)
+			}
+		})
+	}
+}
+
+func TestDownload_ResumeWindowCountsFromTheBreak(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, bytes.Repeat([]byte("s"), 1000), limitedTo(1))
+
+	w := newBrokenWriter(100)
+	w.beforeBreak = func() { c.advance(20 * time.Minute) }
+	getShare(t, e.router(c.now), w, slug)
+	token := w.header.Get(resumeTokenHeader)
+
+	c.advance(25 * time.Minute)
+	if rec := e.resume(t, c.now, slug, token, "bytes=100-"); rec.Code != http.StatusPartialContent {
+		t.Fatalf("resume 25 min after a break 20 min into the stream: status %d, want 206", rec.Code)
+	}
+}
+
+func TestDownload_ResumeOutsideTheBlobIs416(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.seedV2(t, bytes.Repeat([]byte("x"), 1000), limitedTo(1))
+	token := e.abort(t, nil, slug, 100)
+
+	if rec := e.resume(t, nil, slug, token, "bytes=1000-"); rec.Code != http.StatusRequestedRangeNotSatisfiable {
+		t.Fatalf("status %d, want 416", rec.Code)
+	}
+	if rec := e.resume(t, nil, slug, token, "bytes=100-"); rec.Code != http.StatusPartialContent {
+		t.Fatalf("the token must survive a 416, status %d", rec.Code)
+	}
+}
+
+func TestDownload_ResumeStillNeedsTheKeyVerifier(t *testing.T) {
+	e := newTestEnv(t)
+	v := goodVerifier
+	slug := e.seedV2(t, bytes.Repeat([]byte("x"), 1000), func(r *store.FileRecord) {
+		r.KeyVerifier = &v
+		r.MaxDownloads = new(int64(1))
+	})
+	w := newBrokenWriter(100)
+	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
+	req.Header.Set(keyVerifierHeader, v)
+	e.router(nil).ServeHTTP(w, req)
+
+	if rec := e.resume(t, nil, slug, w.header.Get(resumeTokenHeader), "bytes=100-"); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("resume without the verifier: status %d, want 401", rec.Code)
+	}
+}
+
+func TestDownload_ParallelAbortedDownloadsNeverExceedTheLimit(t *testing.T) {
+	const limit = 3
+	e := newTestEnv(t)
+	slug := e.seedV2(t, bytes.Repeat([]byte("p"), 8192), limitedTo(limit))
 	h := e.router(nil)
 
-	getShare(t, h, newBrokenWriter(100), slug)
-
-	rec := httptest.NewRecorder()
-	getShare(t, h, rec, slug)
-	if rec.Code != http.StatusOK || !bytes.Equal(rec.Body.Bytes(), content) {
-		t.Fatalf("retry: status %d, %d bytes, want 200 with the whole blob", rec.Code, rec.Body.Len())
+	const clients = 16
+	ws := make([]*brokenWriter, clients)
+	var wg sync.WaitGroup
+	for i := range ws {
+		ws[i] = newBrokenWriter(64)
+		wg.Go(func() { getShare(t, h, ws[i], slug) })
 	}
-	if row, _ := store.GetFileBySlug(e.db, slug); row != nil {
-		t.Fatalf("the delivered retry must burn the share")
-	}
+	wg.Wait()
 
-	again := httptest.NewRecorder()
-	getShare(t, h, again, slug)
-	if again.Code != http.StatusNotFound {
-		t.Fatalf("after the burn: status %d, want 404", again.Code)
+	started := 0
+	for _, w := range ws {
+		switch w.code {
+		case http.StatusOK:
+			started++
+		case http.StatusConflict:
+		default:
+			t.Fatalf("unexpected status %d", w.code)
+		}
+	}
+	row, _ := store.GetFileBySlug(e.db, slug)
+	if started != limit || row == nil || row.DownloadCount != limit {
+		t.Fatalf("%d started, row %+v; want exactly %d counted and the row kept for resumes", started, row, limit)
 	}
 }
 
