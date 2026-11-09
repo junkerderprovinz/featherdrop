@@ -20,8 +20,9 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
-// keyVerifierHeader carries base64url(SHA-256(content key)), the downloader's
-// proof that it knows the key. The client sends it from lib/e2e.
+// keyVerifierHeader carries the downloader's proof that it knows the key:
+// base64url(SHA-256(content key)) in formats 2 and 3, a subkey of the root key
+// in format 4. The client sends it from lib/e2e.
 const keyVerifierHeader = "x-fd-key-verifier"
 
 type byteRange struct {
