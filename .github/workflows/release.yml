@@ -4,7 +4,7 @@ name: Release
 # .github/release-notes/<tag>.md or generated notes when there is none. The
 # release carries castleparcel-client.json, the hashes of the web client built
 # from the tag, which scripts/verify-client.mjs checks a running instance
-# against.
+# against, and its text ends with the manifest's root hash.
 
 on:
   push:
@@ -56,12 +56,15 @@ jobs:
       # reproducible.yml proves this build gives the same bytes on any machine,
       # and go.yml that the image embeds them.
       - name: Build the client and hash it
+        id: client
         run: |
           set -euo pipefail
           npm ci --no-audit --no-fund
           npm run build:spa
           node scripts/client-manifest.mjs --out castleparcel-client.json
-          echo "Client root \`$(jq -r .root castleparcel-client.json)\`" >> "$GITHUB_STEP_SUMMARY"
+          root="$(jq -r .root castleparcel-client.json)"
+          echo "root=${root}" >> "$GITHUB_OUTPUT"
+          echo "Client root \`${root}\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Locate release notes
         id: notes
@@ -94,3 +97,19 @@ jobs:
           files: castleparcel-client.json
           fail_on_unmatched_files: true
           make_latest: true
+
+      # Below the notes, so a reader sees the root without fetching the
+      # manifest. A rerun finds the line already there.
+      - name: Add the client root to the release text
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          ROOT: ${{ steps.client.outputs.root }}
+        run: |
+          set -euo pipefail
+          body="${RUNNER_TEMP}/release-body.md"
+          gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" --json body --jq .body > "${body}"
+          if ! grep -qF "${ROOT}" "${body}"; then
+            printf '\nClient root hash: `%s` (check an instance with scripts/verify-client.mjs, see docs/verifying-the-client.md)\n' "${ROOT}" >> "${body}"
+            gh release edit "${TAG}" --repo "${GITHUB_REPOSITORY}" --notes-file "${body}"
+          fi
