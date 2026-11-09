@@ -25,6 +25,17 @@
       "allowedVersions": "<25"
     },
     {
+      "description": "The node image and .nvmrc move together, since the release builds the client manifest with .nvmrc and the image has to produce the same bytes",
+      "matchPackageNames": [
+        "node"
+      ],
+      "matchManagers": [
+        "dockerfile",
+        "nvm"
+      ],
+      "groupName": "Node"
+    },
+    {
       "description": "Group Mantine packages, they must move together",
       "matchPackageNames": [
         "@mantine/core",
