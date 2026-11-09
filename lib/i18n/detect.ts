@@ -1,5 +1,8 @@
 export const COOKIE = "fd_lang";
 
+// Browsers name Norwegian by its written standard, the client by the language.
+const ALIASES: Record<string, string> = { nb: "no", nn: "no" };
+
 /**
  * Returns the first supported language among the candidates, most preferred
  * first. A region variant falls back to its base (de-AT to de), and fallback
@@ -17,7 +20,8 @@ export function resolveLanguage(
     if (!tag) continue;
     if (supportedSet.has(tag)) return tag;
     const base = tag.split("-")[0];
-    if (base && supportedSet.has(base)) return base;
+    const lang = ALIASES[base] ?? base;
+    if (lang && supportedSet.has(lang)) return lang;
   }
 
   return fallback;

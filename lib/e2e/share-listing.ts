@@ -6,6 +6,7 @@
 
 import { isV2Link, type ShareKeys } from "./v2/token";
 import type { Client, LegacyKey } from "./v2/protocol";
+import { httpError } from "./http-error";
 
 export interface ListedFile {
   name: string;
@@ -51,7 +52,7 @@ export async function fetchShareHeader(
   const res = await fetchImpl(`/api/d/${encodeURIComponent(slug)}/header`, {
     headers: { "x-fd-key-verifier": keyVerifier },
   });
-  if (!res.ok) throw new Error(`header ${res.status}`);
+  if (!res.ok) throw httpError("header", res);
   return new Uint8Array(await res.arrayBuffer());
 }
 

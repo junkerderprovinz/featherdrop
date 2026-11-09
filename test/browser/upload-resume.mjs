@@ -73,6 +73,11 @@ const server = createServer((req, res) => {
       res.writeHead(404).end();
       return;
     }
+    if (req.method === "DELETE") {
+      uploads.delete(id);
+      res.writeHead(204).end();
+      return;
+    }
     if (req.method === "HEAD") {
       res.writeHead(200, { "Upload-Offset": String(up.data.length), "Upload-Length": String(up.length) }).end();
       return;
@@ -157,6 +162,27 @@ check(
     JSON.stringify(patches) === JSON.stringify([["u2", 0, 1000], ["u2", 1000, 1000], ["u2", 2000, 500]]),
   { resumed, patches },
 );
+
+// Cancelling stops the upload and tells the server to drop what it has.
+hang = true;
+const cancelled = await page.evaluate(async () => {
+  const data = new Uint8Array(2500);
+  const stop = new AbortController();
+  const urls = [];
+  const result = globalThis.__T
+    .tusUpload(
+      { size: data.length, slice: async (s, e) => data.slice(s, e) },
+      { chunkSize: 1000, signal: stop.signal, onUploadUrl: (u) => urls.push(u), onProgress: (sent) => sent >= 1000 && stop.abort() },
+    )
+    .then(() => "finished", (e) => e.name);
+  return { outcome: await result, id: urls[0]?.split("/").pop() };
+});
+check(
+  "tusUpload stops when its signal aborts and deletes the upload on the server",
+  cancelled.outcome === "AbortError" && cancelled.id && !uploads.has(cancelled.id),
+  { cancelled, left: [...uploads.keys()] },
+);
+hang = false;
 
 // A format 4 upload loses its tab after the first request. After the reload
 // the page lists it from IndexedDB, the same file is picked again, and the

@@ -9,6 +9,7 @@ import { cipherRange, type Header } from "./v2/layout";
 import { decryptInWorker, decryptRangeInWorker, decryptFileInWorker } from "./v2/remote";
 import type { Client } from "./v2/protocol";
 import { fetchShareHeader } from "./share-listing";
+import { httpError } from "./http-error";
 
 import { zipStream, zipLength, type ZipEntry } from "./zip";
 
@@ -41,7 +42,7 @@ export function fetchShareBlob(
       { fetchImpl },
     );
     if (res.status === 409) throw new DownloadInProgressError();
-    if (!res.ok || !res.body) throw new Error(`download ${res.status}`);
+    if (!res.ok || !res.body) throw httpError("download", res);
     return res.body;
   };
 }
@@ -145,7 +146,7 @@ export async function downloadFileV2(
   const res = await fetchImpl(`/api/d/${encodeURIComponent(slug)}?preview=1`, {
     headers: { "x-fd-key-verifier": keys.verifier, Range: `bytes=${plan.from}-${plan.to}` },
   });
-  if (res.status !== 206 || !res.body) throw new Error(`range read ${res.status}`);
+  if (res.status !== 206 || !res.body) throw httpError("range read", res);
   const plain = decryptRangeInWorker(crypto, keys, head, streamToAsyncIterable(res.body), start, end);
   await save(asyncIterableToStream(plain), file.name, file.size);
 }

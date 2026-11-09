@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { relative, sep } from "node:path";
 import { build, type Plugin } from "esbuild";
+import { vueSfc } from "./vue-sfc";
 
 // The crypto worker carries the one copy of libsodium the client ships. The
 // page bundles the worker as a string, so an import of libsodium anywhere in
@@ -19,19 +20,19 @@ test("the page reaches libsodium only through the crypto worker", async () => {
       // No other package imports libsodium, so the page's own modules are all
       // that needs walking.
       b.onResolve({ filter: /^[^.]/ }, (args) => {
-        const own = args.kind === "entry-point" || args.path.startsWith("@/") || args.path === "next/link";
+        const own = args.kind === "entry-point" || args.path.startsWith("@/");
         return own ? undefined : { path: args.path, external: true };
       });
     },
   };
   await build({
-    entryPoints: ["src/main.tsx"],
+    entryPoints: ["src/main.ts"],
     bundle: true,
     write: false,
     format: "esm",
     platform: "browser",
     logLevel: "silent",
-    plugins: [probe],
+    plugins: [probe, vueSfc],
     loader: { ".css": "empty", ".png": "empty", ".svg": "empty", ".woff": "empty", ".woff2": "empty" },
   });
 

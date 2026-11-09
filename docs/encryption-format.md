@@ -12,13 +12,12 @@ Known-answer vectors are in `test/fixtures/encryption-v2-vectors.json`.
 
 | Server format | Container | Kind | Content encryption | Status |
 | --- | --- | --- | --- | --- |
-| 2 | varint header, secretbox metadata | single file | cf=1 secretstream or cf=2 seekable AEAD | read and written |
-| 3 | varint header, secretbox manifest | bundle | cf=1 or cf=2 | read and written |
-| 4 | v2 container (this document) | single, bundle or note, encrypted | per-chunk XChaCha20-Poly1305 | read; written when asked for |
+| 2 | varint header, secretbox metadata | single file | cf=1 secretstream or cf=2 seekable AEAD | read |
+| 3 | varint header, secretbox manifest | bundle | cf=1 or cf=2 | read |
+| 4 | v2 container (this document) | single, bundle or note, encrypted | per-chunk XChaCha20-Poly1305 | read and written |
 
-The upload page keeps writing formats 2 and 3 until the new UI switches over.
-`uploadEncrypted(files, { format: 4, ... })` and `downloadDecryptedV2` in
-`lib/e2e/` already speak format 4.
+The upload page writes format 4. Shares of formats 2 and 3 from earlier
+releases still open, list and download.
 
 ## Notation
 

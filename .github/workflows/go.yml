@@ -10,9 +10,7 @@ on:
     paths:
       - "server-go/**"
       - "src/**"
-      - "components/**"
       - "lib/**"
-      - "app/**"
       - "public/**"
       - "index.html"
       - "vite.config.ts"
