@@ -12,7 +12,6 @@ on:
     paths:
       - "src/**"
       - "lib/**"
-      - "app/**"
       - "public/**"
       - "index.html"
       - "vite.config.ts"
