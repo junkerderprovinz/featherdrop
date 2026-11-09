@@ -8,6 +8,14 @@ import "crypto/subtle"
 // app/page.tsx.
 const UploadTokenHeader = "x-fd-upload-token"
 
+// RequestHeader names the file request a tus upload is for, and
+// RequestKeyHeader carries the request's public key from the request link as
+// the uploader's proof. Together they stand in for the upload password.
+const (
+	RequestHeader    = "x-fd-request"
+	RequestKeyHeader = "x-fd-request-key"
+)
+
 // uploadTokenMatches compares provided and secret in constant time.
 // subtle.ConstantTimeCompare returns at once on a length mismatch, which would
 // leak the secret's length, so a mismatch still runs a dummy compare.

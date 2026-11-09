@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/uploadcap"
 )
@@ -45,7 +47,7 @@ func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, er
 	// A cross-origin browser may only attach the upload token header if the
 	// preflight allows it.
 	cors := tushandler.DefaultCorsConfig
-	cors.AllowHeaders += ", " + UploadTokenHeader
+	cors.AllowHeaders += ", " + UploadTokenHeader + ", " + RequestHeader + ", " + RequestKeyHeader
 
 	h, err := tushandler.NewHandler(tushandler.Config{
 		BasePath:                BasePath,
@@ -65,7 +67,7 @@ func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, er
 	}
 	// The auth gate goes outermost so an unauthorized request learns nothing
 	// about the quota.
-	return uploadGate(cfg, quotaGate(cfg, db, next)), nil
+	return uploadGate(cfg, db, quotaGate(cfg, db, next)), nil
 }
 
 // stripBasePath removes the "/files" or "/files/" prefix before tusd sees the
@@ -86,10 +88,20 @@ func stripBasePath(next http.Handler) http.Handler {
 
 // uploadGate checks the optional upload password before any tus method reaches
 // tusd, so an unauthorized request never creates an upload or writes a byte.
-// The OPTIONS preflight passes, because browsers send no custom headers on it.
-func uploadGate(cfg config.Config, next http.Handler) http.Handler {
+// An upload for a file request proves the request link instead, see
+// requestGate. The OPTIONS preflight passes, because browsers send no custom
+// headers on it.
+func uploadGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.Header.Get(RequestHeader) != "" {
+			if status, msg := requestGate(db, r, time.Now().UnixMilli()); status != 0 {
+				writeJSONError(w, status, msg)
+				return
+			}
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -102,6 +114,35 @@ func uploadGate(cfg config.Config, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// requestGate admits a tus request for the file request it names when it
+// carries that request's public key and the request has not expired. A create
+// must also find the request open and declare a length within its size cap;
+// the attach checks both again on the real bytes. It returns 0 to admit, else
+// the status and message to refuse with, a 404 alike for every wrong proof.
+func requestGate(db *sql.DB, r *http.Request, nowMs int64) (int, string) {
+	if db == nil {
+		return http.StatusNotFound, "not found"
+	}
+	rec, err := store.GetRequest(db, r.Header.Get(RequestHeader))
+	if err != nil || rec == nil || rec.Expired(nowMs) ||
+		!share.RequestKeyMatches(r.Header.Get(RequestKeyHeader), rec.PublicKey) {
+		return http.StatusNotFound, "not found"
+	}
+	if r.Method != http.MethodPost {
+		return 0, ""
+	}
+	if !share.RequestTakesUploads(rec.UploadCount, rec.MaxUploads) {
+		return http.StatusGone, "request closed"
+	}
+	if rec.MaxSize != nil {
+		length, err := strconv.ParseInt(r.Header.Get("Upload-Length"), 10, 64)
+		if err != nil || length > *rec.MaxSize {
+			return http.StatusRequestEntityTooLarge, "upload larger than the request allows"
+		}
+	}
+	return 0, ""
 }
 
 // quotaGate refuses a tus create whose declared Upload-Length would push the

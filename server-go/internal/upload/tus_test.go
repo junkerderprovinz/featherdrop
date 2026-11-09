@@ -350,3 +350,114 @@ func TestTus_UploadLimit_CountsTheClientBehindAProxy(t *testing.T) {
 		}
 	}
 }
+
+const requestKey = "cHVibGljcHVibGljcHVibGljcHVibGljcHVibGljcHU"
+
+// requestEnv opens a store holding the request "req", limited by mutate.
+func requestEnv(t *testing.T, cfg config.Config, mutate func(*store.RequestRecord)) *sql.DB {
+	t.Helper()
+	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	rec := store.RequestRecord{
+		Slug:             "req",
+		PublicKey:        requestKey,
+		CollectTokenHash: "aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g",
+		CreatedAt:        1,
+	}
+	if mutate != nil {
+		mutate(&rec)
+	}
+	if err := store.CreateRequest(db, rec); err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	return db
+}
+
+func forRequest(key string) map[string]string {
+	return map[string]string{RequestHeader: "req", RequestKeyHeader: key}
+}
+
+func TestTus_Protected_UploadToARequestNeedsNoPassword(t *testing.T) {
+	cfg := protectedCfg(t, "s3cret")
+	srv := newTestRouter(t, cfg, requestEnv(t, cfg, nil))
+
+	rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, forRequest(requestKey))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create for a request = %d, want 201; body=%q", rec.Code, rec.Body.String())
+	}
+	req := httptest.NewRequest(http.MethodPatch, rec.Header().Get("Location"), strings.NewReader("hello world"))
+	req.Header.Set("Tus-Resumable", "1.0.0")
+	req.Header.Set("Upload-Offset", "0")
+	req.Header.Set("Content-Type", "application/offset+octet-stream")
+	for k, v := range forRequest(requestKey) {
+		req.Header.Set(k, v)
+	}
+	patch := httptest.NewRecorder()
+	srv.ServeHTTP(patch, req)
+	if patch.Code != http.StatusNoContent {
+		t.Fatalf("patch for a request = %d, want 204; body=%q", patch.Code, patch.Body.String())
+	}
+}
+
+func TestTus_RequestUploadWithAWrongKeyIsRefused(t *testing.T) {
+	cfg := protectedCfg(t, "s3cret")
+	srv := newTestRouter(t, cfg, requestEnv(t, cfg, nil))
+
+	for name, h := range map[string]map[string]string{
+		"wrong key":       forRequest("d3JvbmdrZXl3cm9uZ2tleXdyb25na2V5d3JvbmdrZXk"),
+		"no key":          {RequestHeader: "req"},
+		"unknown request": {RequestHeader: "nosuch", RequestKeyHeader: requestKey},
+	} {
+		if rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, h); rec.Code != http.StatusNotFound {
+			t.Errorf("%s: create = %d, want 404", name, rec.Code)
+		}
+	}
+	entries, _ := os.ReadDir(cfg.TmpDir)
+	if len(entries) != 0 {
+		t.Errorf("%d files written for refused creates", len(entries))
+	}
+}
+
+func TestTus_RequestUploadKeepsToTheRequestsLimits(t *testing.T) {
+	cfg := openCfg(t)
+	max := int64(100)
+	srv := newTestRouter(t, cfg, requestEnv(t, cfg, func(r *store.RequestRecord) { r.MaxSize = &max }))
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 101, forRequest(requestKey)); rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("over the size cap = %d, want 413", rec.Code)
+	}
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 100, forRequest(requestKey)); rec.Code != http.StatusCreated {
+		t.Errorf("at the size cap = %d, want 201", rec.Code)
+	}
+
+	full := openCfg(t)
+	one := int64(1)
+	db := requestEnv(t, full, func(r *store.RequestRecord) { r.MaxUploads = &one })
+	if _, err := store.AddRequestUpload(db, "req", store.RequestUpload{ID: "a", FileID: "f", Size: 1, SealedKey: []byte{1}}); err != nil {
+		t.Fatal(err)
+	}
+	fullSrv := newTestRouter(t, full, db)
+	if rec := tusCreateFrom(fullSrv, "203.0.113.7:1000", 11, forRequest(requestKey)); rec.Code != http.StatusGone {
+		t.Errorf("full request = %d, want 410", rec.Code)
+	}
+
+	gone := openCfg(t)
+	past := int64(1)
+	goneSrv := newTestRouter(t, gone, requestEnv(t, gone, func(r *store.RequestRecord) { r.ExpiresAt = &past }))
+	if rec := tusCreateFrom(goneSrv, "203.0.113.7:1000", 11, forRequest(requestKey)); rec.Code != http.StatusNotFound {
+		t.Errorf("expired request = %d, want 404", rec.Code)
+	}
+}
+
+func TestTus_RequestUploadCountsTowardsTheClientLimit(t *testing.T) {
+	cfg := limitCfg(t, 20)
+	srv := newTestRouter(t, cfg, requestEnv(t, cfg, nil))
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, forRequest(requestKey)); rec.Code != http.StatusCreated {
+		t.Fatalf("first create = %d, want 201", rec.Code)
+	}
+	if rec := tusCreateFrom(srv, "203.0.113.7:1001", 11, forRequest(requestKey)); rec.Code != http.StatusTooManyRequests {
+		t.Errorf("create past the client limit = %d, want 429", rec.Code)
+	}
+}
