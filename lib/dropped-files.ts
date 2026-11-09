@@ -1,5 +1,5 @@
-// Reads files straight from the drop or picker event instead of letting
-// react-dropzone walk the DataTransferItemList with webkitGetAsEntry(). That
+// Reads files straight from the drop or picker event instead of walking the
+// DataTransferItemList with webkitGetAsEntry(). That
 // traversal crashes Chromium and Edge renderers on some setups with
 // RESULT_CODE_KILLED_BAD_MESSAGE (castleparcel#4, uppy#4133). The flat FileList
 // is returned and folders are never expanded.

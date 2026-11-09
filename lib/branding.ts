@@ -30,35 +30,3 @@ export function resolveBranding(env: {
     accentColor: normalizeHex(env.ACCENT_COLOR) ?? DEFAULT_BRANDING.accentColor,
   };
 }
-
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-function toHex(r: number, g: number, b: number): string {
-  const clamp = (x: number) => Math.max(0, Math.min(255, Math.round(x)));
-  return "#" + [r, g, b].map((x) => clamp(x).toString(16).padStart(2, "0")).join("");
-}
-
-// A 10-step Mantine colour tuple from a base hex: steps 0 to 5 blend toward
-// white, lightest first, step 6 is the base colour, steps 7 to 9 blend toward
-// black.
-export function accentTuple(hex: string): string[] {
-  const [r, g, b] = hexToRgb(hex);
-  const lighten = (t: number) =>
-    toHex(r + (255 - r) * t, g + (255 - g) * t, b + (255 - b) * t);
-  const darken = (t: number) => toHex(r * (1 - t), g * (1 - t), b * (1 - t));
-  return [
-    lighten(0.92),
-    lighten(0.82),
-    lighten(0.64),
-    lighten(0.44),
-    lighten(0.26),
-    lighten(0.1),
-    hex.toLowerCase(),
-    darken(0.16),
-    darken(0.32),
-    darken(0.48),
-  ];
-}

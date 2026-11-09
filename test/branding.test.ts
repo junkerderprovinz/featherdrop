@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveBranding, normalizeHex, accentTuple } from "../lib/branding";
+import { resolveBranding, normalizeHex } from "../lib/branding";
 
 test("defaults when no env is set", () => {
   const b = resolveBranding({});
@@ -38,13 +38,4 @@ test("normalizeHex validates and lowercases", () => {
   assert.equal(normalizeHex("#GGGGGG"), null);
   assert.equal(normalizeHex("#fff"), null);
   assert.equal(normalizeHex(undefined), null);
-});
-
-test("accentTuple builds 10 valid hex shades, base in the middle", () => {
-  const t = accentTuple("#d4af37");
-  assert.equal(t.length, 10);
-  for (const shade of t) assert.match(shade, /^#[0-9a-f]{6}$/);
-  // Step 6 is Mantine's default filled shade.
-  assert.equal(t[6], "#d4af37");
-  assert.ok(t[0] > t[9], "step 0 (light) should be a larger hex than step 9 (dark)");
 });
