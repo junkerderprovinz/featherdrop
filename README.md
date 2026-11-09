@@ -173,7 +173,7 @@ docker run -d --name castleparcel -p 3000:3000 \
 
 Then open port 3000 and drop a file. `/data` holds the uploads and `/config` the small database, so the two can sit on different disks. To keep both in `/data`, set `CONFIG_DIR=/data` and leave out the `/config` mount.
 
-Put HTTPS in front of it before you share links outside your network. The browser needs a secure context for streaming downloads, resuming an upload that broke off, and the clipboard. Set `BASE_URL` to the public address so the links point there, and in Nginx or Nginx Proxy Manager let big uploads through:
+Put HTTPS in front of it before you share links outside your network. The browser needs a secure context, HTTPS or localhost, for streaming downloads, resuming an upload that broke off, and the clipboard. Over plain HTTP uploads still work, but one that breaks off starts over. Set `BASE_URL` to the public address so the links point there, and in Nginx or Nginx Proxy Manager let big uploads through:
 
 ```nginx
 client_max_body_size 0;

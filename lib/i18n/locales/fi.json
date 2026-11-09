@@ -106,7 +106,8 @@
     "failed": "Lähetys ei mennyt perille. Yritätkö uudelleen?",
     "limit": "Olet lähettänyt niin paljon kuin tämä palvelin ottaa nyt vastaan.",
     "quota": "Palvelimella ei ole enää tilaa näille tiedostoille.",
-    "tooLarge": "Nämä tiedostot ovat suurempia kuin tämä palvelin ottaa vastaan."
+    "tooLarge": "Nämä tiedostot ovat suurempia kuin tämä palvelin ottaa vastaan.",
+    "noResume": "Jatkaminen uudelleenlatauksen jälkeen vaatii HTTPS:n. Tällä yhteydellä keskeytynyt lähetys alkaa alusta."
   },
   "done": {
     "title": "Jakolinkki",

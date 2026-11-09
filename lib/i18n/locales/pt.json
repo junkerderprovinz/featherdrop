@@ -107,7 +107,8 @@
     "failed": "O carregamento não correu bem. Tentas outra vez?",
     "limit": "Por agora já enviaste tudo o que este servidor aceita.",
     "quota": "O servidor já não tem espaço para estes ficheiros.",
-    "tooLarge": "Estes ficheiros são maiores do que este servidor aceita."
+    "tooLarge": "Estes ficheiros são maiores do que este servidor aceita.",
+    "noResume": "Retomar depois de recarregar precisa de HTTPS. Nesta ligação, um envio interrompido recomeça do início."
   },
   "done": {
     "title": "Link de partilha",

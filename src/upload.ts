@@ -138,6 +138,9 @@ export function resetSend() {
 const store: ResumeStore | null =
   typeof indexedDB !== "undefined" && window.isSecureContext ? indexedDbResumeStore() : null;
 
+/** Whether an upload that breaks off can go on after a reload. */
+export const resumable = store !== null;
+
 export const pending = reactive({ list: [] as PendingUpload[] });
 
 export async function loadPending() {

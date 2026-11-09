@@ -106,7 +106,8 @@
     "failed": "The upload did not go through. Try again?",
     "limit": "You have sent as much as this server takes for now.",
     "quota": "The server has no room left for these files.",
-    "tooLarge": "These files are larger than this server takes."
+    "tooLarge": "These files are larger than this server takes.",
+    "noResume": "Resuming after a reload needs HTTPS. Over this connection, an upload that breaks off starts over."
   },
   "done": {
     "title": "Share link",

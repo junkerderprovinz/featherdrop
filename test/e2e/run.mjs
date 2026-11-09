@@ -99,8 +99,14 @@ try {
   await passwordShareRoundTrip();
   await passwordTooShortIsExplained();
   await olderFormatsStillOpen();
-  await resumeAfterClosedTab();
-  await resumeDialogOnTheStartPage();
+  // Resuming needs crypto.subtle, which a page on plain HTTP does not have.
+  if (await secureBase()) {
+    await resumeAfterClosedTab();
+    await resumeDialogOnTheStartPage();
+  } else {
+    console.log("resume: skipped, " + BASE + " is not a secure context");
+  }
+  await plainHttpUpload();
   await noteRoundTrips();
   await requestRoundTrip();
   if (workerUrls.length === 0 || !workerUrls.every((u) => u.startsWith("blob:"))) {
@@ -244,6 +250,46 @@ async function passwordTooShortIsExplained() {
   if (await page.locator("[data-cp=upload]").isDisabled()) fail("short password: eight characters are refused");
   await page.close();
   console.log("password too short: explained, upload held back until 8 characters ✓");
+}
+
+async function secureBase() {
+  const page = await ctx.newPage();
+  await page.goto(BASE, { waitUntil: "domcontentloaded", ...WAIT });
+  const secure = await page.evaluate(() => window.isSecureContext);
+  await page.close();
+  return secure;
+}
+
+// A page on plain HTTP under a name other than localhost is no secure
+// context, so it has no crypto.subtle for the sealed resume record. The
+// upload still goes through, the page says while it runs that resuming needs
+// HTTPS, and the share downloads without the service worker.
+async function plainHttpUpload() {
+  const url = new URL(BASE);
+  const plain = await chromium.launch({ args: [`--host-resolver-rules=MAP castle.test ${url.hostname}`] });
+  const pctx = await plain.newContext({ acceptDownloads: true });
+  // Chromium notes that it ignores the opener policy on an insecure origin.
+  const coop = /Cross-Origin-Opener-Policy header has been ignored/;
+  const page = watch(await pctx.newPage(), "plain http", coop);
+  const base = `http://castle.test:${url.port || 80}`;
+  await page.goto(base, { waitUntil: "domcontentloaded", ...WAIT });
+  if (await page.evaluate(() => window.isSecureContext)) fail("plain http: castle.test counts as a secure context");
+  const held = [];
+  await page.route("**/files/**", (route) => (route.request().method() === "PATCH" ? held.push(route) : route.continue()));
+  const data = randomBytes(256 * 1024);
+  await page.setInputFiles('input[type="file"]', { name: "plain.bin", mimeType: "application/octet-stream", buffer: data });
+  await page.locator("[data-cp=upload]").click();
+  await page.locator("[data-cp=no-resume]").getByText(/needs HTTPS/i).waitFor(WAIT);
+  await page.unroute("**/files/**");
+  for (const route of held) await route.continue();
+  const shareUrl = (await waitForLink(page, "/d/")).replace(BASE, base);
+  const dl = watch(await pctx.newPage(), "plain http dl", coop);
+  await dl.goto(shareUrl, { waitUntil: "domcontentloaded", ...WAIT });
+  await dl.getByText("plain.bin", { exact: true }).waitFor(WAIT);
+  const [download] = await Promise.all([dl.waitForEvent("download", WAIT), dl.locator("[data-cp=download-all]").click()]);
+  if (!readFileSync(await download.path()).equals(data)) fail("plain http: the download does not match");
+  await plain.close();
+  console.log("plain http: the upload went through without a resume record, the page said why ✓");
 }
 
 // The client library, bundled and loaded into a page of the app whose context

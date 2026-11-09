@@ -264,3 +264,18 @@ test("an upload without a resume store keeps nothing and still works", async () 
   const { plain } = await decrypt(server.stored(), shareUrl);
   assert.deepEqual(plain, bytes(300_000));
 });
+
+test("without crypto.subtle, as on plain HTTP, an upload keeps no record and still works", async () => {
+  const store = memoryStore();
+  const server = flakyServer(store);
+  Object.defineProperty(globalThis.crypto, "subtle", { value: undefined, configurable: true });
+  try {
+    const { shareUrl } = await uploadEncrypted([film()], OPTS, server.deps);
+    assert.equal(store.records.size, 0);
+    const { plain } = await decrypt(server.stored(), shareUrl);
+    assert.deepEqual(plain, bytes(300_000));
+  } finally {
+    delete (globalThis.crypto as { subtle?: unknown }).subtle;
+  }
+  assert.ok(globalThis.crypto.subtle, "the stub is gone again");
+});

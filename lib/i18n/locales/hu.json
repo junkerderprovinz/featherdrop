@@ -106,7 +106,8 @@
     "failed": "A feltöltés nem sikerült. Megpróbálod újra?",
     "limit": "Egyelőre annyit küldtél, amennyit ez a szerver befogad.",
     "quota": "A szerveren nincs több hely ezeknek a fájloknak.",
-    "tooLarge": "Ezek a fájlok nagyobbak, mint amit ez a szerver befogad."
+    "tooLarge": "Ezek a fájlok nagyobbak, mint amit ez a szerver befogad.",
+    "noResume": "Újratöltés után a folytatáshoz HTTPS kell. Ezen a kapcsolaton a megszakadt feltöltés elölről indul."
   },
   "done": {
     "title": "Megosztási link",

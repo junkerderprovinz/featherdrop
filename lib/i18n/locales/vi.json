@@ -105,7 +105,8 @@
     "failed": "Tải lên không thành công. Thử lại nhé?",
     "limit": "Hiện bạn đã gửi hết mức máy chủ này nhận.",
     "quota": "Máy chủ không còn chỗ cho các tệp này.",
-    "tooLarge": "Các tệp này lớn hơn mức máy chủ này nhận."
+    "tooLarge": "Các tệp này lớn hơn mức máy chủ này nhận.",
+    "noResume": "Tiếp tục sau khi tải lại trang cần HTTPS. Trên kết nối này, lượt tải lên bị gián đoạn sẽ bắt đầu lại từ đầu."
   },
   "done": {
     "title": "Liên kết chia sẻ",

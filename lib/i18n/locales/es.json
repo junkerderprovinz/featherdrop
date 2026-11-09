@@ -107,7 +107,8 @@
     "failed": "La subida no ha salido bien. ¿Lo intentas otra vez?",
     "limit": "Por ahora ya has enviado todo lo que acepta este servidor.",
     "quota": "Al servidor no le queda sitio para estos archivos.",
-    "tooLarge": "Estos archivos superan lo que acepta este servidor."
+    "tooLarge": "Estos archivos superan lo que acepta este servidor.",
+    "noResume": "Reanudar tras recargar necesita HTTPS. Con esta conexión, una subida interrumpida empieza de nuevo."
   },
   "done": {
     "title": "Enlace para compartir",

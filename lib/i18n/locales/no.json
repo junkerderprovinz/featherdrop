@@ -106,7 +106,8 @@
     "failed": "Opplastingen gikk ikke gjennom. Prøve igjen?",
     "limit": "Du har sendt så mye som denne serveren tar imot akkurat nå.",
     "quota": "Serveren har ikke plass til disse filene.",
-    "tooLarge": "Disse filene er større enn denne serveren tar imot."
+    "tooLarge": "Disse filene er større enn denne serveren tar imot.",
+    "noResume": "Å fortsette etter en ny innlasting krever HTTPS. Over denne tilkoblingen starter en avbrutt opplasting på nytt."
   },
   "done": {
     "title": "Delingslenke",

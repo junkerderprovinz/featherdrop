@@ -107,7 +107,8 @@
     "failed": "L’envoi n’a pas abouti. Réessayer ?",
     "limit": "Vous avez envoyé tout ce que ce serveur accepte pour le moment.",
     "quota": "Le serveur n’a plus de place pour ces fichiers.",
-    "tooLarge": "Ces fichiers dépassent ce que ce serveur accepte."
+    "tooLarge": "Ces fichiers dépassent ce que ce serveur accepte.",
+    "noResume": "Reprendre après un rechargement nécessite HTTPS. Sur cette connexion, un envoi interrompu repart de zéro."
   },
   "done": {
     "title": "Lien de partage",

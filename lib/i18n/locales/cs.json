@@ -108,7 +108,8 @@
     "failed": "Nahrávání neprošlo. Zkusíte to znovu?",
     "limit": "Prozatím jste poslali tolik, kolik tento server přijímá.",
     "quota": "Na serveru už není místo pro tyto soubory.",
-    "tooLarge": "Tyto soubory jsou větší, než tento server přijímá."
+    "tooLarge": "Tyto soubory jsou větší, než tento server přijímá.",
+    "noResume": "Pokračování po obnovení stránky vyžaduje HTTPS. Přes toto připojení začne přerušené nahrávání znovu."
   },
   "done": {
     "title": "Odkaz ke sdílení",

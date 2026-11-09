@@ -108,7 +108,8 @@
     "failed": "Przesyłanie się nie udało. Spróbujesz jeszcze raz?",
     "limit": "Na razie wysłano tyle, ile ten serwer przyjmuje.",
     "quota": "Na serwerze nie ma już miejsca na te pliki.",
-    "tooLarge": "Te pliki są większe, niż ten serwer przyjmuje."
+    "tooLarge": "Te pliki są większe, niż ten serwer przyjmuje.",
+    "noResume": "Wznowienie po przeładowaniu wymaga HTTPS. Przez to połączenie przerwane wysyłanie zacznie się od nowa."
   },
   "done": {
     "title": "Link do udostępnienia",

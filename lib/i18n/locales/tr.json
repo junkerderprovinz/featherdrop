@@ -106,7 +106,8 @@
     "failed": "Yükleme tamamlanamadı. Tekrar dener misin?",
     "limit": "Bu sunucunun şimdilik kabul ettiği kadarını gönderdin.",
     "quota": "Sunucuda bu dosyalar için yer kalmadı.",
-    "tooLarge": "Bu dosyalar, sunucunun kabul ettiğinden büyük."
+    "tooLarge": "Bu dosyalar, sunucunun kabul ettiğinden büyük.",
+    "noResume": "Yeniden yüklemeden sonra devam etmek HTTPS gerektirir. Bu bağlantıda yarıda kalan bir yükleme baştan başlar."
   },
   "done": {
     "title": "Paylaşım bağlantısı",

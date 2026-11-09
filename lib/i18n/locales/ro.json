@@ -107,7 +107,8 @@
     "failed": "Încărcarea nu a reușit. Mai încerci o dată?",
     "limit": "Deocamdată ai trimis cât primește acest server.",
     "quota": "Serverul nu mai are loc pentru aceste fișiere.",
-    "tooLarge": "Aceste fișiere sunt mai mari decât primește acest server."
+    "tooLarge": "Aceste fișiere sunt mai mari decât primește acest server.",
+    "noResume": "Reluarea după reîncărcare necesită HTTPS. Pe această conexiune, o încărcare întreruptă începe de la capăt."
   },
   "done": {
     "title": "Link de partajare",

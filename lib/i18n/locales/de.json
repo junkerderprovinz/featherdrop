@@ -106,7 +106,8 @@
     "failed": "Der Upload ist nicht durchgegangen. Noch einmal?",
     "limit": "Du hast fürs Erste so viel gesendet, wie dieser Server annimmt.",
     "quota": "Auf dem Server ist kein Platz mehr für diese Dateien.",
-    "tooLarge": "Diese Dateien sind größer, als dieser Server annimmt."
+    "tooLarge": "Diese Dateien sind größer, als dieser Server annimmt.",
+    "noResume": "Fortsetzen nach dem Neuladen braucht HTTPS. Über diese Verbindung beginnt ein abgebrochener Upload von vorn."
   },
   "done": {
     "title": "Link zum Teilen",

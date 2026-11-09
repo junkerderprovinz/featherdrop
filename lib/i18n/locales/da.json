@@ -106,7 +106,8 @@
     "failed": "Uploaden gik ikke igennem. Prøv igen?",
     "limit": "Du har sendt så meget, som denne server tager imod lige nu.",
     "quota": "Serveren har ikke plads til disse filer.",
-    "tooLarge": "Disse filer er større, end denne server tager imod."
+    "tooLarge": "Disse filer er større, end denne server tager imod.",
+    "noResume": "At fortsætte efter en genindlæsning kræver HTTPS. Over denne forbindelse starter en afbrudt upload forfra."
   },
   "done": {
     "title": "Delingslink",

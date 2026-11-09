@@ -107,7 +107,8 @@
     "failed": "Il caricamento non è andato a buon fine. Riprovi?",
     "limit": "Per ora hai inviato tutto quello che questo server accetta.",
     "quota": "Il server non ha più spazio per questi file.",
-    "tooLarge": "Questi file sono più grandi di quanto accetta questo server."
+    "tooLarge": "Questi file sono più grandi di quanto accetta questo server.",
+    "noResume": "Riprendere dopo un ricaricamento richiede HTTPS. Su questa connessione un caricamento interrotto riparte da capo."
   },
   "done": {
     "title": "Link di condivisione",

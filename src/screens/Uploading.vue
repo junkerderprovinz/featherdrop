@@ -8,7 +8,7 @@ import { duration, size } from '@/src/format';
 import { G, fileGlyph } from '@/src/glyphs';
 import { num, t } from '@/src/i18n';
 import { toast } from '@/src/toast';
-import { cancelUpload, send, sizes, total } from '@/src/upload';
+import { cancelUpload, resumable, send, sizes, total } from '@/src/upload';
 
 const p = computed(() => send.progress);
 const phase = computed(() => t('upload.' + send.phase));
@@ -43,6 +43,7 @@ async function cancel() {
       </div>
       <ProgressBar v-if="config.branding.logoUrl" class="cp-stage-bar" :value="p" :label="phase" />
       <p class="cp-sub glim-num">{{ counted }}<template v-if="left"> · {{ left }}</template></p>
+      <p v-if="!resumable" class="cp-sub" data-cp="no-resume">{{ t('upload.noResume') }}</p>
     </div>
 
     <Card :title="t('upload.files')">

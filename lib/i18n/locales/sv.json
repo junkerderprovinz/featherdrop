@@ -106,7 +106,8 @@
     "failed": "Uppladdningen gick inte igenom. Försök igen?",
     "limit": "Du har skickat så mycket som den här servern tar emot just nu.",
     "quota": "Servern har inte plats för de här filerna.",
-    "tooLarge": "De här filerna är större än vad servern tar emot."
+    "tooLarge": "De här filerna är större än vad servern tar emot.",
+    "noResume": "Att fortsätta efter en omladdning kräver HTTPS. Över den här anslutningen börjar en avbruten uppladdning om från början."
   },
   "done": {
     "title": "Delningslänk",

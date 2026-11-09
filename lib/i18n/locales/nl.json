@@ -106,7 +106,8 @@
     "failed": "De upload is niet gelukt. Nog een keer?",
     "limit": "Je hebt voorlopig zoveel verstuurd als deze server aanneemt.",
     "quota": "De server heeft geen ruimte meer voor deze bestanden.",
-    "tooLarge": "Deze bestanden zijn groter dan deze server aanneemt."
+    "tooLarge": "Deze bestanden zijn groter dan deze server aanneemt.",
+    "noResume": "Hervatten na herladen vereist HTTPS. Via deze verbinding begint een onderbroken upload opnieuw."
   },
   "done": {
     "title": "Deellink",
