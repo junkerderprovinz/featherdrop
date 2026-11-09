@@ -117,6 +117,41 @@ The files and links in these pictures are made up.
 
 It has no user accounts, no OIDC or LDAP, no email and no S3 storage. If you need those, [Pingvin Share](https://github.com/stonith404/pingvin-share) is the bigger tool that inspired this one.
 
+### Threat model
+
+Everything is encrypted in your browser, so the server only ever holds ciphertext. That protects a lot, but not everything, and one part still comes down to trust. Here is where the lines are.
+
+The server never sees your files, their names or types, or the password in readable form. The key travels in the `#` part of the link, and browsers do not send that part to the server. Shares in the v2 format pad their sizes with Padmé, so the server learns a size bucket instead of the exact size or the number of files. The upload page still writes the older formats until the new interface ships. For those the server sees the exact size, and a share protected by a password alone can be guessed offline by anyone who has its slug. [docs/encryption-format.md](docs/encryption-format.md) covers both in detail.
+
+Whoever runs the server can still see visitors' IP addresses, when a share was uploaded and downloaded and how often, its expiry and download limit, and the size of the encrypted file. With HTTPS, someone watching the network sees that you talk to the server, when, and roughly how much data moves. Without HTTPS they can also change the page on its way to you, so put HTTPS in front of any instance you use for real. If the operator sets `APP_LOGO` to an outside URL, that host sees your IP address as well.
+
+The weak spot is the JavaScript. Your browser runs whatever code the server sends, and a server that was broken into, or a tampered image, could send code that reads your key or your files before they are encrypted. It could even do that for a few visitors only. No web app can rule this out by itself, so featherdrop makes the code checkable instead:
+
+- The client builds to the same bytes on any machine. CI builds it twice on Linux, Windows and macOS and compares the results.
+- Every release carries `castleparcel-client.json`, with the SHA-256 of every file of the client and one root hash over all of them.
+- Each instance serves the manifest of the client it embeds at `/.well-known/castleparcel-client.json` and prints the root hash in its log at startup.
+- `index.html` pins its script and stylesheet with Subresource Integrity, so the browser refuses a file that does not match. The page itself is the release's template with the instance's name filled in.
+- The service worker `sw-download.js` cannot be pinned that way, and it handles downloads after they are decrypted. It is in the manifest like every other file, so the check below covers it.
+
+To check an instance against a release, run this from a checkout of this repository (Node 20 or newer):
+
+```sh
+curl -LO https://github.com/junkerderprovinz/featherdrop/releases/download/vX.Y.Z/castleparcel-client.json
+node scripts/verify-client.mjs https://share.yourdomain.tld castleparcel-client.json
+```
+
+The script fetches every file, compares its hash with the release and makes sure the page differs from the template only by escaped text where the template has placeholders. For an image you have not started, `docker run --rm junkerderprovinz/featherdrop:latest -client-manifest` prints the manifest of the client inside it. [docs/verifying-the-client.md](docs/verifying-the-client.md) explains the format and how to rebuild a release yourself.
+
+A check proves what the instance sent to you at that moment. It says nothing about what the server sends to someone else, and your browser does not compare the code with the release on its own.
+
+The full link is the key, so anyone who has it can open the share until it expires or runs out of downloads. A few habits help:
+
+- Send the link over a channel you trust, and the password, if you set one, over a different one.
+- A chat or mail service keeps the whole link, key included, in its copy of your message. Browsers keep it in their history and may sync it.
+- Pick a short expiry or a download limit, and delete the share with the management link once it has arrived. Keep the management link to yourself.
+
+Some things are out of reach for any file sharer: malware or a hostile browser extension on the sender's or the recipient's device, a recipient who passes the link on, an operator who deletes shares or shuts the server down, and someone who watches the network long enough to match uploads to downloads.
+
 <br>
 
 <p><a id="5-getting-started" href="#5-getting-started"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/sections/5-getting-started-dark.svg"><img src=".github/assets/sections/5-getting-started.svg" alt="5. Getting started" width="100%"></picture></a></p>
