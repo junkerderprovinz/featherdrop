@@ -68,3 +68,44 @@ export function asyncIterableToStream(
     },
   });
 }
+
+/**
+ * Passes rs through and settles consumed once a reader has read it to the
+ * end, or rejects when it fails or the reader cancels. A save such as
+ * streamToDownload resolves before the browser has read a byte, so this is
+ * how a caller learns that a download really finished.
+ */
+export function watchConsumed(rs: ReadableStream<Uint8Array>): {
+  stream: ReadableStream<Uint8Array>;
+  consumed: Promise<void>;
+} {
+  let finished!: () => void;
+  let failed!: (e: unknown) => void;
+  const consumed = new Promise<void>((resolve, reject) => {
+    finished = resolve;
+    failed = reject;
+  });
+  consumed.catch(() => {});
+  const reader = rs.getReader();
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          finished();
+        } else {
+          controller.enqueue(value as Uint8Array<ArrayBuffer>);
+        }
+      } catch (e) {
+        failed(e);
+        controller.error(e);
+      }
+    },
+    cancel(reason) {
+      failed(new Error("the save stopped reading"));
+      return reader.cancel(reason);
+    },
+  });
+  return { stream, consumed };
+}
