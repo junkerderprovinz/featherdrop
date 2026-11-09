@@ -108,6 +108,8 @@ export function serve(port: Port): void {
   }
 
   async function handle(req: Request): Promise<unknown> {
+    // Keys or a blob state from the page skip the derivation that would load libsodium.
+    await ready();
     switch (req.op) {
       case "create": {
         const enc = await createEncryptor(req.files, { password: req.password, kind: req.kind });
@@ -152,7 +154,6 @@ export function serve(port: Port): void {
         sessions.delete(req.session);
         return {};
       case "unwrap":
-        await ready();
         return { key: unwrapKey(req.wrapped, req.salt, req.password) };
     }
   }

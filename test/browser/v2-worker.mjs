@@ -27,8 +27,8 @@ async function bundle(contents) {
 const pageBundle = await bundle(`
 import CryptoWorker from "./lib/e2e/v2/worker.ts?worker&inline";
 import { connect } from "./lib/e2e/v2/protocol.ts";
-import { cipherRange, blobLength, plainSpan } from "./lib/e2e/v2/share.ts";
-globalThis.__V2 = { CryptoWorker, connect, cipherRange, blobLength, plainSpan };
+import { cipherRange, blobLength, plainSpan, openKeys } from "./lib/e2e/v2/share.ts";
+globalThis.__V2 = { CryptoWorker, connect, cipherRange, blobLength, plainSpan, openKeys };
 `);
 
 const server = createServer((req, res) => {
@@ -54,7 +54,7 @@ await page.addScriptTag({ url: "/page.mjs", type: "module" });
 await page.waitForFunction(() => typeof globalThis.__V2 !== "undefined", { timeout: 30_000 });
 
 const result = await page.evaluate(async () => {
-  const { CryptoWorker, connect, cipherRange, blobLength, plainSpan } = globalThis.__V2;
+  const { CryptoWorker, connect, cipherRange, blobLength, plainSpan, openKeys } = globalThis.__V2;
   const worker = () => connect(new CryptoWorker());
   const pattern = (n, seed) => {
     const b = new Uint8Array(n);
@@ -72,9 +72,10 @@ const result = await page.evaluate(async () => {
   };
   const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 
+  // Sealing in a second worker, as after a reload, takes the blob state alone.
   async function encrypt(files, data, password) {
+    const { token, verifier, state } = await worker().request({ op: "create", files, password });
     const w = worker();
-    const { token, verifier, state } = await w.request({ op: "create", files, password });
     const size = blobLength(state);
     const parts = [];
     for (let at = 0; at < size; at += 1 << 20) {
@@ -117,6 +118,16 @@ const result = await page.evaluate(async () => {
   } catch (e) {
     checks.wrongPassword = /header/.test(String(e));
   }
+
+  const keys = await openKeys(single.token, "correct horse battery");
+  const withKeys = worker();
+  await withKeys.request({ op: "decrypt-open", session: 4, keys });
+  const opened = [];
+  for (let i = 0; i < single.blob.length; i += 300_000) {
+    opened.push(...(await withKeys.request({ op: "decrypt-write", session: 4, data: single.blob.slice(i, i + 300_000) })).chunks);
+  }
+  await withKeys.request({ op: "decrypt-close", session: 4 });
+  checks.keysFromThePage = same(join(opened), big);
 
   const a = pattern(10, 2);
   const b = pattern(200_000, 3);
