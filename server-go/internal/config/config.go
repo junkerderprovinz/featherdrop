@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 )
@@ -166,6 +167,12 @@ func (c *Config) Validate() (warnings []string, err error) {
 				"BASE_URL=%q is not an absolute http(s) URL; ignoring it", c.BaseURL))
 			c.BaseURL = ""
 		}
+	}
+
+	if logo := strings.TrimSpace(c.AppLogo); logo != "" && !validLogo(logo) {
+		warnings = append(warnings, fmt.Sprintf(
+			"APP_LOGO=%q is not a path starting with /, an image data URL or an absolute http(s) URL; ignoring it", c.AppLogo))
+		c.AppLogo = ""
 	}
 
 	if c.UploadProtected && len(c.UploadPassword) < 8 {

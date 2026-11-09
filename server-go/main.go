@@ -25,6 +25,7 @@ import (
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/cleanup"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/headers"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/ratelimit"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/static"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
@@ -122,6 +123,7 @@ func main() {
 // tests can run the real routing, rate limits included.
 func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs.FS, shell []byte) chi.Router {
 	r := chi.NewRouter()
+	r.Use(headers.Middleware(headers.ContentSecurityPolicy(cfg.LogoOrigin())))
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)

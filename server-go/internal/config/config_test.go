@@ -340,6 +340,43 @@ func TestValidate_BaseURL(t *testing.T) {
 	}
 }
 
+func TestValidate_AppLogo(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		wantKept string
+		wantWarn bool
+	}{
+		{"empty ok", "", "", false},
+		{"same-origin path kept", "/icon-512.png", "/icon-512.png", false},
+		{"data URL kept", "data:image/svg+xml;base64,PHN2Zz4=", "data:image/svg+xml;base64,PHN2Zz4=", false},
+		{"https kept", "https://cdn.example.com/logo.png", "https://cdn.example.com/logo.png", false},
+		{"relative path ignored", "logo.png", "", true},
+		{"protocol-relative ignored", "//cdn.example.com/logo.png", "", true},
+		{"script URL ignored", "javascript:alert(1)", "", true},
+		{"non-image data URL ignored", "data:text/html,<p>", "", true},
+		{"host with policy syntax ignored", "https://cdn.example.com;script-src/x.png", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConfigEnv(t)
+			if tt.value != "" {
+				t.Setenv("APP_LOGO", tt.value)
+			}
+			cfg, warnings, err := loadAndValidate(t)
+			if err != nil {
+				t.Fatalf("Validate: %v", err)
+			}
+			if cfg.AppLogo != tt.wantKept {
+				t.Errorf("AppLogo = %q, want %q", cfg.AppLogo, tt.wantKept)
+			}
+			if got := hasWarning(warnings, "APP_LOGO"); got != tt.wantWarn {
+				t.Errorf("APP_LOGO warning present = %v, want %v (warnings %v)", got, tt.wantWarn, warnings)
+			}
+		})
+	}
+}
+
 func TestValidate_ShortUploadPasswordWarns(t *testing.T) {
 	tests := []struct {
 		name     string

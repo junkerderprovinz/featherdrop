@@ -71,3 +71,30 @@ func TestConfig_BrandingMethod(t *testing.T) {
 		t.Errorf("logoUrl = %q, want empty", b.LogoURL)
 	}
 }
+
+func TestConfig_LogoOrigin(t *testing.T) {
+	tests := []struct {
+		name string
+		logo string
+		want string
+	}{
+		{"no logo", "", ""},
+		{"same-origin path", "/icon-512.png", ""},
+		{"data URL", "data:image/png;base64,iVBORw0KGgo=", ""},
+		{"https URL", "https://cdn.example.com/brand/logo.png", "https://cdn.example.com"},
+		{"port kept", "http://10.0.0.5:8080/logo.svg", "http://10.0.0.5:8080"},
+		{"scheme lowered", "HTTPS://cdn.example.com/logo.png", "https://cdn.example.com"},
+		{"IPv6 host", "https://[2001:db8::1]:8443/logo.png", "https://[2001:db8::1]:8443"},
+		{"surrounding space", "  https://cdn.example.com/logo.png ", "https://cdn.example.com"},
+		{"host that could break the policy", "https://cdn.example.com;script-src/x.png", ""},
+		{"protocol-relative", "//cdn.example.com/logo.png", ""},
+		{"other scheme", "ftp://cdn.example.com/logo.png", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := (Config{AppLogo: tt.logo}).LogoOrigin(); got != tt.want {
+				t.Errorf("LogoOrigin(%q) = %q, want %q", tt.logo, got, tt.want)
+			}
+		})
+	}
+}
