@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   streamToAsyncIterable,
   asyncIterableToStream,
+  watchConsumed,
 } from "../lib/e2e/stream-adapters";
 
 async function* fromChunks(
@@ -121,4 +122,40 @@ test("round-trip stream→iterable→stream preserves data", async () => {
   const rs2 = asyncIterableToStream(it);
   const got = await collectStream(rs2);
   assert.deepEqual(got, expected);
+});
+
+function streamOf(parts: Uint8Array[], fail?: Error): ReadableStream<Uint8Array> {
+  let i = 0;
+  return new ReadableStream({
+    pull(c) {
+      if (i < parts.length) c.enqueue(parts[i++]);
+      else if (fail) c.error(fail);
+      else c.close();
+    },
+  });
+}
+
+test("a watched stream settles only once its reader has read it to the end", async () => {
+  const { stream, consumed } = watchConsumed(streamOf([new Uint8Array([1]), new Uint8Array([2, 3])]));
+  let settled = false;
+  void consumed.then(() => (settled = true));
+  await new Promise((r) => setTimeout(r, 5));
+  assert.equal(settled, false);
+
+  assert.deepEqual(new Uint8Array(await new Response(stream).arrayBuffer()), new Uint8Array([1, 2, 3]));
+  await consumed;
+});
+
+test("a watched stream rejects when its source fails", async () => {
+  const { stream, consumed } = watchConsumed(streamOf([new Uint8Array([1])], new Error("truncated")));
+  await assert.rejects(new Response(stream).arrayBuffer(), /truncated/);
+  await assert.rejects(consumed, /truncated/);
+});
+
+test("a watched stream rejects when its reader cancels", async () => {
+  const { stream, consumed } = watchConsumed(streamOf([new Uint8Array([1]), new Uint8Array([2])]));
+  const reader = stream.getReader();
+  await reader.read();
+  await reader.cancel();
+  await assert.rejects(consumed, /stopped reading/);
 });

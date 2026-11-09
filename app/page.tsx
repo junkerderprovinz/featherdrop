@@ -37,6 +37,7 @@ import { isStrippableType, stripFileMetadata } from "@/lib/exif";
 import { collectSharedFiles, isShareTargetLaunch } from "@/lib/share-target";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
+import { tusUpload } from "@/lib/e2e/tus-upload";
 
 // The header server-go/internal/upload/auth.go checks.
 const UPLOAD_TOKEN_HEADER = "x-fd-upload-token";
@@ -244,31 +245,7 @@ export default function HomePage() {
       : {};
 
     const deps: UploadDeps = {
-      upload(scratchFile, onProgress) {
-        return new Promise<string>((resolve, reject) => {
-          const upload = new tus.Upload(scratchFile, {
-            endpoint: "/files",
-            // Without chunking the whole blob goes in one request, which a proxy
-            // with a 100 MB cap such as Cloudflare rejects with 413, and a
-            // dropped upload restarts from zero.
-            chunkSize: 64 * 1024 * 1024,
-            retryDelays: [0, 1000, 3000, 5000],
-            headers: authHeaders,
-            // No metadata: name and type are encrypted inside the blob.
-            onError: (err) => reject(err),
-            onProgress: (sent, total) => onProgress(sent, total),
-            onSuccess: () => {
-              const uploadId = upload.url?.split("/").pop();
-              if (!uploadId) {
-                reject(new Error("tus upload missing URL"));
-                return;
-              }
-              resolve(uploadId);
-            },
-          });
-          upload.start();
-        });
-      },
+      upload: (source, { onProgress }) => tusUpload(source, { headers: authHeaders, onProgress }),
       finalize(body) {
         return fetch("/api/finalize", {
           method: "POST",

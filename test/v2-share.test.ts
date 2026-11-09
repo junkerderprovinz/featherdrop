@@ -14,6 +14,8 @@ import {
   headerLength,
   readHeader,
   decryptRange,
+  decryptRangeStream,
+  cipherRange,
   type FileEntry,
   type ShareEncryptor,
 } from "../lib/e2e/v2/share";
@@ -462,4 +464,44 @@ test("a chunk from another blob under the same key does not open", async () => {
   const spliced = new Uint8Array(a.blob);
   spliced.set(b.subarray(p + c, p + 2 * c), p + c);
   await assert.rejects(decryptAll(spliced, a.keys), /chunk 1/);
+});
+
+async function rangeFixture(size: number) {
+  const data = bytes(size);
+  const enc = await createEncryptor([{ name: "v", type: "", size }]);
+  const blob = await encryptAll(enc, data);
+  const keys = await openKeys(enc.token);
+  const { header, contentOffset } = readHeader(keys, blob.subarray(0, headerLength(blob)));
+  return { data, blob, keys, header, contentOffset };
+}
+
+test("a range decrypts from a stream of small reads of exactly its chunks", async () => {
+  const { data, blob, keys, header, contentOffset } = await rangeFixture(65536 * 4 + 900);
+  const start = 65536 + 7;
+  const end = 65536 * 4 + 100;
+  const { from, to } = cipherRange(header, contentOffset, start, end)!;
+
+  const got = await collect(
+    decryptRangeStream(keys, header, contentOffset, pieces(blob.subarray(from, to + 1), 1000), start, end),
+  );
+
+  assert.deepEqual(got, data.subarray(start, end + 1));
+});
+
+test("a range stream that ends early fails", async () => {
+  const { blob, keys, header, contentOffset } = await rangeFixture(65536 * 3);
+  const { from, to } = cipherRange(header, contentOffset, 0, 65536 * 3 - 1)!;
+  await assert.rejects(
+    collect(decryptRangeStream(keys, header, contentOffset, pieces(blob.subarray(from, to), 5000), 0, 65536 * 3 - 1)),
+    /range/,
+  );
+});
+
+test("a range stream with bytes past its last chunk fails", async () => {
+  const { blob, keys, header, contentOffset } = await rangeFixture(65536 * 3);
+  const { from, to } = cipherRange(header, contentOffset, 0, 100)!;
+  await assert.rejects(
+    collect(decryptRangeStream(keys, header, contentOffset, one(blob.subarray(from, to + 2)), 0, 100)),
+    /range/,
+  );
 });

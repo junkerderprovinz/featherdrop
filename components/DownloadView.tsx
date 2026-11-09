@@ -54,7 +54,8 @@ import { fetchShareListing, type ListedFile } from "@/lib/e2e/share-listing";
 import { fetchResumable } from "@/lib/e2e/resumable-fetch";
 import { isV2Link } from "@/lib/e2e/v2/keys";
 import { V2Download } from "@/components/V2Download";
-import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
+import { streamToAsyncIterable, watchConsumed } from "@/lib/e2e/stream-adapters";
+import { zipStream, zipLength, type ZipEntry } from "@/lib/e2e/zip";
 import type { Manifest } from "@/lib/e2e/multi-file";
 import {
   canStreamDownload,
@@ -254,8 +255,8 @@ export function DownloadView({
 
   // A format 3 share is one unit: one counted GET decrypts the blob and unpacks
   // the files. Within the buffer cap every later save reuses that GET, so a
-  // limited share is never counted twice. Larger bundles stream the one GET to
-  // disk file by file.
+  // limited share is never counted twice. Larger bundles stream the one GET
+  // into a ZIP.
 
   // Notifies and returns null when there is neither a link key nor a password.
   const buildSecret = (): DownloadSecret | null => {
@@ -328,45 +329,17 @@ export function DownloadView({
     }
   };
 
-  // Streams one unbuffered file to disk through the service worker. The files
-  // share one decrypted stream and must be drained in order, but the worker
-  // reads on its own schedule, so it gets the readable half of a
-  // TransformStream while this function pumps the file's bytes into the
-  // writable half. Once the pump resolves the next file can advance, and
-  // backpressure bounds the bytes in flight. Without a worker the file is
-  // collected into a Blob.
-  const saveStream = async (
-    name: string,
-    type: string,
-    iter: AsyncIterable<Uint8Array>,
-    size: number,
-  ): Promise<void> => {
+  // Saves the bundle as one ZIP built while it decrypts. The service worker
+  // reads on its own schedule, so the save is over once it has read the ZIP
+  // to its end. Without a worker the ZIP is collected into a Blob.
+  const saveZip = async (entries: ZipEntry[] | AsyncIterable<ZipEntry>, length: number): Promise<void> => {
+    const { stream, consumed } = watchConsumed(zipStream(entries));
     if (canStreamDownload()) {
-      const ts = new TransformStream<Uint8Array<ArrayBuffer>, Uint8Array<ArrayBuffer>>();
-      // The manifest size is the exact plaintext length, so Content-Length is
-      // safe here.
-      await streamToDownload(
-        ts.readable as ReadableStream<Uint8Array>,
-        name,
-        size,
-      );
-      const writer = ts.writable.getWriter();
-      try {
-        for await (const chunk of iter) {
-          await writer.write(chunk as unknown as Uint8Array<ArrayBuffer>);
-        }
-        await writer.close();
-      } catch (e) {
-        await writer.abort(e).catch(() => {});
-        throw e;
-      }
+      await streamToDownload(stream, `${slug}.zip`, length);
     } else {
-      const chunks: Uint8Array<ArrayBuffer>[] = [];
-      for await (const chunk of iter) {
-        chunks.push(chunk as unknown as Uint8Array<ArrayBuffer>);
-      }
-      blobDownload(new Blob(chunks, { type }), name);
+      blobDownload(await new Response(stream).blob(), `${slug}.zip`);
     }
+    await consumed;
   };
 
   const multiDownloadAll = async () => {
@@ -376,20 +349,21 @@ export function DownloadView({
       if (size <= MULTI_BUFFER_MAX_BYTES) {
         const files = await ensureBuffered();
         if (!files) return;
-        for (const f of files) await saveBuffered(f);
+        const entries = files.map((f) => ({
+          name: f.name,
+          size: f.blob.size,
+          bytes: streamToAsyncIterable(f.blob.stream()),
+        }));
+        await saveZip(entries, zipLength(entries));
       } else {
         const secret = buildSecret();
         if (!secret) return;
         const dl = await fetchMultiDownload(secret);
         setManifest(dl.manifest);
-        for await (const file of dl.files) {
-          await saveStream(
-            file.entry.name,
-            file.entry.type,
-            file.bytes,
-            file.entry.size,
-          );
+        async function* entries(): AsyncGenerator<ZipEntry> {
+          for await (const { entry, bytes } of dl.files) yield { name: entry.name, size: entry.size, bytes };
         }
+        await saveZip(entries(), zipLength(dl.manifest.files));
       }
     } catch {
       notifications.show({
@@ -813,7 +787,13 @@ export function DownloadView({
 
           {/* Password shares show the list after a successful unlock. */}
           {v2Link ? (
-            <V2Download slug={slug} format={format} token={linkKey} onFiles={setV2Files} />
+            <V2Download
+              slug={slug}
+              format={format}
+              token={linkKey}
+              limited={downloadsLeft !== null}
+              onFiles={setV2Files}
+            />
           ) : isV3 ? (
             <Stack w="100%" gap="md">
               {hasPassword && !buffered && (

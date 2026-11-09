@@ -9,8 +9,17 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
+
+// Reads a downloaded ZIP back with Info-ZIP's unzip: entry names in order and
+// their bytes.
+function unzipped(path) {
+  const names = execFileSync("unzip", ["-Z1", path]).toString().split("\n").filter(Boolean);
+  execFileSync("unzip", ["-tqq", path]);
+  return names.map((name) => ({ name, data: execFileSync("unzip", ["-p", path, name], { maxBuffer: 1 << 30 }) }));
+}
 const tmp = mkdtempSync(join(tmpdir(), "fd-e2e-"));
 const SRC = join(tmp, "e2e-secret.bin");
 const payload = randomBytes(3 * 1024 * 1024);
@@ -154,7 +163,8 @@ try {
 }
 
 // Three files uploaded together become one format 3 share. The share page has
-// to list all three, and "Download all" has to save each byte-identical.
+// to list all three, "Download all" has to save one ZIP holding each
+// byte-identical, and a single file can still be saved alone.
 async function multiFileRoundTrip(ctx, errors, fail) {
   // The first spans several chunks.
   const files = [
@@ -211,7 +221,6 @@ async function multiFileRoundTrip(ctx, errors, fail) {
     if (m.type() === "error") errors.push("multi dl console: " + m.text());
   });
 
-  // "Download all" saves the files one after another in manifest order.
   const downloads = [];
   dl.on("download", (d) => downloads.push(d));
 
@@ -227,35 +236,38 @@ async function multiFileRoundTrip(ctx, errors, fail) {
     .getByRole("button", { name: /download all|alle herunterladen/i })
     .click();
   const deadline = Date.now() + 120_000;
-  while (downloads.length < 3 && Date.now() < deadline) {
+  while (downloads.length < 1 && Date.now() < deadline) {
     await dl.waitForTimeout(100);
   }
-  if (downloads.length !== 3) {
-    fail("multi: expected 3 downloads, got " + downloads.length);
+  await dl.waitForTimeout(500);
+  if (downloads.length !== 1) fail("multi: expected one ZIP, got " + downloads.length + " downloads");
+  const slug = new URL(shareUrl).pathname.split("/").pop();
+  if (downloads[0].suggestedFilename() !== `${slug}.zip`) {
+    fail("multi: ZIP named " + downloads[0].suggestedFilename());
   }
+  const entries = unzipped(await downloads[0].path());
+  if (entries.map((e) => e.name).join() !== files.map((f) => f.name).join()) {
+    fail("multi: ZIP holds " + entries.map((e) => e.name));
+  }
+  for (const e of entries) {
+    if (!e.data.equals(byName.get(e.name))) fail("multi: bytes for " + e.name + " do not match the original");
+  }
+  console.log("multi-file: Download all saved one ZIP with all 3 files ✓");
 
-  const seen = new Set();
-  for (const d of downloads) {
-    const fname = d.suggestedFilename();
-    seen.add(fname);
-    const expected = byName.get(fname);
-    if (!expected) fail("multi: unexpected downloaded filename: " + fname);
-    const got = readFileSync(await d.path());
-    const ok = got.length === expected.length && got.equals(expected);
-    console.log("multi downloaded:", {
-      filename: fname,
-      size: got.length,
-      bytesMatch: ok,
-    });
-    if (!ok) fail("multi: bytes for " + fname + " do not match the original");
+  // The second row's own download button saves that file alone.
+  await dl.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).nth(1).click();
+  const one = Date.now() + 60_000;
+  while (downloads.length < 2 && Date.now() < one) await dl.waitForTimeout(100);
+  if (downloads.length !== 2 || downloads[1].suggestedFilename() !== "tiny.txt") {
+    fail("multi: picking tiny.txt saved " + downloads.slice(1).map((d) => d.suggestedFilename()));
   }
-  if (seen.size !== 3) fail("multi: filenames not all distinct: " + [...seen]);
-  for (const f of files) {
-    if (!seen.has(f.name)) fail("multi: missing downloaded file " + f.name);
+  if (!readFileSync(await downloads[1].path()).equals(byName.get("tiny.txt"))) {
+    fail("multi: tiny.txt picked alone does not match");
   }
   if (errors.length) fail("page/console errors occurred (multi-file)");
-  console.log("multi-file: 3-file Download-all round trip verified ✓");
+  console.log("multi-file: a single file picked from the list matches ✓");
 }
+
 
 function readonlyValue(page, part) {
   return page.evaluate(
@@ -334,10 +346,26 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
   const bundle = await build({
     stdin: {
       contents: `
-        import * as tus from "tus-js-client";
-        import { uploadEncrypted } from "./lib/e2e/upload-flow.ts";
+        import { uploadEncrypted, resumeUpload } from "./lib/e2e/upload-flow.ts";
+        import { tusUpload } from "./lib/e2e/tus-upload.ts";
+        import { listPendingUploads, indexedDbResumeStore } from "./lib/e2e/upload-resume.ts";
         import { openLink, fetchLinkListing } from "./lib/e2e/share-listing.ts";
-        globalThis.__v2 = { tus, uploadEncrypted, openLink, fetchLinkListing };
+        // An upload that keeps a resume record and sends 1 MiB per request.
+        const resumeDeps = () => ({
+          baseUrl: location.origin,
+          resume: indexedDbResumeStore(),
+          upload: (source, o) => tusUpload(source, { ...o, chunkSize: 1024 * 1024 }),
+          finalize: async (body) => {
+            const res = await fetch("/api/finalize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error("finalize " + res.status);
+            return res.json();
+          },
+        });
+        globalThis.__v2 = { tusUpload, uploadEncrypted, resumeUpload, listPendingUploads, resumeDeps, openLink, fetchLinkListing };
       `,
       resolveDir: repoRoot,
       loader: "ts",
@@ -349,11 +377,15 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
   });
 
   const libCtx = await browser.newContext({ bypassCSP: true });
-  const lib = await libCtx.newPage();
-  lib.on("pageerror", (e) => errors.push("format 4 lib: " + e));
-  await lib.goto(BASE, { waitUntil: "domcontentloaded", timeout: 120_000 });
-  await lib.addScriptTag({ content: bundle.outputFiles[0].text, type: "module" });
-  await lib.waitForFunction(() => globalThis.__v2 !== undefined, { timeout: 30_000 });
+  const openLib = async () => {
+    const page = await libCtx.newPage();
+    page.on("pageerror", (e) => errors.push("format 4 lib: " + e));
+    await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    await page.addScriptTag({ content: bundle.outputFiles[0].text, type: "module" });
+    await page.waitForFunction(() => globalThis.__v2 !== undefined, { timeout: 30_000 });
+    return page;
+  };
+  const lib = await openLib();
 
   const cases = [
     {
@@ -369,6 +401,16 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
       ],
       maxDownloads: 1,
       password: "correct horse battery",
+    },
+    {
+      label: "format 4 bundle without a limit",
+      files: [
+        { name: "v2-x.bin", data: randomBytes(150 * 1024) },
+        { name: "v2-y.bin", data: randomBytes(70 * 1024) },
+        { name: "v2-z.txt", data: randomBytes(5) },
+      ],
+      maxDownloads: null,
+      pick: 1,
     },
   ];
   for (const c of cases) {
@@ -391,22 +433,46 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
     const sent = [];
     dl.on("request", (r) => sent.push([r.method(), r.url(), r.postData() ?? "", JSON.stringify(r.headers())].join(" ")));
     await dl.goto(up.shareUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    const slug = new URL(up.shareUrl).pathname.split("/").pop();
+    const bundle = c.files.length > 1;
+    const waitFor = async (n) => {
+      const deadline = Date.now() + 120_000;
+      while (downloads.length < n && Date.now() < deadline) await dl.waitForTimeout(100);
+      if (downloads.length !== n) fail(`${c.label}: ${downloads.length} downloads, expected ${n}`);
+    };
     if (c.password) {
       await dl.locator('input[type="password"]').fill(c.password);
       await dl.getByRole("button", { name: /unlock|entsperren/i }).click();
     } else {
       await dl.getByText(c.files[0].name, { exact: true }).waitFor({ timeout: 120_000 });
-      await dl.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).click();
-    }
-    const deadline = Date.now() + 120_000;
-    while (downloads.length < c.files.length && Date.now() < deadline) await dl.waitForTimeout(100);
-    if (downloads.length !== c.files.length) fail(`${c.label}: ${downloads.length} downloads`);
-    for (const [i, d] of downloads.entries()) {
-      const got = readFileSync(await d.path());
-      const want = c.files[i];
-      if (d.suggestedFilename() !== want.name || !got.equals(want.data)) {
-        fail(`${c.label}: ${d.suggestedFilename()} does not match ${want.name}`);
+      if (c.pick !== undefined) {
+        const want = c.files[c.pick];
+        await dl.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).nth(c.pick).click();
+        await waitFor(1);
+        const picked = downloads.shift();
+        if (picked.suggestedFilename() !== want.name || !readFileSync(await picked.path()).equals(want.data)) {
+          fail(`${c.label}: picking ${want.name} saved ${picked.suggestedFilename()}`);
+        }
+        console.log(c.label + ": a single file picked alone matches ✓");
       }
+      const name = bundle ? /^(download all|alle herunterladen)$/i : /^(download file|datei herunterladen)$/i;
+      await dl.getByRole("button", { name }).last().click();
+    }
+    await waitFor(1);
+    await dl.waitForTimeout(500);
+    if (downloads.length !== 1) fail(`${c.label}: ${downloads.length} downloads, expected one`);
+    const got = await downloads[0].path();
+    if (bundle) {
+      if (downloads[0].suggestedFilename() !== `${slug}.zip`) fail(`${c.label}: ZIP named ${downloads[0].suggestedFilename()}`);
+      const entries = unzipped(got);
+      if (entries.length !== c.files.length) fail(`${c.label}: ZIP holds ${entries.map((e) => e.name)}`);
+      for (const [i, e] of entries.entries()) {
+        if (e.name !== c.files[i].name || !e.data.equals(c.files[i].data)) {
+          fail(`${c.label}: ${e.name} in the ZIP does not match ${c.files[i].name}`);
+        }
+      }
+    } else if (downloads[0].suggestedFilename() !== c.files[0].name || !readFileSync(got).equals(c.files[0].data)) {
+      fail(`${c.label}: ${downloads[0].suggestedFilename()} does not match ${c.files[0].name}`);
     }
     for (const f of c.files) {
       if (c.files.length > 1) await dl.getByText(f.name, { exact: true }).waitFor({ timeout: 10_000 });
@@ -416,19 +482,92 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
       fail(c.label + ": the page sent the password or posted something");
     }
 
-    const slug = new URL(up.shareUrl).pathname.split("/").pop();
     const meta = await dl.request.get(`${BASE}/api/d/${slug}/meta`);
+
     if (c.maxDownloads === 1 && meta.status() !== 404) fail(c.label + ": once-only share survived");
     console.log(c.label + ": downloaded through the page, bytes match ✓");
   }
   if (errors.length) fail("page/console errors occurred (format 4)");
+  await resumeAfterClosedTab(ctx, libCtx, openLib, errors, fail);
   await libCtx.close();
 }
+
+// A format 4 upload whose tab closes after its first tus request goes on in a
+// new tab once the same file is picked again, and the share it finalizes
+// downloads intact through the page.
+async function resumeAfterClosedTab(ctx, libCtx, openLib, errors, fail) {
+  const data = randomBytes(3 * 1024 * 1024 + 4321);
+  const spec = { name: "resumed.bin", b64: data.toString("base64"), lastModified: 1_700_000_000_000 };
+
+  const first = await openLib();
+  const offsets = [];
+  // Every request after the first chunk is left hanging, as if the tab died.
+  await first.route("**/files/**", (route) => {
+    const offset = Number(route.request().headers()["upload-offset"] ?? 0);
+    if (route.request().method() === "PATCH") offsets.push(offset);
+    if (route.request().method() === "PATCH" && offset > 0) return;
+    return route.continue();
+  });
+  first.evaluate(startResumableUpload, spec).catch(() => {});
+  const deadline = Date.now() + 60_000;
+  while (offsets.length < 2 && Date.now() < deadline) await first.waitForTimeout(100);
+  if (offsets.length < 2) fail("resume: the first upload never reached its second chunk");
+  await first.close();
+
+  const second = await openLib();
+  const sent = [];
+  second.on("request", (r) => {
+    if (r.method() === "PATCH") sent.push(Number(r.headers()["upload-offset"]));
+  });
+  const res = await second.evaluate(resumeUploadInPage, spec);
+  if (res.error) fail("resume: " + res.error);
+  // tusd keeps what arrived of a request cut off mid-body, so the offset can
+  // lie past the first chunk; it must not be back at the start.
+  if (!(sent[0] >= 1024 * 1024)) fail("resume: the second tab started at offset " + sent[0]);
+  console.log("resume: the second tab went on at offset " + sent[0]);
+  await second.close();
+
+  const dl = await ctx.newPage();
+  dl.on("pageerror", (e) => errors.push("resume dl: " + e));
+  const downloads = [];
+  dl.on("download", (d) => downloads.push(d));
+  await dl.goto(res.shareUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await dl.getByText("resumed.bin", { exact: true }).waitFor({ timeout: 120_000 });
+  await dl.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).click();
+  const until = Date.now() + 120_000;
+  while (downloads.length < 1 && Date.now() < until) await dl.waitForTimeout(100);
+  if (downloads.length !== 1 || !readFileSync(await downloads[0].path()).equals(data)) {
+    fail("resume: the resumed share does not download as the original");
+  }
+  if (errors.length) fail("page/console errors occurred (resume)");
+  console.log("resume: an upload cut off with its tab went on in a new tab and downloads intact ✓");
+}
+
+// Runs in the page; never settles, since its tab is closed mid-upload.
+async function startResumableUpload({ name, b64, lastModified }) {
+  const file = new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], name, { lastModified });
+  await globalThis.__v2.uploadEncrypted([file], { expiry: "1d", maxDownloads: null, format: 4 }, globalThis.__v2.resumeDeps());
+}
+
+// Runs in the page: list the pending upload, pick the same file, resume.
+async function resumeUploadInPage({ name, b64, lastModified }) {
+  const file = new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], name, { lastModified });
+  const deps = globalThis.__v2.resumeDeps();
+  const pending
+ = await globalThis.__v2.listPendingUploads(deps.resume);
+  if (pending.length !== 1) return { error: "pending uploads: " + JSON.stringify(pending) };
+  if (pending[0].files[0].name !== name) return { error: "pending lists " + JSON.stringify(pending[0].files) };
+  const { shareUrl } = await globalThis.__v2.resumeUpload(pending[0].id, [file], deps);
+  const left = await globalThis.__v2.listPendingUploads(deps.resume);
+  if (left.length !== 0) return { error: "the record outlived its upload" };
+  return { shareUrl };
+}
+
 
 // Runs in the page: upload with format 4, check that a wrong password gets
 // no listing, list from the uncounted header and check nothing was spent.
 async function uploadAndListV2({ files: specs, maxDownloads, password }) {
-  const { tus, uploadEncrypted, openLink, fetchLinkListing } = globalThis.__v2;
+  const { tusUpload, uploadEncrypted, openLink, fetchLinkListing } = globalThis.__v2;
   const files = specs.map(
     (f) => new File([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], f.name),
   );
@@ -439,15 +578,7 @@ async function uploadAndListV2({ files: specs, maxDownloads, password }) {
     { expiry: "1d", maxDownloads, password, format: 4 },
     {
       baseUrl: location.origin,
-      upload: (file) =>
-        new Promise((resolve, reject) => {
-          const up = new tus.Upload(file, {
-            endpoint: "/files",
-            onError: reject,
-            onSuccess: () => resolve(up.url.split("/").pop()),
-          });
-          up.start();
-        }),
+      upload: (source, { onProgress }) => tusUpload(source, { onProgress }),
       finalize: async (body) => {
         const res = await fetch("/api/finalize", {
           method: "POST",

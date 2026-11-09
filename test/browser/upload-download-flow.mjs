@@ -100,7 +100,7 @@ const result = await page.evaluate(async () => {
     return out;
   }
 
-  // A fake server: upload() keeps the file in memory, finalize() hands back a
+  // A fake server: upload() keeps the blob in memory, finalize() hands back a
   // slug, and downloads read from the store.
   const blobStore = new Map(); // uploadId -> Uint8Array
   const metaStore = new Map(); // slug -> finalizeBody
@@ -111,9 +111,9 @@ const result = await page.evaluate(async () => {
   function makeDeps(baseUrl = "https://x") {
     return {
       baseUrl,
-      async upload(file, onProgress) {
+      async upload(source, { onProgress }) {
         const id = `upload-${++idCounter}`;
-        const ab = await file.arrayBuffer();
+        const ab = await new Blob([await source.slice(0, source.size)]).arrayBuffer();
         blobStore.set(id, new Uint8Array(ab));
         onProgress(ab.byteLength, ab.byteLength);
         return id;
