@@ -27,11 +27,11 @@ const error = ref('');
 const sent = ref<Sent | null>(null);
 
 const expiries = computed(() => expiryChoices().map((e) => ({ value: e, label: t('expiry.' + e) })));
-const limits = computed(() => [
-  { id: 'none' as const, label: t('options.noLimit') },
-  { id: 'once' as const, label: t('options.once') },
-  { id: 'count' as const, label: t('options.count') },
-]);
+const limits = computed(() => (['none', 'once', 'count'] as const).map((id) => ({
+  id,
+  label: t({ none: 'options.noLimit', once: 'options.once', count: 'options.count' }[id]),
+  attrs: { 'data-cp': `limit-${id}` },
+})));
 const short = computed(() => passwordTooShort(note.locked, note.password));
 const tooLong = computed(() => new TextEncoder().encode(note.text).length > MAX_NOTE_BYTES);
 const count = computed({ get: () => note.count, set: (v: number | null) => { note.count = v ?? 1; } });

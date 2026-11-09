@@ -10,11 +10,11 @@ import { expiryChoices, hasJpeg, passwordTooShort, removeFile, resetSend, send, 
 import { eyeWords } from '@/src/ui';
 
 const expiries = computed(() => expiryChoices().map((e) => ({ value: e, label: t('expiry.' + e) })));
-const limits = computed(() => [
-  { id: 'none' as const, label: t('options.noLimit') },
-  { id: 'once' as const, label: t('options.once') },
-  { id: 'count' as const, label: t('options.count') },
-]);
+const limits = computed(() => (['none', 'once', 'count'] as const).map((id) => ({
+  id,
+  label: t({ none: 'options.noLimit', once: 'options.once', count: 'options.count' }[id]),
+  attrs: { 'data-cp': `limit-${id}` },
+})));
 const summary = computed(() => t('options.total', { count: fileCount(send.items.length), size: size(total(sizes())) }));
 const short = computed(() => passwordTooShort(send.locked, send.password));
 const count = computed({ get: () => send.count, set: (v: number | null) => { send.count = v ?? 1; } });

@@ -54,7 +54,7 @@ const actions = computed<WindowAction[]>(() => [
 
 <template>
   <Window :title="item.name" size="wide" :actions="actions" :start="item.size === null ? undefined : size(item.size)" :text="windowWords()" class="cp-preview" @close="emit('close')">
-    <div class="cp-preview-body" :class="shown?.kind" data-cp="preview">
+    <div class="cp-preview-body" :class="shown?.kind" data-cp="preview-body">
       <span v-if="loading" class="cp-spin" aria-hidden="true"></span>
       <pre v-else-if="shown?.kind === 'text'" class="cp-text-preview">{{ shown.text }}</pre>
       <img v-else-if="shown?.kind === 'image'" :src="shown.url" :alt="item.name">
