@@ -87,6 +87,8 @@ try {
   if (!bytesOk) fail("decrypted bytes do not match the original");
   if (errors.length) fail("page/console errors occurred");
 
+  await revokeRoundTrip(ctx, page, shareUrl, errors, fail);
+
   // A tiny PNG must be decrypted on the download page and previewed from a
   // blob: URL.
   const PNG = Buffer.from(
@@ -137,6 +139,8 @@ try {
   if (errors.length) fail("page/console errors occurred (preview)");
 
   await multiFileRoundTrip(ctx, errors, fail);
+  // Last, because the limit switch is remembered for later uploads.
+  await limitedShareListsBeforeDownload(ctx, errors, fail);
 
   console.log("E2E PASSED: zero-knowledge upload→download round trip verified");
 } catch (e) {
@@ -247,4 +251,72 @@ async function multiFileRoundTrip(ctx, errors, fail) {
   }
   if (errors.length) fail("page/console errors occurred (multi-file)");
   console.log("multi-file: 3-file Download-all round trip verified ✓");
+}
+
+function readonlyValue(page, part) {
+  return page.evaluate(
+    (p) =>
+      [...document.querySelectorAll("input[readonly]")].find((i) =>
+        i.value.includes(p),
+      )?.value ?? "",
+    part,
+  );
+}
+
+// The result panel also shows the management link. Opening it and confirming
+// the delete removes the share for good.
+async function revokeRoundTrip(ctx, uploadPage, shareUrl, errors, fail) {
+  const manageUrl = (await readonlyValue(uploadPage, "/m/")).trim();
+  if (!manageUrl.includes("#t=")) fail("management link missing or without #t=: " + manageUrl);
+  if (manageUrl.split("#t=")[1] === shareUrl.split("#k=")[1]) {
+    fail("the management token must differ from the content key");
+  }
+
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push("manage: " + e));
+  await page.goto(manageUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.getByRole("button", { name: /delete now|jetzt löschen/i }).click();
+  await page
+    .getByRole("button", { name: /click again to confirm|zum bestätigen erneut klicken/i })
+    .click();
+  await page
+    .getByText(/share deleted|freigabe gelöscht/i)
+    .waitFor({ timeout: 30_000 });
+
+  const slug = new URL(shareUrl).pathname.split("/").pop();
+  const meta = await page.request.get(`${BASE}/api/d/${slug}/meta`);
+  if (meta.status() !== 404) fail("share still there after revoke: meta " + meta.status());
+  if (errors.length) fail("page/console errors occurred (revoke)");
+  console.log("revoke: management link deleted the share ✓");
+}
+
+// A once-only share shows its file name from the uncounted header and is
+// still unspent afterwards.
+async function limitedShareListsBeforeDownload(ctx, errors, fail) {
+  const up = await ctx.newPage();
+  up.on("pageerror", (e) => errors.push("limited up: " + e));
+  await up.goto(BASE, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await up.setInputFiles('input[type="file"]', {
+    name: "once-only.bin",
+    mimeType: "application/octet-stream",
+    buffer: randomBytes(4096),
+  });
+  await up.getByRole("switch", { name: /limit downloads|download-limit/i }).check();
+  await up.getByRole("button", { name: /upload & share|hochladen & teilen/i }).click();
+  await up.waitForFunction(
+    () => [...document.querySelectorAll("input[readonly]")].some((i) => i.value.includes("/d/")),
+    { timeout: 120_000 },
+  );
+  const shareUrl = (await readonlyValue(up, "/d/")).trim();
+
+  const dl = await ctx.newPage();
+  dl.on("pageerror", (e) => errors.push("limited dl: " + e));
+  await dl.goto(shareUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await dl.getByText("once-only.bin", { exact: true }).waitFor({ timeout: 120_000 });
+
+  const slug = new URL(shareUrl).pathname.split("/").pop();
+  const meta = await (await dl.request.get(`${BASE}/api/d/${slug}/meta`)).json();
+  if (meta.downloadsLeft !== 1) fail("listing spent the share: downloadsLeft " + meta.downloadsLeft);
+  if (errors.length) fail("page/console errors occurred (limited share)");
+  console.log("limited share: name shown before the download, nothing spent ✓");
 }
