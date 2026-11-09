@@ -454,6 +454,28 @@ export async function decryptShare(
 }
 
 /**
+ * The inclusive blob byte range [from, to] holding the chunks that cover the
+ * plaintext range [start, end], or null when the range is empty.
+ */
+export function cipherRange(
+  header: Header,
+  contentOffset: number,
+  start: number,
+  end: number,
+): { from: number; to: number; first: number; last: number } | null {
+  const s = Math.max(0, start);
+  const e = Math.min(header.size - 1, end);
+  if (e < s) return null;
+  const n = chunkCount(paddedContentLength(header.size), header.chunk);
+  const full = header.chunk + TAG_BYTES;
+  const first = Math.floor(s / header.chunk);
+  const last = Math.floor(e / header.chunk);
+  const from = contentOffset + first * full;
+  const to = contentOffset + last * full + cipherChunkLength(header, n, last) - 1;
+  return { from, to, first, last };
+}
+
+/**
  * Yields the plaintext of the inclusive range [start, end], fetching only the
  * chunks that cover it. fetchRange returns an inclusive byte range of the
  * blob, in the browser an HTTP Range request.
@@ -466,15 +488,12 @@ export async function* decryptRange(
   start: number,
   end: number,
 ): AsyncGenerator<Uint8Array> {
+  const plan = cipherRange(header, contentOffset, start, end);
+  if (plan === null) return;
+  const { from, to, first, last } = plan;
   const s = Math.max(0, start);
   const e = Math.min(header.size - 1, end);
-  if (e < s) return;
   const n = chunkCount(paddedContentLength(header.size), header.chunk);
-  const full = header.chunk + TAG_BYTES;
-  const first = Math.floor(s / header.chunk);
-  const last = Math.floor(e / header.chunk);
-  const from = contentOffset + first * full;
-  const to = contentOffset + last * full + cipherChunkLength(header, n, last) - 1;
   const fetched = await fetchRange(from, to);
   if (fetched.length !== to - from + 1) throw new Error("v2: range fetch returned the wrong length");
 
