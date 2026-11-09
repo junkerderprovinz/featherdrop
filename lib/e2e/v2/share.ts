@@ -26,7 +26,10 @@ import {
   type ShareKeys,
 } from "./keys";
 
-export type Kind = "single" | "bundle";
+/** A text share holds a note: one unnamed entry of type TEXT_TYPE. */
+export type Kind = "single" | "bundle" | "text";
+
+export const TEXT_TYPE = "text/plain; charset=utf-8";
 
 export interface FileEntry {
   name: string;
@@ -100,6 +103,10 @@ function hasExactKeys(o: object, keys: string[]): boolean {
 
 const HEADER_KEYS = ["v", "kind", "mode", "kdf", "chunk", "pad", "nonce", "size", "files"];
 
+function isTextEntry(files: FileEntry[]): boolean {
+  return files.length === 1 && files[0].name === "" && files[0].type === TEXT_TYPE;
+}
+
 function sameKdf(a: KdfParams | null, b: KdfParams | null): boolean {
   if (a === null || b === null) return a === b;
   return hasExactKeys(a, ["alg", "ops", "mem"]) && a.alg === b.alg && a.ops === b.ops && a.mem === b.mem;
@@ -111,7 +118,7 @@ function checkHeader(h: unknown, keys: ShareKeys): Header {
   if (typeof h !== "object" || h === null || !hasExactKeys(h, HEADER_KEYS)) throw bad("fields");
   const x = h as Header;
   if (x.v !== 2) throw bad("v");
-  if (x.kind !== "single" && x.kind !== "bundle") throw bad("kind");
+  if (x.kind !== "single" && x.kind !== "bundle" && x.kind !== "text") throw bad("kind");
   if (x.mode !== keys.mode) throw bad("mode");
   if (typeof x.kdf !== "object" || !sameKdf(x.kdf, keys.kdf)) throw bad("kdf");
   if (!isChunkSize(x.chunk)) throw bad("chunk");
@@ -134,6 +141,7 @@ function checkHeader(h: unknown, keys: ShareKeys): Header {
     total += f.size;
   }
   if (!isSize(x.size) || x.size !== total) throw bad("size");
+  if (x.kind === "text" && !isTextEntry(x.files)) throw bad("text with a name, another type or several entries");
   return x;
 }
 
@@ -301,6 +309,7 @@ export function buildEncryptor(opts: {
   const { keys, kind, files, chunk, headerNonce, baseNonce } = opts;
   if (files.length === 0) throw new Error("v2: no files");
   if (kind === "single" && files.length !== 1) throw new Error("v2: a single share holds one file");
+  if (kind === "text" && !isTextEntry(files)) throw new Error("v2: a text share holds one unnamed plain text entry");
   if (!isChunkSize(chunk)) throw new Error("v2: invalid chunk size");
   if (headerNonce.length !== NONCE_BYTES || baseNonce.length !== NONCE_BYTES) throw new Error("v2: invalid nonce");
   let size = 0;
@@ -325,12 +334,12 @@ export function buildEncryptor(opts: {
 
 /**
  * Starts a new share: a fresh link token, its keys and an encryptor. One file
- * becomes a single share, several a bundle. With a password the share needs
- * both the link and the password.
+ * becomes a single share, several a bundle, unless opts.kind says otherwise.
+ * With a password the share needs both the link and the password.
  */
 export async function createEncryptor(
   files: FileEntry[],
-  opts: { password?: string } = {},
+  opts: { password?: string; kind?: Kind } = {},
 ): Promise<ShareEncryptor & { token: string }> {
   const { password } = opts;
   if (password !== undefined && !isPasswordLongEnough(password)) {
@@ -341,7 +350,7 @@ export async function createEncryptor(
   const keys = await deriveKeys(token, password);
   const enc = buildEncryptor({
     keys,
-    kind: files.length === 1 ? "single" : "bundle",
+    kind: opts.kind ?? (files.length === 1 ? "single" : "bundle"),
     files,
     chunk: DEFAULT_CHUNK,
     headerNonce: sodium.randombytes_buf(NONCE_BYTES),
