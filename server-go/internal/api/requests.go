@@ -139,6 +139,12 @@ func RequestRoutes(cfg config.Config, db *sql.DB, now func() time.Time) http.Han
 	r.Get("/{slug}/uploads/{id}", h.blob)
 	r.Get("/{slug}/uploads/{id}/header", h.header)
 	r.Delete("/{slug}", h.close)
+	refuse := func(w http.ResponseWriter, _ *http.Request) {
+		setNoIndex(w)
+		writeJSONError(w, http.StatusNotFound, "not found")
+	}
+	r.NotFound(refuse)
+	r.MethodNotAllowed(refuse)
 	return r
 }
 

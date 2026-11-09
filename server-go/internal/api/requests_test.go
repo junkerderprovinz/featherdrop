@@ -383,3 +383,16 @@ func TestCloseRequest_DeletesItsUploads(t *testing.T) {
 		t.Error("request row still there")
 	}
 }
+
+func TestRequestRoutes_UnknownPathsGetTheUniformRefusal(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, nil)
+	assertUniformRefusal(t, map[string]*httptest.ResponseRecorder{
+		"unknown subpath": e.do(t, nil, http.MethodGet, "/api/r/"+slug+"/elsewhere", nil, asCollector()),
+		"wrong method":    e.do(t, nil, http.MethodPut, "/api/r/"+slug, nil, asCollector()),
+		"wrong token":     e.do(t, nil, http.MethodGet, "/api/r/"+slug+"/uploads", nil, nil),
+	})
+	if got := e.do(t, nil, http.MethodGet, "/api/r/"+slug+"/elsewhere", nil, nil).Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
+		t.Errorf("X-Robots-Tag = %q", got)
+	}
+}

@@ -346,3 +346,44 @@ func TestRouter_NewDownloadsSpendTheMissBudget(t *testing.T) {
 		t.Fatalf("download 11: status %d, want 429", rec.Code)
 	}
 }
+
+func TestRouter_RequestPagesNoIndex(t *testing.T) {
+	h := newFullRouter(t, nil)
+	for _, path := range []string{"/r/some-slug", "/c/some-slug", "/api/r/some-slug", "/api/r/some-slug/uploads"} {
+		if got := get(h, path).Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
+			t.Errorf("%s X-Robots-Tag = %q, want noindex, nofollow", path, got)
+		}
+	}
+}
+
+func TestRouter_RequestRoutesShareTheMissBudgetWithShares(t *testing.T) {
+	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = true })
+
+	paths := []string{"/api/r/nonexistent", "/api/r/nonexistent/uploads", "/api/r/nonexistent/uploads/x"}
+	for i := 0; i < 10; i++ {
+		if rec := get(h, paths[i%len(paths)]); rec.Code != http.StatusNotFound {
+			t.Fatalf("request %d: status %d, want 404", i+1, rec.Code)
+		}
+	}
+	for _, path := range append(paths, "/api/d/nonexistent") {
+		if rec := get(h, path); rec.Code != http.StatusTooManyRequests {
+			t.Errorf("%s after the shared burst: status = %d, want 429", path, rec.Code)
+		}
+	}
+}
+
+func TestRouter_CreatingRequestsIsRateLimited(t *testing.T) {
+	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = true })
+	body := `{"publicKey":"cHVibGljcHVibGljcHVibGljcHVibGljcHVibGljcHU","collectTokenHash":"aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g"}`
+	last := 0
+	for range 11 {
+		req := httptest.NewRequest(http.MethodPost, "/api/requests", strings.NewReader(body))
+		req.RemoteAddr = "192.0.2.1:1234"
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		last = rec.Code
+	}
+	if last != http.StatusTooManyRequests {
+		t.Fatalf("request 11 status = %d, want 429", last)
+	}
+}
