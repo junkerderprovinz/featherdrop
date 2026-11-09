@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { uploadEncrypted, type FinalizeRequest } from "../lib/e2e/upload-flow";
 import { hashManageToken, manageTokenFromFragment } from "../lib/e2e/manage-link";
+import { cryptoWorker } from "./crypto-worker";
 
 test("uploadEncrypted sends only the manage token's hash and returns the management link", async () => {
   let sent: FinalizeRequest | undefined;
@@ -15,6 +16,7 @@ test("uploadEncrypted sends only the manage token's hash and returns the managem
         return Promise.resolve({ slug: "k7Mx9qT2" });
       },
       baseUrl: "https://drop.example.tld",
+      crypto: cryptoWorker(),
     },
   );
 

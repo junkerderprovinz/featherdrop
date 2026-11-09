@@ -1,6 +1,7 @@
-// The message protocol between the page and the crypto Web Worker. Keys stay
-// inside the worker: the page opens a session, streams bytes through it and
-// gets back ciphertext or plaintext, the link token and the key verifier.
+// The message protocol between the page and the crypto Web Worker. The worker
+// derives keys and seals and opens chunks; the page reads files, talks to the
+// server and passes the bytes through. create hands the page the blob state,
+// content key included, because resuming an upload after a reload needs it.
 // Every request carries an id and gets exactly one reply with the same id.
 
 import { ready, unwrapKey } from "../crypto";
@@ -8,44 +9,50 @@ import {
   createEncryptor,
   openKeys,
   ShareDecryptor,
+  RangeDecryptor,
   readHeader,
-  decryptRange,
+  sealSpan,
+  type BlobState,
   type FileEntry,
   type Header,
-  type ShareEncryptor,
+  type Kind,
 } from "./share";
 import type { ShareKeys } from "./keys";
 
 export type Request =
-  | { op: "encrypt-open"; session: number; files: FileEntry[]; password?: string }
-  | { op: "encrypt-write"; session: number; data: Uint8Array }
-  /** Returns the padding and final chunks, at most about maxBytes per call, until done. */
-  | { op: "encrypt-close"; session: number; maxBytes?: number }
-  /** Derives the keys (Argon2id in password mode) and returns the verifier for the download request. */
-  | { op: "decrypt-open"; session: number; token: string; password?: string }
+  /** Starts a share: a fresh link token and what reproduces every byte of its blob. */
+  | { op: "create"; files: FileEntry[]; password?: string; kind?: Kind }
+  /** Seals the blob bytes [start, end) from the plaintext plainSpan names for them. */
+  | { op: "seal"; state: BlobState; start: number; end: number; plain: Uint8Array }
+  /** Derives the keys (Argon2id in password mode), or takes keys the page has, and returns the verifier. */
+  | ({ op: "decrypt-open"; session: number } & ({ token: string; password?: string } | { keys: ShareKeys }))
   | { op: "decrypt-write"; session: number; data: Uint8Array }
   | { op: "decrypt-close"; session: number }
   /** Opens the header from the blob's first headerLength bytes and keeps it for seeking. */
   | { op: "read-header"; session: number; data: Uint8Array }
   /**
-   * Decrypts [start, end] from the blob bytes cipherRange named, under the
-   * header the worker opened, so the page cannot hand it another one.
+   * Starts decrypting [start, end] under the header the worker opened, so the
+   * page cannot hand it another one. range-write takes the blob bytes
+   * cipherRange names, in any slicing, and range-close checks they all came.
    */
-  | { op: "range"; session: number; start: number; end: number; data: Uint8Array }
+  | { op: "range-open"; session: number; start: number; end: number }
+  | { op: "range-write"; session: number; data: Uint8Array }
+  | { op: "range-close"; session: number }
   | { op: "close"; session: number }
   /** Unwraps the key of an older password share. */
   | { op: "unwrap"; wrapped: Uint8Array; salt: Uint8Array; password: string };
 
 export interface Responses {
-  "encrypt-open": { token: string; verifier: string; blobLength: number; prefix: Uint8Array };
-  "encrypt-write": { chunks: Uint8Array[] };
-  "encrypt-close": { chunks: Uint8Array[]; done: boolean };
+  create: { token: string; verifier: string; state: BlobState };
+  seal: { data: Uint8Array };
   "decrypt-open": { verifier: string };
   /** header is set once, in the reply that completed it. */
   "decrypt-write": { header: Header | null; chunks: Uint8Array[] };
   "decrypt-close": Record<string, never>;
   "read-header": { header: Header; contentOffset: number };
-  range: { chunks: Uint8Array[] };
+  "range-open": Record<string, never>;
+  "range-write": { chunks: Uint8Array[] };
+  "range-close": Record<string, never>;
   close: Record<string, never>;
   unwrap: { key: Uint8Array };
 }
@@ -59,18 +66,15 @@ export interface Port {
   start?(): void;
 }
 
-const DEFAULT_CLOSE_BYTES = 8 * 1024 * 1024;
+type Session = {
+  keys: ShareKeys;
+  dec: ShareDecryptor;
+  seek?: { header: Header; contentOffset: number };
+  range?: RangeDecryptor;
+};
 
-type Session =
-  | { kind: "encrypt"; enc: ShareEncryptor; tail?: Generator<Uint8Array> }
-  | {
-      kind: "decrypt";
-      keys: ShareKeys;
-      dec: ShareDecryptor;
-      seek?: { header: Header; contentOffset: number };
-    };
-
-function transferables(result: unknown): ArrayBuffer[] {
+/** The buffers of the byte arrays in v that can move instead of being copied. */
+export function transferables(v: unknown): ArrayBuffer[] {
   const out = new Set<ArrayBuffer>();
   const visit = (v: unknown) => {
     if (v instanceof Uint8Array) {
@@ -84,87 +88,72 @@ function transferables(result: unknown): ArrayBuffer[] {
       Object.values(v).forEach(visit);
     }
   };
-  visit(result);
+  visit(v);
   return [...out];
+}
+
+function openRange(s: Session): RangeDecryptor {
+  if (!s.range) throw new Error("v2: open a range before writing to it");
+  return s.range;
 }
 
 /** Answers protocol requests arriving on port. Requests run one at a time, in order. */
 export function serve(port: Port): void {
   const sessions = new Map<number, Session>();
 
-  function get<K extends Session["kind"]>(id: number, kind: K): Extract<Session, { kind: K }> {
+  function get(id: number): Session {
     const s = sessions.get(id);
-    if (!s || s.kind !== kind) throw new Error(`no ${kind} session ${id}`);
-    return s as Extract<Session, { kind: K }>;
-  }
-
-  function fresh(id: number): void {
-    if (sessions.has(id)) throw new Error(`session ${id} is already open`);
+    if (!s) throw new Error(`no decrypt session ${id}`);
+    return s;
   }
 
   async function handle(req: Request): Promise<unknown> {
+    // Keys or a blob state from the page skip the derivation that would load libsodium.
+    await ready();
     switch (req.op) {
-      case "encrypt-open": {
-        fresh(req.session);
-        const enc = await createEncryptor(req.files, { password: req.password });
-        sessions.set(req.session, { kind: "encrypt", enc });
-        return { token: enc.token, verifier: enc.verifier, blobLength: enc.blobLength, prefix: enc.prefix.slice() };
+      case "create": {
+        const enc = await createEncryptor(req.files, { password: req.password, kind: req.kind });
+        return { token: enc.token, verifier: enc.verifier, state: enc.state };
       }
-      case "encrypt-write":
-        return { chunks: get(req.session, "encrypt").enc.push(req.data) };
-      case "encrypt-close": {
-        const s = get(req.session, "encrypt");
-        s.tail ??= s.enc.finish();
-        const limit = req.maxBytes ?? DEFAULT_CLOSE_BYTES;
-        const chunks: Uint8Array[] = [];
-        let size = 0;
-        while (size < limit) {
-          const r = s.tail.next();
-          if (r.done) {
-            sessions.delete(req.session);
-            return { chunks, done: true };
-          }
-          chunks.push(r.value);
-          size += r.value.length;
-        }
-        return { chunks, done: false };
-      }
+      case "seal":
+        return { data: sealSpan(req.state, req.start, req.end, req.plain) };
       case "decrypt-open": {
-        fresh(req.session);
-        const keys = await openKeys(req.token, req.password);
-        sessions.set(req.session, { kind: "decrypt", keys, dec: new ShareDecryptor(keys) });
+        if (sessions.has(req.session)) throw new Error(`session ${req.session} is already open`);
+        const keys = "keys" in req ? req.keys : await openKeys(req.token, req.password);
+        sessions.set(req.session, { keys, dec: new ShareDecryptor(keys) });
         return { verifier: keys.verifier };
       }
       case "decrypt-write": {
-        const { dec } = get(req.session, "decrypt");
+        const { dec } = get(req.session);
         const before = dec.header;
         const chunks = dec.push(req.data);
         return { header: before === null ? dec.header : null, chunks };
       }
       case "decrypt-close":
-        get(req.session, "decrypt").dec.finish();
+        get(req.session).dec.finish();
         sessions.delete(req.session);
         return {};
       case "read-header": {
-        const s = get(req.session, "decrypt");
+        const s = get(req.session);
         s.seek = readHeader(s.keys, req.data);
         return s.seek;
       }
-      case "range": {
-        const { keys, seek } = get(req.session, "decrypt");
-        if (!seek) throw new Error("v2: read the header before seeking");
-        const chunks: Uint8Array[] = [];
-        const data = req.data;
-        for await (const c of decryptRange(keys, seek.header, seek.contentOffset, async () => data, req.start, req.end)) {
-          chunks.push(c);
-        }
-        return { chunks };
+      case "range-open": {
+        const s = get(req.session);
+        if (!s.seek) throw new Error("v2: read the header before seeking");
+        s.range = new RangeDecryptor(s.keys, s.seek.header, s.seek.contentOffset, req.start, req.end);
+        return {};
       }
+      case "range-write":
+        return { chunks: openRange(get(req.session)).push(req.data) };
+      case "range-close":
+        openRange(get(req.session)).finish();
+        sessions.delete(req.session);
+        return {};
       case "close":
         sessions.delete(req.session);
         return {};
       case "unwrap":
-        await ready();
         return { key: unwrapKey(req.wrapped, req.salt, req.password) };
     }
   }
@@ -178,7 +167,7 @@ export function serve(port: Port): void {
         reply = { id, ok: true, result: await handle(req as Request) };
       } catch (err) {
         // A stream that failed once cannot continue.
-        if ("session" in req && req.op !== "encrypt-open" && req.op !== "decrypt-open") sessions.delete(req.session);
+        if ("session" in req && req.op !== "decrypt-open") sessions.delete(req.session);
         reply = { id, ok: false, error: err instanceof Error ? err.message : String(err) };
       }
       port.postMessage(reply, reply.ok ? transferables(reply.result) : []);

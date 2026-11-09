@@ -14,7 +14,8 @@ import {
   RequestTooLargeError,
   type RequestLink,
 } from "@/lib/e2e/request-flow";
-import { tusUpload } from "@/lib/tus-upload";
+import { tusUpload } from "@/lib/e2e/tus-upload";
+import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 
 type Phase = "loading" | "ready" | "sending" | "sent" | "closed" | "notfound";
 
@@ -45,8 +46,8 @@ export function SendPage() {
     if (!link || files.length === 0) return;
     setPhase("sending");
     try {
-      await sendToRequest(files, link, { upload: tusUpload }, (step, fraction) =>
-        setProgress(step === "encrypting" ? fraction * 50 : 50 + fraction * 50),
+      await sendToRequest(files, link, { upload: tusUpload, crypto: cryptoWorker }, (fraction) =>
+        setProgress(fraction * 100),
       );
       setPhase("sent");
     } catch (e) {

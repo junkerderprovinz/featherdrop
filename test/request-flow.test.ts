@@ -19,6 +19,8 @@ import {
 import { downloadDecryptedV2 } from "../lib/e2e/download-flow";
 import { readNote } from "../lib/e2e/note";
 import { headerLength } from "../lib/e2e/v2/share";
+import type { UploadSource } from "../lib/e2e/upload-flow";
+import { recordingWorker } from "./crypto-worker";
 import { readZip } from "./zip-reader";
 
 interface StoredRequest {
@@ -88,13 +90,14 @@ function fakeServer(limits: { maxSize?: number; open?: boolean } = {}) {
     return new Response(up.blob.slice());
   }) as typeof fetch;
 
-  const upload = async (file: File, headers: Record<string, string>) => {
-    seen.push({ url: "/files", headers: new Headers(headers), body: "" });
+  const upload = async (source: UploadSource, opts: { headers: Record<string, string> }) => {
+    seen.push({ url: "/files", headers: new Headers(opts.headers), body: "" });
     const id = `tus${tus.size}`;
-    tus.set(id, new Uint8Array(await file.arrayBuffer()));
+    tus.set(id, new Uint8Array(await new Blob([(await source.slice(0, source.size)) as BlobPart]).arrayBuffer()));
     return id;
   };
-  return { fetchImpl, upload, requests, seen };
+  const worker = recordingWorker();
+  return { fetchImpl, upload, requests, seen, crypto: worker.client, ops: worker.ops };
 }
 
 const BASE = "https://drop.example";
@@ -121,7 +124,7 @@ test("files sent to a request come back through the collect link", async () => {
   const a = new Uint8Array(70_000).map((_, i) => i % 251);
   const b = new TextEncoder().encode("second file");
   const link = parseRequestUrl(links.requestUrl);
-  await sendToRequest([file("a.bin", a), file("b.txt", b, "text/plain")], link, { upload: srv.upload, fetchImpl: srv.fetchImpl });
+  await sendToRequest([file("a.bin", a), file("b.txt", b, "text/plain")], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
 
   const collect = parseCollectUrl(links.collectUrl);
   const listing = await listRequestUploads(collect, srv.fetchImpl);
@@ -133,7 +136,7 @@ test("files sent to a request come back through the collect link", async () => {
   );
 
   let zip: { name: string; bytes: Uint8Array } | null = null;
-  await downloadDecryptedV2(fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }, async (s, name) => {
+  await downloadDecryptedV2(srv.crypto, fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }, async (s, name) => {
     zip = { name, bytes: await bytesOf(s) };
   });
   assert.equal(zip!.name, "files.zip");
@@ -146,11 +149,22 @@ test("files sent to a request come back through the collect link", async () => {
 test("a note sent to a request is read as a note", async () => {
   const srv = fakeServer();
   const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
-  await sendToRequest("the code is 4711", parseRequestUrl(links.requestUrl), { upload: srv.upload, fetchImpl: srv.fetchImpl });
+  await sendToRequest("the code is 4711", parseRequestUrl(links.requestUrl), { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const collect = parseCollectUrl(links.collectUrl);
   const up = opened((await listRequestUploads(collect, srv.fetchImpl)).uploads[0]);
   assert.equal(up.header.kind, "text");
-  assert.equal(await readNote(fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }), "the code is 4711");
+  assert.equal(await readNote(srv.crypto, fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }), "the code is 4711");
+});
+
+test("files sent to a request are sealed in the crypto worker", async () => {
+  const srv = fakeServer();
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  await sendToRequest([file("x.bin", new Uint8Array(70_000))], parseRequestUrl(links.requestUrl), {
+    upload: srv.upload,
+    crypto: srv.crypto,
+    fetchImpl: srv.fetchImpl,
+  });
+  assert.deepEqual([...new Set(srv.ops)], ["create", "seal"]);
 });
 
 test("creating a request sends the public key and the collect hash, never the secret", async () => {
@@ -175,7 +189,7 @@ test("the uploader sends the request key with every request and nothing that col
   const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
   const before = srv.seen.length;
-  await sendToRequest([file("x.bin", new Uint8Array(10))], link, { upload: srv.upload, fetchImpl: srv.fetchImpl });
+  await sendToRequest([file("x.bin", new Uint8Array(10))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   const uploaderCalls = srv.seen.slice(before);
   assert.ok(uploaderCalls.length >= 3);
   for (const call of uploaderCalls) {
@@ -204,7 +218,7 @@ test("an upload over the request's size cap is refused before it is sent", async
   const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: 8000 }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
   await assert.rejects(
-    sendToRequest([file("big.bin", new Uint8Array(9000))], link, { upload: srv.upload, fetchImpl: srv.fetchImpl }),
+    sendToRequest([file("big.bin", new Uint8Array(9000))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl }),
     RequestTooLargeError,
   );
   assert.ok(!srv.seen.some((c) => c.url === "/files"));
@@ -216,7 +230,7 @@ test("a closed request refuses before anything is encrypted", async () => {
   const link = parseRequestUrl(links.requestUrl);
   assert.deepEqual(await fetchRequestInfo(link, srv.fetchImpl), { expiresAt: 1, maxSize: null, open: false });
   await assert.rejects(
-    sendToRequest([file("x.bin", new Uint8Array(1))], link, { upload: srv.upload, fetchImpl: srv.fetchImpl }),
+    sendToRequest([file("x.bin", new Uint8Array(1))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl }),
     RequestClosedError,
   );
 });
@@ -233,7 +247,7 @@ test("an upload that does not open is listed as unreadable and can be deleted", 
   const srv = fakeServer();
   const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
   const link = parseRequestUrl(links.requestUrl);
-  await sendToRequest([file("good.bin", new Uint8Array(5))], link, { upload: srv.upload, fetchImpl: srv.fetchImpl });
+  await sendToRequest([file("good.bin", new Uint8Array(5))], link, { upload: srv.upload, crypto: srv.crypto, fetchImpl: srv.fetchImpl });
   // Anyone with the request link can attach a sealed key that opens nothing.
   const good = srv.requests.get("req0")!.uploads[0];
   srv.requests.get("req0")!.uploads.unshift({

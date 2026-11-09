@@ -16,9 +16,10 @@ const PermissionsPolicy = "accelerometer=(), autoplay=(), bluetooth=(), browsing
 
 // ContentSecurityPolicy returns the policy for the app. libsodium compiles its
 // WebAssembly at runtime, Mantine injects style elements, Vite inlines the
-// smallest font files as data: URLs, previews are blob: URLs and the PDF
-// preview is an <embed>. A non-empty logoOrigin, the origin of an external
-// APP_LOGO, is allowed for images and nothing else.
+// smallest font files as data: URLs, previews are blob: URLs, the PDF preview
+// is an <embed> and the crypto worker starts from a blob: URL made from code
+// inside the pinned main script. A non-empty logoOrigin, the origin of an
+// external APP_LOGO, is allowed for images and nothing else.
 func ContentSecurityPolicy(logoOrigin string) string {
 	img := "'self' blob: data:"
 	if logoOrigin != "" {
@@ -32,7 +33,7 @@ func ContentSecurityPolicy(logoOrigin string) string {
 		"font-src 'self' data:",
 		"media-src 'self' blob:",
 		"object-src blob:",
-		"worker-src 'self'",
+		"worker-src 'self' blob:",
 		"connect-src 'self'",
 		"frame-ancestors 'none'",
 		"base-uri 'none'",

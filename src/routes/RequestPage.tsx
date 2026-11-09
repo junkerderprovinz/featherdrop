@@ -10,7 +10,7 @@ import { ExpirySelect } from "@/components/ExpirySelect";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { clampExpiry } from "@/lib/expiry";
 import { createRequest } from "@/lib/e2e/request-flow";
-import { storedUploadToken } from "@/lib/tus-upload";
+import { storedUploadToken } from "@/lib/e2e/tus-upload";
 
 export function RequestPage() {
   const { t } = useTranslation();

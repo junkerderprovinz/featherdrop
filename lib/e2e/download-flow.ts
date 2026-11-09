@@ -7,7 +7,9 @@ import { streamToAsyncIterable, asyncIterableToStream, watchConsumed } from "./s
 
 import { splitByManifest } from "./multi-file";
 import { fetchResumable } from "./resumable-fetch";
-import { openKeys, decryptShare, readHeader, cipherRange, decryptRangeStream, type Header } from "./v2/share";
+import { readHeader, cipherRange, type Header } from "./v2/share";
+import { decryptInWorker, decryptRangeInWorker } from "./v2/remote";
+import type { Client } from "./v2/protocol";
 import { fetchShareHeader } from "./share-listing";
 
 import { zipStream, zipLength, type ZipEntry } from "./zip";
@@ -76,22 +78,22 @@ export async function downloadDecrypted(
 }
 
 /**
- * Downloads and decrypts a format 4 share and saves it: a single file as
- * itself, a bundle as one ZIP named bundleName, built while it decrypts. save
+ * Downloads a format 4 share, decrypts it in the crypto worker and saves it: a
+ * single file as itself, a bundle as one ZIP named bundleName, built while it
+ * decrypts. save
  * gets the exact length for Content-Length. The secret is the token from the
  * URL fragment with the password, or the keys already derived for the
  * listing. A wrong password cannot be told apart locally, so it shows up as a
  * verifier the server refuses, before anything is counted.
  */
 export async function downloadDecryptedV2(
+  crypto: Client,
   fetchBlob: (keyVerifier: string) => Promise<ReadableStream<Uint8Array>>,
   secret: { token: string; password?: string } | { keys: ShareKeys },
   save: (plaintext: ReadableStream<Uint8Array>, filename: string, size: number) => Promise<void>,
   bundleName = "files.zip",
 ): Promise<{ header: Header }> {
-  const keys = "keys" in secret ? secret.keys : await openKeys(secret.token, secret.password);
-  const stream = await fetchBlob(keys.verifier);
-  const { header, plaintext } = await decryptShare(streamToAsyncIterable(stream), keys);
+  const { header, plaintext } = await decryptInWorker(crypto, secret, fetchBlob);
 
   let out: ReadableStream<Uint8Array>;
   let name: string;
@@ -123,16 +125,18 @@ export async function downloadDecryptedV2(
  * Saves file index of a format 4 share alone. Only the chunks holding it are
  * fetched, through the uncounted ?preview=1 range read, which the server
  * allows for unlimited shares only; a limited share is one unit and downloads
- * whole.
+ * whole. The crypto worker decrypts them.
  */
 export async function downloadFileV2(
+  crypto: Client,
   slug: string,
   keys: ShareKeys,
   index: number,
   save: (plaintext: ReadableStream<Uint8Array>, filename: string, size: number) => Promise<void>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
-  const { header, contentOffset } = readHeader(keys, await fetchShareHeader(slug, keys.verifier, fetchImpl));
+  const head = await fetchShareHeader(slug, keys.verifier, fetchImpl);
+  const { header, contentOffset } = readHeader(keys, head);
   const file = header.files[index];
   if (!file) throw new Error(`v2: the share has no file ${index}`);
   const start = header.files.slice(0, index).reduce((sum, f) => sum + f.size, 0);
@@ -146,6 +150,6 @@ export async function downloadFileV2(
     headers: { "x-fd-key-verifier": keys.verifier, Range: `bytes=${plan.from}-${plan.to}` },
   });
   if (res.status !== 206 || !res.body) throw new Error(`range read ${res.status}`);
-  const plain = decryptRangeStream(keys, header, contentOffset, streamToAsyncIterable(res.body), start, end);
+  const plain = decryptRangeInWorker(crypto, keys, head, streamToAsyncIterable(res.body), start, end);
   await save(asyncIterableToStream(plain), file.name, file.size);
 }

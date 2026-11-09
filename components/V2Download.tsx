@@ -14,6 +14,7 @@ import { downloadDecryptedV2, downloadFileV2, fetchShareBlob } from "@/lib/e2e/d
 import { canStreamDownload, streamToDownload, blobDownload } from "@/lib/e2e/stream-download";
 import { readHeader, type Kind } from "@/lib/e2e/v2/share";
 import { readNote } from "@/lib/e2e/note";
+import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 import { NoteView } from "@/components/NoteView";
 
 function tokenMode(token: string) {
@@ -107,8 +108,8 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
     }
     try {
       // Reading a note counts as its download, like saving a file.
-      if (currentKind === "text") setNote(await readNote(fetchShareBlob(slug), { keys: current }));
-      else await downloadDecryptedV2(fetchShareBlob(slug), { keys: current }, save, `${slug}.zip`);
+      if (currentKind === "text") setNote(await readNote(cryptoWorker, fetchShareBlob(slug), { keys: current }));
+      else await downloadDecryptedV2(cryptoWorker, fetchShareBlob(slug), { keys: current }, save, `${slug}.zip`);
     } catch {
       notifications.show({ color: "red", message: t("download.failed") });
     } finally {
@@ -120,7 +121,7 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
     if (!keys || busy || savingFile !== null) return;
     setSavingFile(index);
     try {
-      await downloadFileV2(slug, keys, index, save);
+      await downloadFileV2(cryptoWorker, slug, keys, index, save);
     } catch {
       notifications.show({ color: "red", message: t("download.failed") });
     } finally {

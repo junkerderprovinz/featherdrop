@@ -12,6 +12,7 @@ import { NoteView } from "@/components/NoteView";
 import { formatBytes } from "@/lib/format";
 import { downloadDecryptedV2 } from "@/lib/e2e/download-flow";
 import { readNote } from "@/lib/e2e/note";
+import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 import { canStreamDownload, streamToDownload, blobDownload } from "@/lib/e2e/stream-download";
 import {
   closeRequest,
@@ -81,8 +82,8 @@ function Upload({ collect, upload }: { collect: CollectLink; upload: Readable })
     setBusy(true);
     try {
       const fetchBlob = fetchUploadBlob(collect, upload.id);
-      if (isNote) setNote(await readNote(fetchBlob, { keys: upload.keys }));
-      else await downloadDecryptedV2(fetchBlob, { keys: upload.keys }, save);
+      if (isNote) setNote(await readNote(cryptoWorker, fetchBlob, { keys: upload.keys }));
+      else await downloadDecryptedV2(cryptoWorker, fetchBlob, { keys: upload.keys }, save);
     } catch {
       notifications.show({ color: "red", message: t("download.failed") });
     } finally {

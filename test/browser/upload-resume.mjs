@@ -7,6 +7,7 @@ import { build } from "esbuild";
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { inlineWorker } from "../inline-worker.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -18,8 +19,9 @@ const pageBundle = (
         import { uploadEncrypted, resumeUpload } from "./lib/e2e/upload-flow.ts";
         import { listPendingUploads, indexedDbResumeStore } from "./lib/e2e/upload-resume.ts";
         import { openKeys, decryptShare } from "./lib/e2e/v2/share.ts";
+        import { cryptoWorker } from "./lib/e2e/v2/crypto-worker.ts";
         globalThis.__T = {
-          tusUpload, uploadEncrypted, resumeUpload, listPendingUploads, indexedDbResumeStore, openKeys, decryptShare,
+          tusUpload, uploadEncrypted, resumeUpload, listPendingUploads, indexedDbResumeStore, openKeys, decryptShare, cryptoWorker,
         };
       `,
       resolveDir: repoRoot,
@@ -29,6 +31,7 @@ const pageBundle = (
     format: "esm",
     platform: "browser",
     write: false,
+    plugins: [inlineWorker],
   })
 ).outputFiles[0].text;
 
@@ -161,11 +164,12 @@ check(
 hang = true;
 patches.length = 0;
 const start = page.evaluate(async () => {
-  const { uploadEncrypted, tusUpload, indexedDbResumeStore } = globalThis.__T;
+  const { uploadEncrypted, tusUpload, indexedDbResumeStore, cryptoWorker } = globalThis.__T;
   const data = new Uint8Array(20_000).map((_, i) => (i * 11) % 251);
   const file = new File([data], "report.pdf", { type: "application/pdf", lastModified: 1_700_000_000_000 });
   await uploadEncrypted([file], { expiry: "1d", maxDownloads: null, format: 4 }, {
     baseUrl: location.origin,
+    crypto: cryptoWorker,
     resume: indexedDbResumeStore(),
     upload: (source, o) => tusUpload(source, { ...o, chunkSize: 8192 }),
     finalize: async () => ({ slug: "never" }),
@@ -180,7 +184,7 @@ await page.addScriptTag({ url: "/page.mjs", type: "module" });
 await page.waitForFunction(() => globalThis.__T !== undefined);
 
 const after = await page.evaluate(async () => {
-  const { resumeUpload, listPendingUploads, indexedDbResumeStore, tusUpload, openKeys, decryptShare } = globalThis.__T;
+  const { resumeUpload, listPendingUploads, indexedDbResumeStore, tusUpload, openKeys, decryptShare, cryptoWorker } = globalThis.__T;
   const store = indexedDbResumeStore();
   const pending = await listPendingUploads(store);
   const data = new Uint8Array(20_000).map((_, i) => (i * 11) % 251);
@@ -189,6 +193,7 @@ const after = await page.evaluate(async () => {
   let uploadId = "";
   const deps = {
     baseUrl: location.origin,
+    crypto: cryptoWorker,
     resume: store,
     upload: async (source, o) => (uploadId = await tusUpload(source, { ...o, chunkSize: 8192 })),
     finalize: async () => ({ slug: "abc" }),

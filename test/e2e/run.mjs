@@ -10,6 +10,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { inlineWorker } from "../inline-worker.mjs";
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
 
@@ -27,6 +28,10 @@ writeFileSync(SRC, payload);
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ acceptDownloads: true });
+// The served client must start its crypto worker from a blob: URL, which the
+// real CSP has to allow.
+const workerUrls = [];
+ctx.on("page", (p) => p.on("worker", (w) => workerUrls.push(w.url())));
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push("page: " + e));
@@ -154,6 +159,10 @@ try {
   await format4RoundTrips(browser, ctx, errors, fail);
   await noteRoundTrips(ctx, errors, fail);
   await requestRoundTrip(ctx, errors, fail);
+  if (workerUrls.length === 0 || !workerUrls.every((u) => u.startsWith("blob:"))) {
+    fail("the crypto worker did not start from a blob: URL: " + JSON.stringify(workerUrls));
+  }
+  console.log("crypto workers:", workerUrls.length, "all from blob: URLs");
   // Last, because the limit switch is remembered for later uploads.
   await limitedShareListsBeforeDownload(ctx, errors, fail);
 
@@ -352,9 +361,11 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
         import { tusUpload } from "./lib/e2e/tus-upload.ts";
         import { listPendingUploads, indexedDbResumeStore } from "./lib/e2e/upload-resume.ts";
         import { openLink, fetchLinkListing } from "./lib/e2e/share-listing.ts";
+        import { cryptoWorker } from "./lib/e2e/v2/crypto-worker.ts";
         // An upload that keeps a resume record and sends 1 MiB per request.
         const resumeDeps = () => ({
           baseUrl: location.origin,
+          crypto: cryptoWorker,
           resume: indexedDbResumeStore(),
           upload: (source, o) => tusUpload(source, { ...o, chunkSize: 1024 * 1024 }),
           finalize: async (body) => {
@@ -367,7 +378,7 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
             return res.json();
           },
         });
-        globalThis.__v2 = { tusUpload, uploadEncrypted, resumeUpload, listPendingUploads, resumeDeps, openLink, fetchLinkListing };
+        globalThis.__v2 = { tusUpload, uploadEncrypted, resumeUpload, listPendingUploads, resumeDeps, openLink, fetchLinkListing, cryptoWorker };
       `,
       resolveDir: repoRoot,
       loader: "ts",
@@ -376,6 +387,7 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
     format: "esm",
     platform: "browser",
     write: false,
+    plugins: [inlineWorker],
   });
 
   const libCtx = await browser.newContext({ bypassCSP: true });
@@ -569,7 +581,7 @@ async function resumeUploadInPage({ name, b64, lastModified }) {
 // Runs in the page: upload with format 4, check that a wrong password gets
 // no listing, list from the uncounted header and check nothing was spent.
 async function uploadAndListV2({ files: specs, maxDownloads, password }) {
-  const { tusUpload, uploadEncrypted, openLink, fetchLinkListing } = globalThis.__v2;
+  const { tusUpload, uploadEncrypted, openLink, fetchLinkListing, cryptoWorker } = globalThis.__v2;
   const files = specs.map(
     (f) => new File([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], f.name),
   );
@@ -580,6 +592,7 @@ async function uploadAndListV2({ files: specs, maxDownloads, password }) {
     { expiry: "1d", maxDownloads, password, format: 4 },
     {
       baseUrl: location.origin,
+      crypto: cryptoWorker,
       upload: (source, { onProgress }) => tusUpload(source, { onProgress }),
       finalize: async (body) => {
         const res = await fetch("/api/finalize", {

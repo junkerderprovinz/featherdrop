@@ -14,6 +14,7 @@ import {
   type ResumeStore,
 } from "../lib/e2e/upload-resume";
 import { openKeys, decryptShare } from "../lib/e2e/v2/share";
+import { cryptoWorker } from "./crypto-worker";
 
 function bytes(n: number, seed = 0): Uint8Array<ArrayBuffer> {
   return new Uint8Array(n).map((_, i) => (i * 3 + seed) % 251);
@@ -50,6 +51,7 @@ function flakyServer(store: ResumeStore, breakAfter?: number) {
   let n = 0;
   const deps: UploadDeps = {
     baseUrl: "https://drop.example.tld",
+    crypto: cryptoWorker(),
     resume: store,
     async upload(source, { resumeUrl, onUploadUrl }) {
       let url = resumeUrl;

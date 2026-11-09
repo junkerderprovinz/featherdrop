@@ -9,6 +9,7 @@ import {
 } from "../lib/e2e/download-flow";
 import { openKeys, decryptShare, headerLength, readHeader, cipherRange } from "../lib/e2e/v2/share";
 import { readZip } from "./zip-reader";
+import { cryptoWorker, recordingWorker } from "./crypto-worker";
 
 
 async function* one(b: Uint8Array) {
@@ -38,9 +39,13 @@ async function readSource(source: UploadSource): Promise<Uint8Array> {
 function fakeServer() {
   let stored: Uint8Array | null = null;
   let finalized: FinalizeRequest | null = null;
+  const worker = recordingWorker();
   return {
+    ops: worker.ops,
+    crypto: worker.client,
     deps: {
       baseUrl: "https://drop.example.tld",
+      crypto: worker.client,
       async upload(source: UploadSource) {
         stored = await readSource(source);
         return "upload-1";
@@ -77,6 +82,7 @@ async function download(server: ReturnType<typeof fakeServer>, url: string, pass
   const saved: { name: string; data: Uint8Array }[] = [];
   const sizes: number[] = [];
   const { header } = await downloadDecryptedV2(
+    server.crypto,
     (v) => server.fetchBlob(v),
     { token, password },
     async (plaintext, name, size) => {
@@ -133,6 +139,22 @@ test("format 4 uploads a bundle with a password that downloads as one ZIP", asyn
     { name: "a.txt", data: a },
     { name: "b.bin", data: b },
   ]);
+});
+
+test("a format 4 upload is sealed and its download opened in the crypto worker", async () => {
+  const server = fakeServer();
+  const data = bytes(70_000);
+  const { shareUrl } = await uploadEncrypted(
+    [new File([data], "a.bin")],
+    { expiry: "1d", maxDownloads: null, password: "correct horse battery", format: 4 },
+    server.deps,
+  );
+  assert.deepEqual([...new Set(server.ops)], ["create", "seal"]);
+
+  server.ops.length = 0;
+  const { saved } = await download(server, shareUrl, "correct horse battery");
+  assert.deepEqual(saved, [{ name: "a.bin", data }]);
+  assert.deepEqual([...new Set(server.ops)], ["decrypt-open", "decrypt-write", "decrypt-close", "close"]);
 });
 
 test("a wrong password sends a verifier the server refuses", async () => {
@@ -210,7 +232,7 @@ test("a v2 download reads the response to its end, which is what the server coun
   const net = servingFetch(server);
   const saved: Uint8Array[] = [];
 
-  await downloadDecryptedV2(fetchShareBlob("abc123", net.fetchImpl), { token }, async (plaintext) => {
+  await downloadDecryptedV2(server.crypto, fetchShareBlob("abc123", net.fetchImpl), { token }, async (plaintext) => {
     saved.push(await readAll(plaintext));
   });
 
@@ -226,7 +248,7 @@ test("a v2 download that another reader holds rejects as in progress and saves n
   let saves = 0;
 
   await assert.rejects(
-    downloadDecryptedV2(fetchShareBlob("abc123", net.fetchImpl), { token }, async () => {
+    downloadDecryptedV2(server.crypto, fetchShareBlob("abc123", net.fetchImpl), { token }, async () => {
       saves++;
     }),
     DownloadInProgressError,
@@ -251,7 +273,7 @@ test("a v2 link-and-password download takes keys derived once for the listing", 
   const keys = await openKeys(token, "correct horse battery");
   const saved: Uint8Array[] = [];
 
-  await downloadDecryptedV2((v) => server.fetchBlob(v), { keys }, async (plaintext) => {
+  await downloadDecryptedV2(server.crypto, (v) => server.fetchBlob(v), { keys }, async (plaintext) => {
     saved.push(await readAll(plaintext));
   });
 
@@ -274,7 +296,7 @@ test("a single file arrives whole through a save that resolves before reading", 
   const { data, token } = await uploadV2(server);
   const { reads, save } = earlySave();
 
-  await downloadDecryptedV2((v) => server.fetchBlob(v), { token }, save);
+  await downloadDecryptedV2(server.crypto, (v) => server.fetchBlob(v), { token }, save);
 
   assert.deepEqual(await Promise.all(reads), [{ name: "film.mp4", data }]);
 });
@@ -290,7 +312,7 @@ test("a bundle's ZIP arrives whole through a save that resolves before reading",
   );
   const { reads, save } = earlySave();
 
-  await downloadDecryptedV2((v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save, "s.zip");
+  await downloadDecryptedV2(server.crypto, (v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save, "s.zip");
 
   const [zip] = await Promise.all(reads);
   assert.equal(zip.name, "s.zip");
@@ -312,7 +334,7 @@ test("a bundle's ZIP fails instead of ending when the final chunk is missing", a
   const { reads, save } = earlySave();
 
   await assert.rejects(
-    downloadDecryptedV2((v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save, "s.zip"),
+    downloadDecryptedV2(server.crypto, (v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save, "s.zip"),
     /v2: blob truncated/,
   );
   await assert.rejects(reads[0], /v2: blob truncated/);
@@ -330,7 +352,7 @@ test("the last file's stream fails instead of ending when the final chunk is mis
   const { reads, save } = earlySave();
 
   await assert.rejects(
-    downloadDecryptedV2((v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save),
+    downloadDecryptedV2(server.crypto, (v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save),
     /v2: blob truncated/,
   );
   await assert.rejects(reads[0], /v2: blob truncated/);
@@ -360,6 +382,7 @@ test("a format 4 upload hands over the exact blob length before reading any plai
   let blob: Uint8Array = new Uint8Array(0);
   const { shareUrl } = await uploadEncrypted([file], { expiry: "1d", maxDownloads: null, format: 4 }, {
     baseUrl: "https://drop.example.tld",
+    crypto: cryptoWorker(),
     async upload(source) {
       declared = source.size;
       readBefore = file.slices;
@@ -384,6 +407,7 @@ test("a format 4 upload larger than the in-memory cap needs no scratch storage",
   let tail: Uint8Array = new Uint8Array(0);
   await uploadEncrypted([file], { expiry: "1d", maxDownloads: null, format: 4 }, {
     baseUrl: "https://drop.example.tld",
+    crypto: cryptoWorker(),
     async upload(source) {
       tail = await readSource({ size: source.size, slice: (s, e) => source.slice(s + source.size - 100, e + source.size - 100) });
       return "upload-1";
@@ -448,7 +472,7 @@ test("one file of a bundle downloads alone through the uncounted range read", as
   const net = rangeFetch(server);
   const saved: { name: string; size: number; data: Uint8Array }[] = [];
 
-  await downloadFileV2("abc123", keys, 1, async (plaintext, name, size) => {
+  await downloadFileV2(server.crypto, "abc123", keys, 1, async (plaintext, name, size) => {
     saved.push({ name, size, data: await readAll(plaintext) });
   }, net.fetchImpl);
 
@@ -456,6 +480,24 @@ test("one file of a bundle downloads alone through the uncounted range read", as
   const { header, contentOffset } = readHeader(keys, server.blob!);
   const plan = cipherRange(header, contentOffset, 100_000, 249_999)!;
   assert.deepEqual(net.seen, ["header", `preview bytes=${plan.from}-${plan.to}`]);
+});
+
+test("one file of a bundle is decrypted in the crypto worker", async () => {
+  const server = fakeServer();
+  const files = [
+    { name: "a.bin", data: bytes(100_000, 1) },
+    { name: "b.bin", data: bytes(150_000, 2) },
+  ];
+  const keys = await uploadBundle(server, files);
+  server.ops.length = 0;
+  let data: Uint8Array = new Uint8Array(0);
+
+  await downloadFileV2(server.crypto, "abc123", keys, 1, async (plaintext) => {
+    data = await readAll(plaintext);
+  }, rangeFetch(server).fetchImpl);
+
+  assert.deepEqual(data, files[1].data);
+  assert.deepEqual([...new Set(server.ops)], ["decrypt-open", "read-header", "range-open", "range-write", "range-close", "close"]);
 });
 
 test("an empty file of a bundle downloads without reading any content", async () => {
@@ -467,7 +509,7 @@ test("an empty file of a bundle downloads without reading any content", async ()
   const net = rangeFetch(server);
   const saved: { name: string; data: Uint8Array }[] = [];
 
-  await downloadFileV2("abc123", keys, 1, async (plaintext, name) => {
+  await downloadFileV2(server.crypto, "abc123", keys, 1, async (plaintext, name) => {
     saved.push({ name, data: await readAll(plaintext) });
   }, net.fetchImpl);
 
@@ -485,7 +527,7 @@ test("a single-file pick fails when the server refuses the range read", async ()
   let saves = 0;
 
   await assert.rejects(
-    downloadFileV2("abc123", keys, 0, async () => {
+    downloadFileV2(server.crypto, "abc123", keys, 0, async () => {
       saves++;
     }, net.fetchImpl),
     /range read 404/,

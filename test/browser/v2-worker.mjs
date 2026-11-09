@@ -1,11 +1,13 @@
 // Browser test for the v2 crypto worker: lib/e2e/v2/worker.ts runs as a real
-// module Web Worker in Chromium, and the page encrypts, decrypts and seeks
-// through the message protocol.
+// module Web Worker in Chromium, started from a blob: URL as in the client
+// build, and the page encrypts, decrypts and seeks through the message
+// protocol.
 import { createServer } from "node:http";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { inlineWorker } from "../inline-worker.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -17,22 +19,22 @@ async function bundle(contents) {
     format: "esm",
     platform: "browser",
     write: false,
+    plugins: [inlineWorker],
   });
   return out.outputFiles[0].text;
 }
 
-const workerBundle = await bundle(`import "./lib/e2e/v2/worker.ts";`);
 const pageBundle = await bundle(`
+import CryptoWorker from "./lib/e2e/v2/worker.ts?worker&inline";
 import { connect } from "./lib/e2e/v2/protocol.ts";
-import { cipherRange } from "./lib/e2e/v2/share.ts";
-globalThis.__V2 = { connect, cipherRange };
+import { cipherRange, blobLength, plainSpan, openKeys } from "./lib/e2e/v2/share.ts";
+globalThis.__V2 = { CryptoWorker, connect, cipherRange, blobLength, plainSpan, openKeys };
 `);
 
 const server = createServer((req, res) => {
-  const js = { "/worker.mjs": workerBundle, "/page.mjs": pageBundle }[req.url];
-  if (js) {
+  if (req.url === "/page.mjs") {
     res.writeHead(200, { "Content-Type": "text/javascript" });
-    res.end(js);
+    res.end(pageBundle);
     return;
   }
   res.writeHead(200, { "Content-Type": "text/html" });
@@ -45,13 +47,15 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(String(e)));
+const workerUrls = [];
+page.on("worker", (w) => workerUrls.push(w.url()));
 await page.goto(`http://127.0.0.1:${port}/`);
 await page.addScriptTag({ url: "/page.mjs", type: "module" });
 await page.waitForFunction(() => typeof globalThis.__V2 !== "undefined", { timeout: 30_000 });
 
 const result = await page.evaluate(async () => {
-  const { connect, cipherRange } = globalThis.__V2;
-  const worker = () => connect(new Worker("/worker.mjs", { type: "module" }));
+  const { CryptoWorker, connect, cipherRange, blobLength, plainSpan, openKeys } = globalThis.__V2;
+  const worker = () => connect(new CryptoWorker());
   const pattern = (n, seed) => {
     const b = new Uint8Array(n);
     for (let i = 0; i < n; i++) b[i] = (i * 7 + seed) % 251;
@@ -68,21 +72,20 @@ const result = await page.evaluate(async () => {
   };
   const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 
+  // Sealing in a second worker, as after a reload, takes the blob state alone.
   async function encrypt(files, data, password) {
+    const { token, verifier, state } = await worker().request({ op: "create", files, password });
     const w = worker();
-    const open = await w.request({ op: "encrypt-open", session: 1, files, password });
-    const parts = [open.prefix];
-    for (let i = 0; i < data.length; i += 1 << 20) {
-      const slice = data.slice(i, i + (1 << 20));
-      parts.push(...(await w.request({ op: "encrypt-write", session: 1, data: slice }, [slice.buffer])).chunks);
-    }
-    for (;;) {
-      const r = await w.request({ op: "encrypt-close", session: 1 });
-      parts.push(...r.chunks);
-      if (r.done) break;
+    const size = blobLength(state);
+    const parts = [];
+    for (let at = 0; at < size; at += 1 << 20) {
+      const end = Math.min(at + (1 << 20), size);
+      const span = plainSpan(state, at, end);
+      const plain = data.slice(span.from, Math.max(span.from, span.to));
+      parts.push((await w.request({ op: "seal", state, start: at, end, plain }, [plain.buffer])).data);
     }
     const blob = join(parts);
-    return { blob, token: open.token, verifier: open.verifier, lengthOk: blob.length === open.blobLength };
+    return { blob, token, verifier, lengthOk: blob.length === size };
   }
 
   // A fresh worker, so the keys come from the token and password alone.
@@ -116,6 +119,16 @@ const result = await page.evaluate(async () => {
     checks.wrongPassword = /header/.test(String(e));
   }
 
+  const keys = await openKeys(single.token, "correct horse battery");
+  const withKeys = worker();
+  await withKeys.request({ op: "decrypt-open", session: 4, keys });
+  const opened = [];
+  for (let i = 0; i < single.blob.length; i += 300_000) {
+    opened.push(...(await withKeys.request({ op: "decrypt-write", session: 4, data: single.blob.slice(i, i + 300_000) })).chunks);
+  }
+  await withKeys.request({ op: "decrypt-close", session: 4 });
+  checks.keysFromThePage = same(join(opened), big);
+
   const a = pattern(10, 2);
   const b = pattern(200_000, 3);
   const files = [
@@ -137,13 +150,14 @@ const result = await page.evaluate(async () => {
   const start = 2_000_000;
   const end = 2_100_000;
   const plan = cipherRange(header, contentOffset, start, end);
-  const r = await w.request({
-    op: "range",
-    session: 3,
-    start,
-    end,
-    data: single.blob.slice(plan.from, plan.to + 1),
-  });
+  await w.request({ op: "range-open", session: 3, start, end });
+  const out = [];
+  for (let at = plan.from; at <= plan.to; at += 50_000) {
+    const data = single.blob.slice(at, Math.min(at + 50_000, plan.to + 1));
+    out.push(...(await w.request({ op: "range-write", session: 3, data }, [data.buffer])).chunks);
+  }
+  await w.request({ op: "range-close", session: 3 });
+  const r = { chunks: out };
   checks.seek = same(join(r.chunks), big.subarray(start, end + 1));
   return checks;
 });
@@ -151,6 +165,7 @@ const result = await page.evaluate(async () => {
 await browser.close();
 server.close();
 
+result.workersFromBlob = workerUrls.length > 0 && workerUrls.every((u) => u.startsWith("blob:"));
 const failed = Object.entries(result).filter(([, ok]) => ok !== true);
 for (const [name, ok] of Object.entries(result)) console.log(`${ok === true ? "ok  " : "FAIL"} ${name}`);
 if (pageErrors.length) console.log("page errors:", pageErrors);

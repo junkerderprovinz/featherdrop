@@ -387,60 +387,96 @@ export interface BlobSource {
   slice(start: number, end: number): Promise<Uint8Array>;
 }
 
+function layout(state: BlobState) {
+  const { prefix, header } = state;
+  const padded = paddedContentLength(header.size);
+  const n = chunkCount(padded, header.chunk);
+  return { padded, n, full: header.chunk + TAG_BYTES, size: prefix.length + padded + n * TAG_BYTES };
+}
+
+/** Exact length of the blob state describes. */
+export function blobLength(state: BlobState): number {
+  return layout(state).size;
+}
+
+/**
+ * The plaintext range [from, to) whose chunks seal into the blob bytes
+ * [start, end), which lie within the blob. A range inside the prefix needs
+ * no plaintext and gives to <= from.
+ */
+export function plainSpan(state: BlobState, start: number, end: number): { from: number; to: number } {
+  const { prefix, header } = state;
+  const { full } = layout(state);
+  if (end <= prefix.length) return { from: 0, to: 0 };
+  const cs = Math.max(start, prefix.length) - prefix.length;
+  const ce = end - prefix.length;
+  const from = Math.floor(cs / full) * header.chunk;
+  const to = Math.min((Math.floor((ce - 1) / full) + 1) * header.chunk, header.size);
+  return { from, to };
+}
+
+/**
+ * The blob bytes [start, end), which lie within the blob, sealed from plain,
+ * the plaintext plainSpan names for them.
+ */
+export function sealSpan(state: BlobState, start: number, end: number, plain: Uint8Array): Uint8Array {
+  const { prefix, header, contentKey } = state;
+  const { padded, n, full } = layout(state);
+  const out = new Uint8Array(end - start);
+  let at = 0;
+  if (start < prefix.length) {
+    const head = prefix.subarray(start, Math.min(end, prefix.length));
+    out.set(head);
+    at = head.length;
+  }
+  if (end <= prefix.length) return out;
+
+  const baseNonce = fromBase64(header.nonce);
+  const cs = Math.max(start, prefix.length) - prefix.length;
+  const ce = end - prefix.length;
+  const first = Math.floor(cs / full);
+  const last = Math.floor((ce - 1) / full);
+  const plainFrom = first * header.chunk;
+  for (let i = first; i <= last; i++) {
+    const chunkPlain = new Uint8Array(i === n - 1 ? padded - i * header.chunk : header.chunk);
+    const from = i * header.chunk - plainFrom;
+    if (from < plain.length) chunkPlain.set(plain.subarray(from, from + chunkPlain.length));
+    const sealed = sealChunk(contentKey, baseNonce, n, i, chunkPlain);
+    const a = Math.max(0, cs - i * full);
+    const b = Math.min(sealed.length, ce - i * full);
+    out.set(sealed.subarray(a, b), at);
+    at += b - a;
+  }
+  return out;
+}
+
 /**
  * The blob as random-access bytes. A slice seals only the chunks it covers,
- * from the plaintext range [start, end) readPlain returns. Chunks depend on
- * nothing but the key, the base nonce and the index, so every slice equals the
- * same bytes of encryptStream's output and an upload can pick up at any offset.
+ * from the plaintext range readPlain returns. Chunks depend on nothing but the
+ * key, the base nonce and the index, so every slice equals the same bytes of
+ * encryptStream's output and an upload can pick up at any offset. The page
+ * passes a seal that hands the work to the crypto worker.
  */
 export function blobSource(
   state: BlobState,
   readPlain: (start: number, end: number) => Promise<Uint8Array>,
+  seal: (start: number, end: number, plain: Uint8Array) => Uint8Array | Promise<Uint8Array> = (s, e, p) =>
+    sealSpan(state, s, e, p),
 ): BlobSource {
-  const { prefix, header, contentKey } = state;
-  const padded = paddedContentLength(header.size);
-  const n = chunkCount(padded, header.chunk);
-  const full = header.chunk + TAG_BYTES;
-  const size = prefix.length + padded + n * TAG_BYTES;
-  const baseNonce = fromBase64(header.nonce);
-
+  const size = blobLength(state);
   return {
     size,
     async slice(start, end) {
       const s = Math.max(0, start);
       const e = Math.min(end, size);
       if (e <= s) return new Uint8Array(0);
-      const out = new Uint8Array(e - s);
-      let at = 0;
-      if (s < prefix.length) {
-        const head = prefix.subarray(s, Math.min(e, prefix.length));
-        out.set(head);
-        at = head.length;
-      }
-      if (e <= prefix.length) return out;
-
-      const cs = Math.max(s, prefix.length) - prefix.length;
-      const ce = e - prefix.length;
-      const first = Math.floor(cs / full);
-      const last = Math.floor((ce - 1) / full);
-      const plainFrom = first * header.chunk;
-      const plainTo = Math.min((last + 1) * header.chunk, header.size);
+      const { from, to } = plainSpan(state, s, e);
       let plain: Uint8Array = new Uint8Array(0);
-      if (plainTo > plainFrom) {
-        plain = await readPlain(plainFrom, plainTo);
-        if (plain.length !== plainTo - plainFrom) throw new Error("v2: the plaintext read came back short");
+      if (to > from) {
+        plain = await readPlain(from, to);
+        if (plain.length !== to - from) throw new Error("v2: the plaintext read came back short");
       }
-      for (let i = first; i <= last; i++) {
-        const chunkPlain = new Uint8Array(i === n - 1 ? padded - i * header.chunk : header.chunk);
-        const from = i * header.chunk - plainFrom;
-        if (from < plain.length) chunkPlain.set(plain.subarray(from, from + chunkPlain.length));
-        const sealed = sealChunk(contentKey, baseNonce, n, i, chunkPlain);
-        const a = Math.max(0, cs - i * full);
-        const b = Math.min(sealed.length, ce - i * full);
-        out.set(sealed.subarray(a, b), at);
-        at += b - a;
-      }
-      return out;
+      return seal(s, e, plain);
     },
   };
 }
@@ -595,15 +631,84 @@ export async function* decryptRange(
   const plan = cipherRange(header, contentOffset, start, end);
   if (plan === null) return;
   const fetched = await fetchRange(plan.from, plan.to);
-  if (fetched.length !== plan.to - plan.from + 1) throw new Error("v2: range fetch returned the wrong length");
+  if (fetched.length !== plan.to - plan.from + 1) throw short();
   yield* decryptRangeStream(keys, header, contentOffset, [fetched], start, end);
 }
 
 /**
+ * Push-based decryption of the inclusive plaintext range [start, end] from the
+ * blob bytes cipherRange names for it, in any slicing. Each chunk is opened as
+ * soon as it is complete, so a large range never sits in memory whole.
+ */
+export class RangeDecryptor {
+  private readonly keys: ShareKeys;
+  private readonly header: Header;
+  private readonly baseNonce: Uint8Array;
+  private readonly n: number;
+  private readonly s: number;
+  private readonly e: number;
+  private readonly last: number;
+  private pending: Uint8Array[] = [];
+  private buffered = 0;
+  private i: number;
+
+  constructor(keys: ShareKeys, header: Header, contentOffset: number, start: number, end: number) {
+    const plan = cipherRange(header, contentOffset, start, end);
+    this.keys = keys;
+    this.header = header;
+    this.baseNonce = fromBase64(header.nonce);
+    this.n = chunkCount(paddedContentLength(header.size), header.chunk);
+    this.s = Math.max(0, start);
+    this.e = Math.min(header.size - 1, end);
+    // An empty range takes no bytes at all.
+    this.i = plan?.first ?? 0;
+    this.last = plan?.last ?? -1;
+  }
+
+  /** Takes blob bytes in any slicing and returns the plaintext of the chunks they complete. */
+  push(data: Uint8Array): Uint8Array[] {
+    if (data.length === 0) return [];
+    if (this.i > this.last) throw short();
+    this.pending.push(data);
+    this.buffered += data.length;
+    const out: Uint8Array[] = [];
+    const { header } = this;
+    while (this.i <= this.last) {
+      const len = cipherChunkLength(header, this.n, this.i);
+      if (this.buffered < len) break;
+      const joined = this.pending.length === 1 ? this.pending[0] : new Uint8Array(this.buffered);
+      if (this.pending.length > 1) {
+        let at = 0;
+        for (const p of this.pending) {
+          joined.set(p, at);
+          at += p.length;
+        }
+      }
+      const plain = openChunk(this.keys, header, this.baseNonce, this.n, this.i, joined.subarray(0, len));
+      this.pending = this.buffered > len ? [joined.subarray(len)] : [];
+      this.buffered -= len;
+      const chunkStart = this.i * header.chunk;
+      const a = Math.max(0, this.s - chunkStart);
+      const b = Math.min(plain.length, this.e + 1 - chunkStart);
+      this.i++;
+      if (b > a) out.push(plain.subarray(a, b));
+    }
+    return out;
+  }
+
+  /** Throws unless exactly the bytes of the range arrived. */
+  finish(): void {
+    if (this.i <= this.last || this.buffered > 0) throw short();
+  }
+}
+
+function short(): Error {
+  return new Error("v2: range fetch returned the wrong length");
+}
+
+/**
  * Yields the plaintext of the inclusive range [start, end] from cipher, which
- * holds exactly the blob bytes cipherRange names for it, in any slicing. Each
- * chunk is opened as soon as it is complete, so a large range never sits in
- * memory whole.
+ * holds exactly the blob bytes cipherRange names for it, in any slicing.
  */
 export async function* decryptRangeStream(
   keys: ShareKeys,
@@ -613,48 +718,8 @@ export async function* decryptRangeStream(
   start: number,
   end: number,
 ): AsyncGenerator<Uint8Array> {
-  const plan = cipherRange(header, contentOffset, start, end);
-  if (plan === null) return;
-  const { first, last } = plan;
-  const s = Math.max(0, start);
-  const e = Math.min(header.size - 1, end);
-  const n = chunkCount(paddedContentLength(header.size), header.chunk);
-  const baseNonce = fromBase64(header.nonce);
-  const short = () => new Error("v2: range fetch returned the wrong length");
-
-  let pending: Uint8Array[] = [];
-  let buffered = 0;
-  let i = first;
-  const open = function* (): Generator<Uint8Array> {
-    while (i <= last) {
-      const len = cipherChunkLength(header, n, i);
-      if (buffered < len) return;
-      const joined = pending.length === 1 ? pending[0] : new Uint8Array(buffered);
-      if (pending.length > 1) {
-        let at = 0;
-        for (const p of pending) {
-          joined.set(p, at);
-          at += p.length;
-        }
-      }
-      const plain = openChunk(keys, header, baseNonce, n, i, joined.subarray(0, len));
-      pending = buffered > len ? [joined.subarray(len)] : [];
-      buffered -= len;
-      const chunkStart = i * header.chunk;
-      const a = Math.max(0, s - chunkStart);
-      const b = Math.min(plain.length, e + 1 - chunkStart);
-      i++;
-      if (b > a) yield plain.subarray(a, b);
-    }
-  };
-
-  for await (const part of cipher) {
-    if (part.length === 0) continue;
-    if (i > last) throw short();
-    pending.push(part);
-    buffered += part.length;
-    yield* open();
-  }
-  if (i <= last || buffered > 0) throw short();
+  if (cipherRange(header, contentOffset, start, end) === null) return;
+  const dec = new RangeDecryptor(keys, header, contentOffset, start, end);
+  for await (const part of cipher) yield* dec.push(part);
+  dec.finish();
 }
-
