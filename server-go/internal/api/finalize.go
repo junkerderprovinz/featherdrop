@@ -62,7 +62,7 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 		}
 
 		var body finalizeBody
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBody)).Decode(&body); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 			return
 		}

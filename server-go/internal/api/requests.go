@@ -27,9 +27,9 @@ import (
 // derives from the collect link's fragment.
 const collectTokenHeader = "x-fd-collect-token"
 
-// maxRequestBody bounds the JSON bodies of the request routes, which are a
-// few hundred bytes.
-const maxRequestBody = 64 << 10
+// maxJSONBody bounds every JSON body the API reads, which are a few hundred
+// bytes.
+const maxJSONBody = 64 << 10
 
 // absentSecret is compared when there is no request, so a refusal takes the
 // same work either way. A missing request is refused whatever the comparison
@@ -59,7 +59,7 @@ func CreateRequestHandler(cfg config.Config, db *sql.DB, now func() time.Time) h
 			return
 		}
 		var body createRequestBody
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&body); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBody)).Decode(&body); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 			return
 		}
@@ -236,7 +236,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body sendBody
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBody)).Decode(&body); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}

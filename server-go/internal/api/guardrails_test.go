@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
@@ -196,5 +197,15 @@ func TestFinalize_OtherUploadsInProgressCountTowardTheQuota(t *testing.T) {
 	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2}, nil)
 	if rec.Code != http.StatusInsufficientStorage {
 		t.Fatalf("status = %d, want 507 (body %s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestFinalize_RefusesAnOversizedBody(t *testing.T) {
+	e := newTestEnv(t)
+	id := e.makeTusUpload(t, []byte("small blob"))
+
+	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2, "pad": strings.Repeat("x", 1<<20)}, nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("finalize with a 1 MiB body = %d, want 400", rec.Code)
 	}
 }
