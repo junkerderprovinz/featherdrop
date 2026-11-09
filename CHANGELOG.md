@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The README has a table of all settings.
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
 - Tidied the code comments and log messages.
+- Deleting an upload from a file request gives its place back, so a request someone filled with junk takes uploads again.
 
 ### Removed
 

@@ -434,7 +434,7 @@ func (h requestHandlers) header(w http.ResponseWriter, r *http.Request) {
 }
 
 // deleteUpload deletes one upload of a request, such as one whose sealed key
-// does not open, for the holder of its collect link.
+// does not open, for the holder of its collect link, and frees its place.
 func (h requestHandlers) deleteUpload(w http.ResponseWriter, r *http.Request) {
 	rec, up, ok := h.collected(w, r)
 	if !ok {

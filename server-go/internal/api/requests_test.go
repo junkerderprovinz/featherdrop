@@ -470,3 +470,26 @@ func TestRequestRoutes_RefuseOversizedBodies(t *testing.T) {
 		t.Errorf("send with a 1 MiB body: %d", rec.Code)
 	}
 }
+
+func TestDeleteRequestUpload_ReopensAFullRequest(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, map[string]any{"maxUploads": 1})
+	if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusNoContent {
+		t.Fatalf("send: %d", rec.Code)
+	}
+	if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusGone {
+		t.Fatalf("send to a full request: %d, want 410", rec.Code)
+	}
+	ups, _ := store.ListRequestUploads(e.db, slug)
+	if rec := e.do(t, nil, http.MethodDelete, "/api/r/"+slug+"/uploads/"+ups[0].ID, nil, asCollector()); rec.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d", rec.Code)
+	}
+	var info map[string]any
+	decodeJSON(t, e.do(t, nil, http.MethodGet, "/api/r/"+slug, nil, asUploader()), &info)
+	if info["open"] != true {
+		t.Errorf("after the delete the request reports %v", info)
+	}
+	if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusNoContent {
+		t.Errorf("send after the delete: %d, want 204", rec.Code)
+	}
+}

@@ -184,10 +184,17 @@ func CloseRequest(db *sql.DB, slug string) error {
 	return nil
 }
 
-// DeleteRequestUpload deletes the row of one upload of a request. ok is false
-// when the request has no such upload. The caller removes the blob first.
+// DeleteRequestUpload deletes the row of one upload of a request and gives
+// its place back, so a request filled with junk opens again. ok is false when
+// the request has no such upload. The caller removes the blob first.
 func DeleteRequestUpload(db *sql.DB, slug, id string) (ok bool, err error) {
-	res, err := db.Exec(`DELETE FROM request_uploads WHERE request_slug = ? AND id = ?`, slug, id)
+	tx, err := db.Begin()
+	if err != nil {
+		return false, fmt.Errorf("delete request upload: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	res, err := tx.Exec(`DELETE FROM request_uploads WHERE request_slug = ? AND id = ?`, slug, id)
 	if err != nil {
 		return false, fmt.Errorf("delete request upload: %w", err)
 	}
@@ -195,7 +202,18 @@ func DeleteRequestUpload(db *sql.DB, slug, id string) (ok bool, err error) {
 	if err != nil {
 		return false, fmt.Errorf("delete request upload: rows affected: %w", err)
 	}
-	return n == 1, nil
+	if n == 0 {
+		return false, nil
+	}
+	if _, err := tx.Exec(
+		`UPDATE requests SET upload_count = MAX(upload_count - 1, 0) WHERE slug = ?`, slug,
+	); err != nil {
+		return false, fmt.Errorf("delete request upload: count: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("delete request upload: commit: %w", err)
+	}
+	return true, nil
 }
 
 // DeleteRequest deletes a request and the rows of its uploads. ok is false

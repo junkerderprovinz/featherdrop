@@ -373,7 +373,7 @@ The requester's browser sends `x-fd-collect-token: collectToken` to:
 | `GET /api/r/<slug>/uploads` | the uploads: id, encrypted size, time, sealed key |
 | `GET /api/r/<slug>/uploads/<id>/header` | prefix and sealed header of one upload |
 | `GET /api/r/<slug>/uploads/<id>` | the blob, with Range, never counted |
-| `DELETE /api/r/<slug>/uploads/<id>` | deletes one upload |
+| `DELETE /api/r/<slug>/uploads/<id>` | deletes one upload and frees its place |
 | `DELETE /api/r/<slug>` | closes the request and deletes it with its uploads |
 
 The server hashes the token and compares it with `collectHash` in constant
@@ -384,7 +384,8 @@ another request all get the same 404. The browser opens each sealed key with
 link-mode token, derives the share's keys and opens the header and the content
 as for any format 4 share. Anyone with the request link can attach a sealed key
 that opens nothing; the browser lists such an upload as unreadable next to the
-others, and the requester can delete it.
+others, and the requester can delete it. A deleted upload gives its place back,
+so a request filled with junk takes uploads again.
 
 ### Why the collect proof is separate
 
