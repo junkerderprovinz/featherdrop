@@ -38,8 +38,7 @@ import { collectSharedFiles, isShareTargetLaunch } from "@/lib/share-target";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
 
-// The same header as lib/upload-auth.ts, repeated so this module has no
-// server-only import.
+// The header server-go/internal/upload/auth.go checks.
 const UPLOAD_TOKEN_HEADER = "x-fd-upload-token";
 // The upload secret lives in sessionStorage, which survives navigation but not
 // closing the tab; it never goes to localStorage.

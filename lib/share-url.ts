@@ -1,7 +1,7 @@
 // The configured BASE_URL wins over the browser's origin, so the link uses the
 // public domain however the uploader reached the page (internal IP, DNS name,
 // tailnet address). The key, when there is one, rides in the fragment and never
-// reaches the server; server master-key mode has none.
+// reaches the server.
 export function buildShareUrl(
   baseUrl: string,
   origin: string,

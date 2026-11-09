@@ -19,7 +19,7 @@ test("falls back to the browser origin when BASE_URL is empty", () => {
   );
 });
 
-test("no #k fragment when there is no link key (server master-key mode)", () => {
+test("no #k fragment without a link key", () => {
   assert.equal(
     buildShareUrl("https://s.example.com", "http://x", "abc123", ""),
     "https://s.example.com/d/abc123",
