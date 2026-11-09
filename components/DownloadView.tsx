@@ -51,6 +51,7 @@ import { decryptFilesWithKey, type MultiDownload } from "@/lib/e2e/multi-pipelin
 import { deriveContentKey, decryptWithKey } from "@/lib/e2e/pipeline";
 import { computeKeyVerifier, fromBase64 } from "@/lib/e2e/crypto";
 import { peekBlobHeader } from "@/lib/e2e/blob-layout";
+import { fetchShareListing } from "@/lib/e2e/share-listing";
 import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
 import type { Manifest } from "@/lib/e2e/multi-file";
 import {
@@ -503,6 +504,36 @@ export function DownloadView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isV3, hasPassword, downloadsLeft, size, linkKey]);
+
+  // Link shares that are not decrypted on mount, limited ones or ones over the
+  // in-memory cap, show their names and sizes from the uncounted blob header.
+  useEffect(() => {
+    if ((!isV2 && !isV3) || hasPassword || !linkKey) return;
+    const mountCap = isV3 ? MULTI_BUFFER_MAX_BYTES : PREVIEW_MAX_BYTES;
+    if (downloadsLeft === null && size <= mountCap) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const key = await deriveContentKey({ keyFromUrl: linkKey });
+        const files = await fetchShareListing(slug, key, isV3 ? 3 : 2);
+        if (cancelled) return;
+        if (isV3) {
+          setManifest(
+            (cur) =>
+              cur ?? { files: files.map((f) => ({ ...f, size: f.size ?? 0 })) },
+          );
+        } else {
+          setRevealedName(files[0].name);
+          setRevealedMime(files[0].type);
+        }
+      } catch {
+        // The download button still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isV2, isV3, hasPassword, linkKey, downloadsLeft, size, slug]);
 
   // Builds the blob: URL of the selected buffered file and revokes it when the
   // selection changes or the view unmounts.

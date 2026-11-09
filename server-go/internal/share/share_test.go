@@ -354,3 +354,31 @@ func show(p *int64) string {
 }
 
 func strPtr(s string) *string { return &s }
+
+func TestBlobHeaderLength(t *testing.T) {
+	tests := []struct {
+		name   string
+		prefix []byte
+		size   int64
+		want   int64
+		wantOK bool
+	}{
+		{"one-byte length", []byte{5, 'm', 'e', 't', 'a', '!'}, 100, 6, true},
+		{"two-byte length", []byte{0x80, 0x01}, 1000, 2 + 128, true},
+		{"header is the whole blob", []byte{3, 'a', 'b', 'c'}, 4, 4, true},
+		{"length past the end of the blob", []byte{5, 'm'}, 5, 0, false},
+		{"truncated varint", []byte{0x80}, 100, 0, false},
+		{"empty prefix", nil, 0, 0, false},
+		{"length over the cap", []byte{0x81, 0x80, 0x80, 0x01}, 1 << 30, 0, false},
+		{"varint longer than any valid length", []byte{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01}, 1 << 30, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := BlobHeaderLength(tt.prefix, tt.size)
+			if got != tt.want || ok != tt.wantOK {
+				t.Errorf("BlobHeaderLength(%v, %d) = (%d, %v), want (%d, %v)",
+					tt.prefix, tt.size, got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+}

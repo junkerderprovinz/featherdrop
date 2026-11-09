@@ -159,7 +159,7 @@ func TestRouter_SharePageNoIndex(t *testing.T) {
 		t.Fatalf("/d/<slug> X-Robots-Tag = %q, want noindex, nofollow", got)
 	}
 	// No share is seeded, so these are the uniform 404s.
-	for _, path := range []string{"/api/d/some-slug", "/api/d/some-slug/meta"} {
+	for _, path := range []string{"/api/d/some-slug", "/api/d/some-slug/meta", "/api/d/some-slug/header"} {
 		rec := get(h, path)
 		if got := rec.Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
 			t.Fatalf("%s X-Robots-Tag = %q, want noindex, nofollow", path, got)
@@ -189,6 +189,22 @@ func TestRouter_DownloadRateLimited(t *testing.T) {
 	}
 	if got := lastRec.Body.String(); got != `{"error":"too many requests"}` {
 		t.Fatalf("429 body = %q, want the uniform JSON error", got)
+	}
+}
+
+func TestRouter_ShareRoutesShareOneRateLimitBucket(t *testing.T) {
+	h := newFullRouter(t, func(c *config.Config) { c.RateLimit = true })
+
+	paths := []string{"/api/d/nonexistent", "/api/d/nonexistent/meta", "/api/d/nonexistent/header"}
+	for i := 0; i < 10; i++ {
+		if rec := get(h, paths[i%len(paths)]); rec.Code == http.StatusTooManyRequests {
+			t.Fatalf("request %d limited early", i+1)
+		}
+	}
+	for _, path := range paths {
+		if rec := get(h, path); rec.Code != http.StatusTooManyRequests {
+			t.Fatalf("%s after the shared burst: status = %d, want 429", path, rec.Code)
+		}
 	}
 }
 

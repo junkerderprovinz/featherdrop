@@ -142,10 +142,11 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	finalize := api.FinalizeHandler(cfg, db, nil)
 	download := api.DownloadHandler(cfg, db, nil)
 	meta := api.MetaHandler(db, nil)
+	header := api.HeaderHandler(cfg, db, nil)
 
 	// Only the tus create POST is limited; PATCH and HEAD resumes stay free.
-	// Download and meta share one bucket so a slug or verifier guesser cannot
-	// double its budget by alternating endpoints.
+	// The share routes share one bucket so a slug or verifier guesser cannot
+	// multiply its budget by alternating endpoints.
 	if cfg.RateLimit {
 		createLimiter := ratelimit.NewLimiter(30, 10, nil)
 		finalizeLimiter := ratelimit.NewLimiter(60, 10, nil)
@@ -154,6 +155,7 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustProxy, "", finalize)
 		download = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", download)
 		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", meta)
+		header = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", header)
 	}
 
 	// chi keeps the full request path, which tusd matches against its
@@ -164,6 +166,7 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	r.Post("/api/finalize", finalize)
 	r.Get("/api/d/{slug}", download)
 	r.Get("/api/d/{slug}/meta", meta)
+	r.Get("/api/d/{slug}/header", header)
 	r.Get("/api/config", api.ConfigHandler(cfg))
 
 	// Without this, an unknown /api path would fall through to the SPA and

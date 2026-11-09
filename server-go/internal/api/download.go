@@ -106,42 +106,9 @@ func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 	}
 	slots := newDownloadSlots(db)
 	return func(w http.ResponseWriter, r *http.Request) {
-		setNoIndex(w)
-		slug := chi.URLParam(r, "slug")
-
-		rec, err := store.GetFileBySlug(db, slug)
-		if err != nil {
-			writeJSONError(w, http.StatusNotFound, "not found")
+		rec, blobPath, ok := readableShare(w, r, cfg, db, now().UnixMilli())
+		if !ok {
 			return
-		}
-		if rec == nil || isExpired(rec, now().UnixMilli()) {
-			writeJSONError(w, http.StatusNotFound, "not found")
-			return
-		}
-
-		// The blob path comes from the stored id, never from the URL slug.
-		blobPath := filepath.Join(cfg.UploadsDir, rec.ID)
-		if _, err := os.Stat(blobPath); err != nil {
-			writeJSONError(w, http.StatusNotFound, "not found")
-			return
-		}
-
-		// Format 1 rows from an older database hold age ciphertext and no
-		// verifier. Serving them here would stream them without proof and burn
-		// them, so they get the same 404 as a missing share.
-		if rec.Format < 2 {
-			writeJSONError(w, http.StatusNotFound, "not found")
-			return
-		}
-
-		// The verifier is checked before anything is counted or burned. Rows
-		// uploaded before verifiers existed have none and are served without it.
-		if rec.KeyVerifier != nil && *rec.KeyVerifier != "" {
-			provided := r.Header.Get(keyVerifierHeader)
-			if provided == "" || !share.VerifierMatches(provided, *rec.KeyVerifier) {
-				writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-				return
-			}
 		}
 
 		if r.URL.Query().Get("preview") == "1" {
@@ -169,6 +136,47 @@ func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			_ = os.Remove(blobPath)
 		}
 	}
+}
+
+// readableShare looks up the share a read request names and its blob path. When
+// there is nothing to read it answers the request itself and returns false: a
+// 404 for a missing, expired or format 1 share or a missing blob, a 401 for a
+// wrong key verifier.
+func readableShare(w http.ResponseWriter, r *http.Request, cfg config.Config, db *sql.DB, nowMs int64) (*store.FileRecord, string, bool) {
+	setNoIndex(w)
+	slug := chi.URLParam(r, "slug")
+
+	rec, err := store.GetFileBySlug(db, slug)
+	if err != nil || rec == nil || isExpired(rec, nowMs) {
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return nil, "", false
+	}
+
+	// The blob path comes from the stored id, never from the URL slug.
+	blobPath := filepath.Join(cfg.UploadsDir, rec.ID)
+	if _, err := os.Stat(blobPath); err != nil {
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return nil, "", false
+	}
+
+	// Format 1 rows from an older database hold age ciphertext and no
+	// verifier. Serving them here would stream them without proof and burn
+	// them, so they get the same 404 as a missing share.
+	if rec.Format < 2 {
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return nil, "", false
+	}
+
+	// The verifier is checked before anything is counted or burned. Rows
+	// uploaded before verifiers existed have none and are served without it.
+	if rec.KeyVerifier != nil && *rec.KeyVerifier != "" {
+		provided := r.Header.Get(keyVerifierHeader)
+		if provided == "" || !share.VerifierMatches(provided, *rec.KeyVerifier) {
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			return nil, "", false
+		}
+	}
+	return rec, blobPath, true
 }
 
 // servePreview handles ?preview=1, a Range-capable read that is neither counted
