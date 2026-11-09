@@ -41,3 +41,8 @@ test("prefers an exact region-specific match over a base fallback when both cand
   // pt-BR is not supported, so the region falls back to pt.
   assert.equal(resolveLanguage(["pt-BR"], ["en", "pt"], FALLBACK), "pt");
 });
+
+test("takes Norwegian Bokmål and Nynorsk for Norwegian", () => {
+  assert.equal(resolveLanguage(["nb-NO"], ["en", "no"], FALLBACK), "no");
+  assert.equal(resolveLanguage(["nn"], ["en", "no"], FALLBACK), "no");
+});
