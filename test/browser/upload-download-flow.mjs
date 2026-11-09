@@ -161,7 +161,7 @@ const result = await page.evaluate(async () => {
 
     const phases = [];
     const { shareUrl } = await uploadEncrypted(
-      file,
+      [file],
       { expiry: "7d", maxDownloads: null },
       deps,
       (phase, frac) => phases.push({ phase, frac }),
@@ -229,7 +229,7 @@ const result = await page.evaluate(async () => {
     const deps = makeDeps("https://x");
 
     const { shareUrl } = await uploadEncrypted(
-      file,
+      [file],
       { expiry: "1d", maxDownloads: 3, password: "pw" },
       deps,
     );
@@ -316,7 +316,7 @@ const result = await page.evaluate(async () => {
   try {
     const file = new File([new Uint8Array(100)], "tiny.bin", { type: "application/octet-stream" });
     const deps = makeDeps();
-    const { shareUrl } = await uploadEncrypted(file, { expiry: "7d", maxDownloads: null }, deps);
+    const { shareUrl } = await uploadEncrypted([file], { expiry: "7d", maxDownloads: null }, deps);
     const hashIdx = shareUrl.indexOf("#k=");
     const slug = shareUrl.slice("https://x/d/".length, hashIdx === -1 ? undefined : hashIdx);
     const body = metaStore.get(slug);
