@@ -6,6 +6,7 @@
 
 import { toBase64url } from "./base64";
 import type { Client } from "./v2/protocol";
+import { httpError } from "./http-error";
 
 /** The secret of a management link and the hash finalize stores. */
 export interface ManageToken {
@@ -45,6 +46,6 @@ export async function revokeShare(
     headers: { "x-fd-manage-token": token },
   });
   if (res.status === 404) return "notfound";
-  if (!res.ok) throw new Error(`revoke ${res.status}`);
+  if (!res.ok) throw httpError("revoke", res);
   return "deleted";
 }
