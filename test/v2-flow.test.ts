@@ -1,12 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { uploadEncrypted, type FinalizeRequest } from "../lib/e2e/upload-flow";
+import { uploadEncrypted, type FinalizeRequest, type UploadSource } from "../lib/e2e/upload-flow";
 import {
   downloadDecryptedV2,
   fetchShareBlob,
   DownloadInProgressError,
 } from "../lib/e2e/download-flow";
-import { openKeys } from "../lib/e2e/v2/share";
+import { openKeys, decryptShare } from "../lib/e2e/v2/share";
+
+async function* one(b: Uint8Array) {
+  yield b;
+}
 
 function bytes(n: number, seed = 0): Uint8Array<ArrayBuffer> {
   return new Uint8Array(n).map((_, i) => (i * 3 + seed) % 251);
@@ -23,6 +27,10 @@ async function readAll(rs: ReadableStream<Uint8Array>): Promise<Uint8Array> {
   return new Uint8Array(Buffer.concat(parts));
 }
 
+async function readSource(source: UploadSource): Promise<Uint8Array> {
+  return new Uint8Array(await new Blob([(await source.slice(0, source.size)) as BlobPart]).arrayBuffer());
+}
+
 /** A server stand-in: stores the upload and the finalize body, serves the blob for the stored verifier only. */
 function fakeServer() {
   let stored: Uint8Array | null = null;
@@ -30,8 +38,8 @@ function fakeServer() {
   return {
     deps: {
       baseUrl: "https://drop.example.tld",
-      async upload(file: File) {
-        stored = new Uint8Array(await file.arrayBuffer());
+      async upload(source: UploadSource) {
+        stored = await readSource(source);
         return "upload-1";
       },
       async finalize(body: FinalizeRequest) {
@@ -290,4 +298,61 @@ test("the last file's stream fails instead of ending when the final chunk is mis
     /v2: blob truncated/,
   );
   await assert.rejects(reads[0], /v2: blob truncated/);
+});
+
+/** A file whose bytes are zeros made up on demand, so its size costs no memory. */
+class ZeroFile extends File {
+  slices = 0;
+  readonly zeros: number;
+  constructor(zeros: number, name: string) {
+    super([], name);
+    this.zeros = zeros;
+  }
+  override get size(): number {
+    return this.zeros;
+  }
+  override slice(start = 0, end = this.zeros): Blob {
+    this.slices++;
+    return new Blob([new Uint8Array(Math.max(0, Math.min(end, this.zeros) - start))]);
+  }
+}
+
+test("a format 4 upload hands over the exact blob length before reading any plaintext", async () => {
+  const file = new ZeroFile(3 * 1024 * 1024, "big.bin");
+  let declared = 0;
+  let readBefore = -1;
+  let blob: Uint8Array = new Uint8Array(0);
+  const { shareUrl } = await uploadEncrypted([file], { expiry: "1d", maxDownloads: null, format: 4 }, {
+    baseUrl: "https://drop.example.tld",
+    async upload(source) {
+      declared = source.size;
+      readBefore = file.slices;
+      blob = await readSource(source);
+      return "upload-1";
+    },
+    finalize: async () => ({ slug: "abc123" }),
+  });
+
+  assert.equal(readBefore, 0);
+  assert.equal(declared, blob.length);
+  const keys = await openKeys(new URL(shareUrl).hash.slice(3));
+  const { header, plaintext } = await decryptShare(one(blob), keys);
+  let size = 0;
+  for await (const p of plaintext) size += p.length;
+  assert.equal(header.files[0].name, "big.bin");
+  assert.equal(size, file.size);
+});
+
+test("a format 4 upload larger than the in-memory cap needs no scratch storage", async () => {
+  const file = new ZeroFile(600 * 1024 * 1024, "huge.bin");
+  let tail: Uint8Array = new Uint8Array(0);
+  await uploadEncrypted([file], { expiry: "1d", maxDownloads: null, format: 4 }, {
+    baseUrl: "https://drop.example.tld",
+    async upload(source) {
+      tail = await readSource({ size: source.size, slice: (s, e) => source.slice(s + source.size - 100, e + source.size - 100) });
+      return "upload-1";
+    },
+    finalize: async () => ({ slug: "abc123" }),
+  });
+  assert.equal(tail.length, 100);
 });

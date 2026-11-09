@@ -334,10 +334,10 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
   const bundle = await build({
     stdin: {
       contents: `
-        import * as tus from "tus-js-client";
         import { uploadEncrypted } from "./lib/e2e/upload-flow.ts";
+        import { tusUpload } from "./lib/e2e/tus-upload.ts";
         import { openLink, fetchLinkListing } from "./lib/e2e/share-listing.ts";
-        globalThis.__v2 = { tus, uploadEncrypted, openLink, fetchLinkListing };
+        globalThis.__v2 = { tusUpload, uploadEncrypted, openLink, fetchLinkListing };
       `,
       resolveDir: repoRoot,
       loader: "ts",
@@ -428,7 +428,7 @@ async function format4RoundTrips(browser, ctx, errors, fail) {
 // Runs in the page: upload with format 4, check that a wrong password gets
 // no listing, list from the uncounted header and check nothing was spent.
 async function uploadAndListV2({ files: specs, maxDownloads, password }) {
-  const { tus, uploadEncrypted, openLink, fetchLinkListing } = globalThis.__v2;
+  const { tusUpload, uploadEncrypted, openLink, fetchLinkListing } = globalThis.__v2;
   const files = specs.map(
     (f) => new File([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], f.name),
   );
@@ -439,15 +439,7 @@ async function uploadAndListV2({ files: specs, maxDownloads, password }) {
     { expiry: "1d", maxDownloads, password, format: 4 },
     {
       baseUrl: location.origin,
-      upload: (file) =>
-        new Promise((resolve, reject) => {
-          const up = new tus.Upload(file, {
-            endpoint: "/files",
-            onError: reject,
-            onSuccess: () => resolve(up.url.split("/").pop()),
-          });
-          up.start();
-        }),
+      upload: (source, { onProgress }) => tusUpload(source, { onProgress }),
       finalize: async (body) => {
         const res = await fetch("/api/finalize", {
           method: "POST",

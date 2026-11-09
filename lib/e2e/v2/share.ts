@@ -208,6 +208,11 @@ function openChunk(keys: ShareKeys, header: Header, baseNonce: Uint8Array, n: nu
   return plain.subarray(0, real);
 }
 
+/** Seals chunk i of n, whose plaintext is already padded to its full length. */
+function sealChunk(key: Uint8Array, baseNonce: Uint8Array, n: number, i: number, plain: Uint8Array): Uint8Array {
+  return aeadEncrypt(plain, chunkAad(i, i === n - 1), deriveNonce(baseNonce, i), key);
+}
+
 function cipherChunkLength(header: Header, n: number, i: number): number {
   const padded = paddedContentLength(header.size);
   const plain = i === n - 1 ? padded - i * header.chunk : header.chunk;
@@ -242,14 +247,13 @@ export class ShareEncryptor {
     this.buf = new Uint8Array(header.chunk);
   }
 
+  /** The content key with the sealed header, which together reproduce any byte of the blob. */
+  get state(): BlobState {
+    return { prefix: this.prefix, header: this.header, contentKey: this.key };
+  }
+
   private seal(): Uint8Array {
-    const final = this.i === this.n - 1;
-    const out = aeadEncrypt(
-      this.buf.subarray(0, this.fill),
-      chunkAad(this.i, final),
-      deriveNonce(this.baseNonce, this.i),
-      this.key,
-    );
+    const out = sealChunk(this.key, this.baseNonce, this.n, this.i, this.buf.subarray(0, this.fill));
     this.i++;
     this.fill = 0;
     return out;
@@ -358,6 +362,78 @@ export async function* encryptStream(
   yield enc.prefix;
   for await (const part of plaintext) yield* enc.push(part);
   yield* enc.finish();
+}
+
+/** What reproduces any byte of a blob: the sealed prefix, the header it seals and the content key. */
+export interface BlobState {
+  prefix: Uint8Array;
+  header: Header;
+  contentKey: Uint8Array;
+}
+
+/** A blob of known length whose bytes are produced on demand. */
+export interface BlobSource {
+  readonly size: number;
+  /** The bytes [start, end), cut at the end of the blob. */
+  slice(start: number, end: number): Promise<Uint8Array>;
+}
+
+/**
+ * The blob as random-access bytes. A slice seals only the chunks it covers,
+ * from the plaintext range [start, end) readPlain returns. Chunks depend on
+ * nothing but the key, the base nonce and the index, so every slice equals the
+ * same bytes of encryptStream's output and an upload can pick up at any offset.
+ */
+export function blobSource(
+  state: BlobState,
+  readPlain: (start: number, end: number) => Promise<Uint8Array>,
+): BlobSource {
+  const { prefix, header, contentKey } = state;
+  const padded = paddedContentLength(header.size);
+  const n = chunkCount(padded, header.chunk);
+  const full = header.chunk + TAG_BYTES;
+  const size = prefix.length + padded + n * TAG_BYTES;
+  const baseNonce = fromBase64(header.nonce);
+
+  return {
+    size,
+    async slice(start, end) {
+      const s = Math.max(0, start);
+      const e = Math.min(end, size);
+      if (e <= s) return new Uint8Array(0);
+      const out = new Uint8Array(e - s);
+      let at = 0;
+      if (s < prefix.length) {
+        const head = prefix.subarray(s, Math.min(e, prefix.length));
+        out.set(head);
+        at = head.length;
+      }
+      if (e <= prefix.length) return out;
+
+      const cs = Math.max(s, prefix.length) - prefix.length;
+      const ce = e - prefix.length;
+      const first = Math.floor(cs / full);
+      const last = Math.floor((ce - 1) / full);
+      const plainFrom = first * header.chunk;
+      const plainTo = Math.min((last + 1) * header.chunk, header.size);
+      let plain: Uint8Array = new Uint8Array(0);
+      if (plainTo > plainFrom) {
+        plain = await readPlain(plainFrom, plainTo);
+        if (plain.length !== plainTo - plainFrom) throw new Error("v2: the plaintext read came back short");
+      }
+      for (let i = first; i <= last; i++) {
+        const chunkPlain = new Uint8Array(i === n - 1 ? padded - i * header.chunk : header.chunk);
+        const from = i * header.chunk - plainFrom;
+        if (from < plain.length) chunkPlain.set(plain.subarray(from, from + chunkPlain.length));
+        const sealed = sealChunk(contentKey, baseNonce, n, i, chunkPlain);
+        const a = Math.max(0, cs - i * full);
+        const b = Math.min(sealed.length, ce - i * full);
+        out.set(sealed.subarray(a, b), at);
+        at += b - a;
+      }
+      return out;
+    },
+  };
 }
 
 /** Derives the keys for a link token from the URL fragment. */

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Format 4 uploads encrypt as they upload.** Each upload request encrypts just the bytes it sends, so no encrypted copy has to be written first. The link is ready in about half the time, and on plain HTTP format 4 drops the 500 MB limit. Formats 2 and 3 work as before.
 - **A download counts as soon as it starts, and a broken one picks up where it stopped.** The response carries a resume token that stays in the open page. With it the download continues by Range without counting again, for half an hour after the last byte arrived and at most a day. A one-time share keeps its file until that download is complete or the token runs out, and a second attempt meanwhile gets `409 download in progress`. Cutting the connection just before the end no longer lets anyone read a limited share without spending a download.
 - The upload server logs errors only, so the container log no longer lists every upload with its id and size.
 - The README has a table of all settings.
