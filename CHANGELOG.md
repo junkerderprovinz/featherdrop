@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Encryption format v2.** A versioned container with separate keys for the metadata, the content and the download proof, all derived from one fresh link secret. Kind, mode, chunk size and padding sit inside the encrypted header, so the server can't read or swap them, and Padmé padding hides exact file sizes, name lengths and small file counts. The byte layout is in `docs/encryption-format.md`, with test vectors for other implementations.
+- **Link and password.** In v2 a password is a second factor next to the link: the key needs both, the server keeps no wrapped key, and nobody holding only the slug or only the stored blob can guess the password offline. Passwords need at least 8 characters.
+- The v2 code runs in a Web Worker behind a small message protocol, and the server accepts v2 uploads as format 4. The upload page keeps writing the current formats until the new interface switches over, and every existing share stays readable.
+
 ### Changed
 
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
