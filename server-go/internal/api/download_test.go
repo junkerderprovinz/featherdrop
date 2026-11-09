@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
@@ -233,5 +235,200 @@ func TestDownload_ParallelDownloadsNeverExceedTheLimit(t *testing.T) {
 		t.Fatalf("share must burn after %d delivered downloads", limit)
 	case delivered < limit && (row == nil || row.DownloadCount != int64(delivered)):
 		t.Fatalf("download_count must equal the %d delivered downloads, row = %+v", delivered, row)
+	}
+}
+
+const wrongVerifier = "wrongwrongwrongwrongwrongwrongwrongwrongwro"
+
+// clock is a settable time source for handlers built with a now func.
+type clock struct {
+	mu sync.Mutex
+	t  time.Time
+}
+
+func newClock() *clock { return &clock{t: time.UnixMilli(1_900_000_000_000)} }
+
+func (c *clock) now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.t
+}
+
+func (c *clock) advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.t = c.t.Add(d)
+}
+
+func format4(r *store.FileRecord) {
+	v := goodVerifier
+	r.Format = 4
+	r.KeyVerifier = &v
+}
+
+// guess sends one download request with verifier through a router built for
+// this call, so state that lives only in a handler would not carry over.
+func (e *testEnv) guess(t *testing.T, now func() time.Time, path, verifier string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set(keyVerifierHeader, verifier)
+	rec := httptest.NewRecorder()
+	e.router(now).ServeHTTP(rec, req)
+	return rec
+}
+
+func TestDownload_WrongVerifiersLockAFormat4ShareWithGrowingBackoff(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, []byte("blob"), format4)
+	path := "/api/d/" + slug
+
+	for i := range share.FreeVerifierFailures {
+		if rec := e.guess(t, c.now, path, wrongVerifier); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("free guess %d: status %d, want 401", i+1, rec.Code)
+		}
+	}
+	if rec := e.guess(t, c.now, path, wrongVerifier); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("first guess past the free ones: status %d, want 401", rec.Code)
+	}
+
+	locked := e.guess(t, c.now, path, goodVerifier)
+	if locked.Code != http.StatusTooManyRequests {
+		t.Fatalf("right verifier while locked: status %d, want 429", locked.Code)
+	}
+	if ra := locked.Header().Get("Retry-After"); ra != "1" {
+		t.Fatalf("Retry-After = %q, want 1", ra)
+	}
+	var body errorBody
+	decodeJSON(t, locked, &body)
+	if body.Error != "too many requests" {
+		t.Fatalf("error = %q, want the rate limiter's too many requests", body.Error)
+	}
+
+	c.advance(time.Second)
+	if rec := e.guess(t, c.now, path, wrongVerifier); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("guess after the lock: status %d, want 401", rec.Code)
+	}
+	if ra := e.guess(t, c.now, path, wrongVerifier).Header().Get("Retry-After"); ra != "2" {
+		t.Fatalf("second lock: Retry-After = %q, want 2", ra)
+	}
+}
+
+func TestDownload_RightVerifierResetsTheBackoff(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, []byte("blob"), format4)
+	header := "/api/d/" + slug + "/header"
+
+	for range share.FreeVerifierFailures + 1 {
+		e.guess(t, c.now, header, wrongVerifier)
+	}
+	c.advance(time.Second)
+	// The header route answers 404 for format 4, but only after the verifier.
+	if rec := e.guess(t, c.now, header, goodVerifier); rec.Code == http.StatusTooManyRequests || rec.Code == http.StatusUnauthorized {
+		t.Fatalf("right verifier after the lock: status %d", rec.Code)
+	}
+	for i := range share.FreeVerifierFailures {
+		if rec := e.guess(t, c.now, header, wrongVerifier); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("guess %d after the reset: status %d, want 401", i+1, rec.Code)
+		}
+	}
+	if rec := e.guess(t, c.now, "/api/d/"+slug, goodVerifier); rec.Code != http.StatusOK {
+		t.Fatalf("download after the reset: status %d, want 200", rec.Code)
+	}
+}
+
+func TestDownload_GuessesOnTheHeaderRouteCountTowardTheLock(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, []byte("blob"), format4)
+
+	for range share.FreeVerifierFailures + 1 {
+		e.guess(t, c.now, "/api/d/"+slug+"/header", wrongVerifier)
+	}
+	if rec := e.guess(t, c.now, "/api/d/"+slug, goodVerifier); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("download after header guesses: status %d, want 429", rec.Code)
+	}
+}
+
+func TestDownload_ParallelWrongVerifiersGetNoExtraGuesses(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, []byte("blob"), format4)
+	h := e.router(c.now)
+
+	const clients = 40
+	codes := make([]int, clients)
+	var wg sync.WaitGroup
+	for i := range codes {
+		wg.Go(func() {
+			req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug, nil)
+			req.Header.Set(keyVerifierHeader, wrongVerifier)
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			codes[i] = rec.Code
+		})
+	}
+	wg.Wait()
+
+	compared := 0
+	for _, code := range codes {
+		switch code {
+		case http.StatusUnauthorized:
+			compared++
+		case http.StatusTooManyRequests:
+		default:
+			t.Fatalf("unexpected status %d", code)
+		}
+	}
+	if compared != share.FreeVerifierFailures+1 {
+		t.Fatalf("%d guesses were compared, want %d", compared, share.FreeVerifierFailures+1)
+	}
+}
+
+func TestDownload_LockStaysWithItsShare(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	attacked := e.seedV2(t, []byte("blob"), format4)
+	other := e.seedV2(t, []byte("other"), format4)
+
+	for range share.FreeVerifierFailures + 1 {
+		e.guess(t, c.now, "/api/d/"+attacked, wrongVerifier)
+	}
+	if rec := e.guess(t, c.now, "/api/d/"+other, goodVerifier); rec.Code != http.StatusOK {
+		t.Fatalf("other share: status %d, want 200", rec.Code)
+	}
+}
+
+func TestDownload_MissingVerifierIsNoGuess(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	slug := e.seedV2(t, []byte("blob"), format4)
+
+	for range 3 * share.FreeVerifierFailures {
+		if rec := e.guess(t, c.now, "/api/d/"+slug, ""); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("request without a verifier: status %d, want 401", rec.Code)
+		}
+	}
+	if rec := e.guess(t, c.now, "/api/d/"+slug, goodVerifier); rec.Code != http.StatusOK {
+		t.Fatalf("right verifier: status %d, want 200", rec.Code)
+	}
+}
+
+// Formats 2 and 3 hand their password material to anyone with the slug, so a
+// lock would protect nothing and only let a slug holder block the recipient.
+func TestDownload_OlderFormatsAreNeverLocked(t *testing.T) {
+	e := newTestEnv(t)
+	c := newClock()
+	v := goodVerifier
+	slug := e.seedV2(t, []byte("blob"), func(r *store.FileRecord) { r.KeyVerifier = &v })
+
+	for range 3 * share.FreeVerifierFailures {
+		if rec := e.guess(t, c.now, "/api/d/"+slug, wrongVerifier); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("wrong guess: status %d, want 401", rec.Code)
+		}
+	}
+	if rec := e.guess(t, c.now, "/api/d/"+slug, goodVerifier); rec.Code != http.StatusOK {
+		t.Fatalf("right verifier: status %d, want 200", rec.Code)
 	}
 }

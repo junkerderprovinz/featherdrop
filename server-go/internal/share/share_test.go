@@ -3,9 +3,11 @@ package share
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestIsSafeID(t *testing.T) {
@@ -378,6 +380,31 @@ func TestBlobHeaderLength(t *testing.T) {
 			if got != tt.want || ok != tt.wantOK {
 				t.Errorf("BlobHeaderLength(%v, %d) = (%d, %v), want (%d, %v)",
 					tt.prefix, tt.size, got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+}
+
+func TestVerifierLock(t *testing.T) {
+	tests := []struct {
+		failures int64
+		want     time.Duration
+	}{
+		{0, 0},
+		{1, 0},
+		{FreeVerifierFailures, 0},
+		{FreeVerifierFailures + 1, time.Second},
+		{FreeVerifierFailures + 2, 2 * time.Second},
+		{FreeVerifierFailures + 5, 16 * time.Second},
+		{FreeVerifierFailures + 12, 2048 * time.Second},
+		{FreeVerifierFailures + 13, time.Hour},
+		{FreeVerifierFailures + 100, time.Hour},
+		{math.MaxInt64, time.Hour},
+	}
+	for _, tt := range tests {
+		t.Run(strconv.FormatInt(tt.failures, 10), func(t *testing.T) {
+			if got := VerifierLock(tt.failures); got != tt.want {
+				t.Fatalf("VerifierLock(%d) = %v, want %v", tt.failures, got, tt.want)
 			}
 		})
 	}

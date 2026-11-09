@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Strict security headers on every response.** A Content-Security-Policy that allows only the app's own scripts and connections, plus `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `X-Frame-Options: DENY`, a Permissions-Policy that switches off camera, microphone, location and other unused features, and `X-Content-Type-Options: nosniff`.
 - An `APP_LOGO` on another host is allowed for images and nothing else. A value that is neither an http(s) URL, an image `data:` URL nor a path is ignored with a warning at boot.
 - The build tools use minimatch 11 and zod 4.6.7, which close two advisories. Neither ships in the image.
+- **Online password guessing is slowed per share.** A v2 share takes ten wrong passwords in a row, then locks for everyone for one second, doubling after each further miss up to an hour, and answers `429` with `Retry-After` while locked. The right password resets the count. The count is kept with the share, so a restart doesn't clear it, and it no longer matters how many addresses a guesser has.
 - `RATE_LIMIT` counts IPv6 visitors per /64, like the upload cap, so one host can no longer multiply its budget by rotating through the addresses of its prefix.
 
 ## [1.9.0] - 2026-07-15

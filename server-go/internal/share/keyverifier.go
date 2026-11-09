@@ -3,6 +3,7 @@ package share
 import (
 	"crypto/subtle"
 	"regexp"
+	"time"
 )
 
 // verifierRe matches a key verifier: base64url(SHA-256(K)) of the 32-byte
@@ -33,4 +34,26 @@ func constantTimeEqual(a, b string) bool {
 		return false
 	}
 	return subtle.ConstantTimeCompare(ab, bb) == 1
+}
+
+// FreeVerifierFailures is how many wrong verifiers in a row a format 4 share
+// takes before each further one locks it.
+const FreeVerifierFailures = 10
+
+// maxVerifierLock caps the lock, so a share stays reachable for its recipient
+// at least once an hour while still allowing only about 24 guesses a day.
+const maxVerifierLock = time.Hour
+
+// VerifierLock returns how long a share stays locked after its failures-th
+// wrong verifier in a row: nothing for the free ones, then one second,
+// doubling with each further failure up to an hour.
+func VerifierLock(failures int64) time.Duration {
+	over := failures - FreeVerifierFailures
+	if over <= 0 {
+		return 0
+	}
+	if over > 12 {
+		return maxVerifierLock
+	}
+	return min(time.Second<<(over-1), maxVerifierLock)
 }

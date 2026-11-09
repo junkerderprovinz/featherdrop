@@ -79,6 +79,8 @@ func ApplySchema(db *sql.DB) error {
 		{"kdf_salt", "kdf_salt BLOB"},
 		{"key_verifier", "key_verifier TEXT"},
 		{"manage_token_hash", "manage_token_hash TEXT"},
+		{"verifier_failures", "verifier_failures INTEGER NOT NULL DEFAULT 0"},
+		{"verifier_locked_until", "verifier_locked_until INTEGER"},
 	}
 	for _, m := range migrations {
 		if err := addColumn(m.name, m.ddl); err != nil {

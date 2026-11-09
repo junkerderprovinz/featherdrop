@@ -239,8 +239,13 @@ the share is downloaded.
 
 The verifier is a pseudorandom function of R, so it gives the server nothing to
 guess against without S. Someone with the link but not the blob can only guess
-the password online, one download request per guess, and the download endpoint
-is rate limited.
+the password online, one request per guess. The server counts wrong verifiers
+per share: after ten in a row it locks the share for every client, for one
+second and then twice as long after each further wrong one, up to an hour, and
+answers `429` to every verifier, right or wrong, until the lock ends. A right
+verifier resets the count, which is stored with the share, so a restart does not
+clear it. With `RATE_LIMIT` on, each IPv4 address or IPv6 /64 also gets 20
+requests a minute across the share routes.
 
 ## Password-only mode
 

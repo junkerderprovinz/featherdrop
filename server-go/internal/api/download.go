@@ -141,7 +141,8 @@ func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 // readableShare looks up the share a read request names and its blob path. When
 // there is nothing to read it answers the request itself and returns false: a
 // 404 for a missing, expired or format 1 share or a missing blob, a 401 for a
-// wrong key verifier.
+// wrong key verifier and a 429 while a format 4 share is locked after too many
+// wrong ones.
 func readableShare(w http.ResponseWriter, r *http.Request, cfg config.Config, db *sql.DB, nowMs int64) (*store.FileRecord, string, bool) {
 	setNoIndex(w)
 	slug := chi.URLParam(r, "slug")
@@ -169,12 +170,42 @@ func readableShare(w http.ResponseWriter, r *http.Request, cfg config.Config, db
 
 	// The verifier is checked before anything is counted or burned. Rows
 	// uploaded before verifiers existed have none and are served without it.
-	if rec.KeyVerifier != nil && *rec.KeyVerifier != "" {
-		provided := r.Header.Get(keyVerifierHeader)
-		if provided == "" || !share.VerifierMatches(provided, *rec.KeyVerifier) {
+	if rec.KeyVerifier == nil || *rec.KeyVerifier == "" {
+		return rec, blobPath, true
+	}
+	provided := r.Header.Get(keyVerifierHeader)
+	if provided == "" {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return nil, "", false
+	}
+	// Only a format 4 verifier can stand for a password that has to be
+	// guessed online. Formats 2 and 3 hand their wrapped key to anyone with
+	// the slug, so a lock there would protect nothing and only let a slug
+	// holder block the recipient.
+	if rec.Format < 4 {
+		if !share.VerifierMatches(provided, *rec.KeyVerifier) {
 			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 			return nil, "", false
 		}
+		return rec, blobPath, true
+	}
+	check, retryAfter, err := store.CheckKeyVerifier(db, rec.Slug, provided, nowMs)
+	switch {
+	case err != nil || check == store.VerifierNoShare:
+		if err != nil {
+			log.Printf("download: check verifier: %v", err)
+		}
+		writeJSONError(w, http.StatusNotFound, "not found")
+		return nil, "", false
+	case check == store.VerifierLocked:
+		// The same answer as the per-client rate limit, so a lock says no
+		// more than a busy network does.
+		w.Header().Set("Retry-After", strconv.FormatInt(int64(math.Ceil(retryAfter.Seconds())), 10))
+		writeJSONError(w, http.StatusTooManyRequests, "too many requests")
+		return nil, "", false
+	case check == store.VerifierWrong:
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return nil, "", false
 	}
 	return rec, blobPath, true
 }
