@@ -1,19 +1,17 @@
-// Renders the image assets, run by hand with @resvg/resvg-js and opentype.js
-// from the global npm root:
-//   .github/assets/featherdrop-banner.svg  README banner, a white 1600x500 card
-//                                          with the feather, the wordmark in
-//                                          Bitter Italic and a claim below
-//   .github/assets/featherdrop-banner.png  the rendered banner
-//   .github/assets/icon.png                512x512 template icon
-//   app/opengraph-image.png                1200x630 link preview card
-// The feather is placed by its real bounding box, whatever the path's own
-// offset. The text becomes SVG paths so the SVG needs no font; Bitter is
-// downloaded to the OS temp dir and not committed.
+// Renders the image assets other than the README banners, which
+// .github/assets/gen-banner.mjs draws:
+//   .github/assets/icon.png        512x512 Community Applications icon
+//   public/icon-512.png            the same icon for the web app manifest
+//   public/favicon.svg             the app icon, unchanged
+//   public/opengraph-image.png     1200x630 link preview card
+// The icons come from castleparcel-app.svg, the card from castleparcel-logo.svg.
+// Text becomes SVG paths, so nothing depends on a font being installed.
 //
 // Usage:  npm i -g @resvg/resvg-js opentype.js && node scripts/render-assets.mjs
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, copyFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
 
@@ -22,166 +20,63 @@ const gRoot = execSync("npm root -g").toString().trim();
 const { Resvg } = require(`${gRoot}/@resvg/resvg-js`);
 const opentype = require(`${gRoot}/opentype.js`);
 
-const ASSETS = new URL("../.github/assets/", import.meta.url);
-const logoSvg = readFileSync(new URL("featherdrop-logo.svg", ASSETS), "utf8");
+const root = fileURLToPath(new URL("..", import.meta.url));
+const assets = join(root, ".github", "assets");
+const pub = join(root, "public");
+const appSvg = join(assets, "castleparcel-app.svg");
+const logoSvg = readFileSync(join(assets, "castleparcel-logo.svg"), "utf8");
 
-// Bitter Italic 500 for the wordmark as in the app, upright 400 for the claim.
-// google/fonts only ships Bitter as a variable font, and opentype.js ignores
-// gvar deltas and would draw the thinnest master, so static instances come from
-// the Google Fonts CSS API, which returns plain TTF URLs to a legacy User-Agent.
-async function loadFont(spec, cacheName) {
-  const path = join(tmpdir(), `featherdrop-${cacheName}.ttf`);
+async function font(file, url) {
+  const path = join(tmpdir(), file);
   if (!existsSync(path)) {
-    const cssRes = await fetch(`https://fonts.googleapis.com/css2?family=${spec}`, {
-      headers: { "User-Agent": "curl/8" },
-    });
-    if (!cssRes.ok) throw new Error(`font css ${spec}: ${cssRes.status}`);
-    const css = await cssRes.text();
-    const m = css.match(/url\((https:[^)]+\.ttf)\)/);
-    if (!m) throw new Error(`no ttf url in css for ${spec}`);
-    const ttf = await fetch(m[1]);
-    if (!ttf.ok) throw new Error(`font ttf ${spec}: ${ttf.status}`);
-    writeFileSync(path, Buffer.from(await ttf.arrayBuffer()));
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`font fetch ${res.status}: ${url}`);
+    writeFileSync(path, Buffer.from(await res.arrayBuffer()));
   }
-  const buf = readFileSync(path);
-  return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  return opentype.parse(readFileSync(path));
 }
-const bitterItalic = await loadFont("Bitter:ital,wght@1,500", "Bitter-Italic-500");
-const bitterRegular = await loadFont("Bitter:wght@400", "Bitter-Regular-400");
+const nameFont = await font("CastleParcel-BreeSerif-Regular.ttf", "https://github.com/google/fonts/raw/main/ofl/breeserif/BreeSerif-Regular.ttf");
+const claimFont = await font("CastleParcel-Lato-Regular.ttf", "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf");
 
-// The logo without its <svg> wrapper, to re-wrap in other viewBoxes.
-const inner = logoSvg.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+// The tile has rounded corners, and Community Applications and maskable
+// manifest icons both want a solid square, so the corners are filled white.
+const icon = new Resvg(readFileSync(appSvg, "utf8"), { background: "#ffffff", fitTo: { mode: "width", value: 512 } })
+  .render()
+  .asPng();
+writeFileSync(join(assets, "icon.png"), icon);
+writeFileSync(join(pub, "icon-512.png"), icon);
+copyFileSync(appSvg, join(pub, "favicon.svg"));
 
-const round = (n) => Math.round(n * 100) / 100;
-
-function wrap(minX, minY, vbW, vbH) {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="${round(minX)} ${round(minY)} ${round(vbW)} ${round(vbH)}" role="img" aria-label="featherdrop">${inner}</svg>\n`;
-}
-
-function renderPng(svg, widthPx) {
-  return new Resvg(svg, {
-    background: "rgba(0,0,0,0)",
-    fitTo: { mode: "width", value: widthPx },
-  })
-    .render()
-    .asPng();
-}
-
-const probe = new Resvg(logoSvg, { background: "rgba(0,0,0,0)" });
-const bb = probe.getBBox();
-if (!bb) throw new Error("could not compute bbox");
-const { x, y, width: w, height: h } = bb;
-
-// The banner: the wordmark in the logo's gold with the app's negative letter
-// spacing, and a grey claim below.
-const BW = 1600;
-const BH = 500;
-const NAME = "featherdrop";
-const CLAIM = "Drop it like it's hot.";
-const CLAIM_FILL = "#5a5d5e"; // the house claim grey
-// The app wordmark uses -1px letter spacing at 32px.
-const NAME_SPACING = -0.031;
-
-const LH = 410; // feather height by its bounding box
-const s = LH / h;
-const logoW = w * s;
-let nameSize = 140;
-let claimSize = 42;
-const gap = 56;
-const lineGap = 22;
-
-const nameWidth = () =>
-  bitterItalic.getAdvanceWidth(NAME, nameSize, { kerning: true, letterSpacing: NAME_SPACING });
-const claimWidth = () =>
-  bitterRegular.getAdvanceWidth(CLAIM, claimSize, { kerning: true });
-// Shrinks the text until the group fits the card with some margin.
-while (logoW + gap + Math.max(nameWidth(), claimWidth()) > BW - 120 && nameSize > 80) {
-  nameSize -= 4;
-  claimSize = Math.max(30, claimSize - 1);
-}
-
-const groupW = logoW + gap + Math.max(nameWidth(), claimWidth());
-const startX = (BW - groupW) / 2;
-const tx = startX - x * s;
-const ty = (BH - LH) / 2 - y * s;
-const bTextX = startX + logoW + gap;
-
-const em = (f, size) => size / f.unitsPerEm;
-const nameAsc = bitterItalic.ascender * em(bitterItalic, nameSize);
-const nameDesc = -bitterItalic.descender * em(bitterItalic, nameSize);
-const claimAsc = bitterRegular.ascender * em(bitterRegular, claimSize);
-const blockH = nameAsc + nameDesc + lineGap + claimAsc;
-const nameBaseline = BH / 2 - blockH / 2 + nameAsc;
-const claimBaseline = nameBaseline + nameDesc + lineGap + claimAsc;
-
-const namePath = bitterItalic
-  .getPath(NAME, bTextX, nameBaseline, nameSize, { kerning: true, letterSpacing: NAME_SPACING })
-  .toPathData(2);
-const claimPath = bitterRegular
-  .getPath(CLAIM, bTextX, claimBaseline, claimSize, { kerning: true })
-  .toPathData(2);
-
-const bannerSvg =
-  `<?xml version="1.0" encoding="UTF-8"?>\n` +
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${BW} ${BH}" width="${BW}" height="${BH}" role="img" aria-label="featherdrop">\n` +
-  `  <defs>\n` +
-  // The feather's gold ramp, spanned across the wordmark's em box so it runs
-  // light to dark from top to bottom.
-  `    <linearGradient id="fd-gold-name" x1="0" y1="${round(nameBaseline - nameAsc)}" x2="0" y2="${round(nameBaseline + nameDesc)}" gradientUnits="userSpaceOnUse">\n` +
-  `      <stop offset="0" stop-color="#E0B53A"/>\n` +
-  `      <stop offset="0.5" stop-color="#D4AF37"/>\n` +
-  `      <stop offset="1" stop-color="#A97C0A"/>\n` +
-  `    </linearGradient>\n` +
-  `  </defs>\n` +
-  `  <rect width="${BW}" height="${BH}" fill="#ffffff"/>\n` +
-  `  <g transform="translate(${round(tx)},${round(ty)}) scale(${round(s)})">${inner}</g>\n` +
-  `  <path d="${namePath}" fill="url(#fd-gold-name)"/>\n` +
-  `  <path d="${claimPath}" fill="${CLAIM_FILL}"/>\n` +
-  `</svg>\n`;
-writeFileSync(new URL("featherdrop-banner.svg", ASSETS), bannerSvg);
-writeFileSync(new URL("featherdrop-banner.png", ASSETS), renderPng(bannerSvg, BW));
-
-// The icon is the Community Applications <Icon>, so its #121212 background
-// matches Unraid's dark theme. The favicon and the in-app logo stay
-// transparent.
-const side = Math.max(w, h) * 1.2;
-const iconSvg = wrap(x - (side - w) / 2, y - (side - h) / 2, side, side);
+// The link preview card shows for every share, so it carries the product and
+// never anything about the file.
+const W = 1600, H = 840;
+const LH = 520;
+const vb = logoSvg.match(/viewBox="([^"]+)"/)[1].split(/[\s,]+/).map(Number);
+const LW = (LH * vb[2]) / vb[3];
+const nameSize = 144, claimSize = 46, gap = 80;
+const pathData = (path) => path.commands.map((c) => (c.type === "Z" ? "Z"
+  : c.type + [c.x1, c.y1, c.x2, c.y2, c.x, c.y].filter((v) => v !== undefined).map((v) => v.toFixed(2)).join(" "))).join("");
+const NAME = "CastleParcel";
+const CLAIM = "Sealed in the keep. Only your link gets in.";
+const textW = Math.max(nameFont.getAdvanceWidth(NAME, nameSize), claimFont.getAdvanceWidth(CLAIM, claimSize));
+const LX = (W - (LW + gap + textW)) / 2;
+const textX = LX + LW + gap;
+const nameBaseline = H / 2 - 10;
+const claimBaseline = nameBaseline + claimSize * 1.6;
+const logo = logoSvg
+  .replace(/<\?xml[^>]*\?>\s*/, "")
+  .replace(/<svg\b[^>]*>/, `<svg x="${LX.toFixed(1)}" y="${((H - LH) / 2).toFixed(1)}" width="${LW.toFixed(1)}" height="${LH}" viewBox="${vb.join(" ")}" xmlns="http://www.w3.org/2000/svg">`);
+const card = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" fill="#0d1117"/>
+  ${logo}
+  <path transform="translate(${textX.toFixed(2)} ${nameBaseline})" d="${pathData(nameFont.getPath(NAME, 0, 0, nameSize))}" fill="#e6edf3"/>
+  <path transform="translate(${textX.toFixed(2)} ${claimBaseline})" d="${pathData(claimFont.getPath(CLAIM, 0, 0, claimSize))}" fill="#9aa4ad"/>
+</svg>
+`;
+if (/NaN/.test(card)) throw new Error("a glyph came out as NaN");
 writeFileSync(
-  new URL("icon.png", ASSETS),
-  new Resvg(iconSvg, { background: "#121212", fitTo: { mode: "width", value: 512 } })
-    .render()
-    .asPng(),
+  join(pub, "opengraph-image.png"),
+  new Resvg(card, { background: "#0d1117", fitTo: { mode: "width", value: 1200 } }).render().asPng(),
 );
 
-// The link preview card is generic, never the file name. It uses a system
-// serif and is rendered once and committed.
-const OGW = 1600;
-const OGH = (OGW * 630) / 1200; // the 1.91:1 OG aspect
-const ogScale = (OGH * 0.58) / h;
-const ogLogoW = w * ogScale;
-const ogLeftPad = OGW * 0.075;
-const ogTx = ogLeftPad - x * ogScale;
-const ogTy = (OGH - h * ogScale) / 2 - y * ogScale;
-const textX = ogLeftPad + ogLogoW + OGW * 0.04;
-const ogSvg =
-  `<?xml version="1.0" encoding="UTF-8"?>\n` +
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${OGW} ${round(OGH)}" width="${OGW}" height="${round(OGH)}">\n` +
-  `  <defs>\n` +
-  `    <radialGradient id="og-gold" cx="10%" cy="-10%" r="75%"><stop offset="0" stop-color="#f6d981" stop-opacity="0.34"/><stop offset="55%" stop-color="#f6d981" stop-opacity="0"/></radialGradient>\n` +
-  `    <radialGradient id="og-violet" cx="98%" cy="8%" r="80%"><stop offset="0" stop-color="#7c3aed" stop-opacity="0.32"/><stop offset="55%" stop-color="#7c3aed" stop-opacity="0"/></radialGradient>\n` +
-  `  </defs>\n` +
-  `  <rect width="${OGW}" height="${round(OGH)}" fill="#0d0b07"/>\n` +
-  `  <rect width="${OGW}" height="${round(OGH)}" fill="url(#og-gold)"/>\n` +
-  `  <rect width="${OGW}" height="${round(OGH)}" fill="url(#og-violet)"/>\n` +
-  `  <g transform="translate(${round(ogTx)},${round(ogTy)}) scale(${round(ogScale)})">${inner}</g>\n` +
-  `  <text x="${round(textX)}" y="${round(OGH * 0.505)}" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-weight="700" font-size="${round(OGH * 0.15)}" fill="#e8c75a">featherdrop</text>\n` +
-  `  <text x="${round(textX) + 4}" y="${round(OGH * 0.63)}" font-family="'Segoe UI', Arial, sans-serif" font-size="${round(OGH * 0.05)}" fill="#cfc4ad">Drop a file · share a link</text>\n` +
-  `</svg>\n`;
-const ogPng = renderPng(ogSvg, 1200);
-writeFileSync(new URL("../../app/opengraph-image.png", ASSETS), ogPng);
-
-console.log(`bbox x=${round(x)} y=${round(y)} w=${round(w)} h=${round(h)}`);
-console.log(`banner ${BW}x${BH} white, feather scale=${round(s)} -> ${BW}px png`);
-console.log(`og card 1200x630 (rendered @ ${OGW}px), medallion scale=${round(ogScale)}`);
-console.log("wrote featherdrop-banner.svg, featherdrop-banner.png, icon.png,");
-console.log("      app/opengraph-image.png");
+console.log("wrote .github/assets/icon.png, public/icon-512.png, public/favicon.svg, public/opengraph-image.png");
