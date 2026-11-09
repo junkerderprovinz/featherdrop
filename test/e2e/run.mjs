@@ -143,6 +143,8 @@ try {
 
   await multiFileRoundTrip(ctx, errors, fail);
   await format4RoundTrips(browser, ctx, errors, fail);
+  await noteRoundTrips(ctx, errors, fail);
+  await requestRoundTrip(ctx, errors, fail);
   // Last, because the limit switch is remembered for later uploads.
   await limitedShareListsBeforeDownload(ctx, errors, fail);
 
@@ -483,4 +485,139 @@ async function uploadAndListV2({ files: specs, maxDownloads, password }) {
     return { error: "the listing spent a download: " + after.downloadsLeft };
   }
   return { shareUrl, listed: listed.map((f) => `${f.name} ${f.size}`) };
+}
+
+function watch(page, label, errors) {
+  page.on("pageerror", (e) => errors.push(`${label}: ${e}`));
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push(`${label} console: ${m.text()}`);
+  });
+  return page;
+}
+
+async function waitForLink(page, part) {
+  await page.waitForFunction(
+    (p) => [...document.querySelectorAll("input[readonly]")].some((i) => i.value.includes(p)),
+    part,
+    { timeout: 120_000 },
+  );
+  return (await readonlyValue(page, part)).trim();
+}
+
+// A note written on /note and read on the share page, once in link mode and
+// once with a password and a single download. The page must show markup in a
+// note as text and never run it.
+async function noteRoundTrips(ctx, errors, fail) {
+  const cases = [
+    { label: "note", password: "", once: false },
+    { label: "note with password", password: "correct horse battery", once: true },
+  ];
+  for (const c of cases) {
+    const note = `<img src=x onerror="window.__pwned=1">\n${c.label}: the gate code is 4711 🏰`;
+    const up = watch(await ctx.newPage(), `${c.label} up`, errors);
+    await up.goto(`${BASE}/note`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    await up.getByPlaceholder(/type or paste your note|notiz eintippen/i).fill(note);
+    if (c.password) await up.locator('input[type="password"]').fill(c.password);
+    if (c.once) await up.getByLabel(/max downloads|max\. downloads/i).fill("1");
+    await up.getByRole("button", { name: /encrypt and share|verschlüsseln und teilen/i }).click();
+    const shareUrl = await waitForLink(up, "/d/");
+    if (!shareUrl.includes("#k=")) fail(`${c.label}: link without a key: ${shareUrl}`);
+
+    const dl = watch(await ctx.newPage(), `${c.label} dl`, errors);
+    await dl.goto(shareUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    if (c.password) {
+      await dl.locator('input[type="password"]').fill(c.password);
+      await dl.getByRole("button", { name: /unlock|entsperren/i }).click();
+    } else {
+      await dl.getByRole("button", { name: /show note|notiz anzeigen/i }).click();
+    }
+    await dl.locator("pre").waitFor({ timeout: 120_000 });
+    const shown = await dl.evaluate(() => ({
+      text: document.querySelector("pre")?.textContent ?? "",
+      images: document.querySelectorAll("pre img").length,
+      pwned: globalThis.__pwned === 1,
+    }));
+    if (shown.text !== note) fail(`${c.label}: shown ${JSON.stringify(shown.text)}`);
+    if (shown.images !== 0 || shown.pwned) fail(`${c.label}: the note was rendered as HTML`);
+
+    const slug = new URL(shareUrl).pathname.split("/").pop();
+    // The server burns a used-up share once it has sent the last byte, which
+    // can land just after the page has shown the note.
+    let meta = await dl.request.get(`${BASE}/api/d/${slug}/meta`);
+    for (let i = 0; c.once && meta.status() !== 404 && i < 50; i++) {
+      await dl.waitForTimeout(100);
+      meta = await dl.request.get(`${BASE}/api/d/${slug}/meta`);
+    }
+    if (c.once && meta.status() !== 404) fail(`${c.label}: a once-only note survived its reading`);
+    if (!c.once && meta.status() !== 200) fail(`${c.label}: meta ${meta.status()}`);
+    if (!c.once && (await meta.json()).format !== 4) fail(`${c.label}: not a format 4 share`);
+    console.log(`${c.label}: written, read as text, never as HTML ✓`);
+  }
+  if (errors.length) fail("page/console errors occurred (notes)");
+}
+
+// A file request opened on /request, filled on the request link's page and
+// collected on the collect link's page. The request link alone must not list
+// anything.
+async function requestRoundTrip(ctx, errors, fail) {
+  const files = [
+    { name: "asked-for.bin", mimeType: "application/octet-stream", buffer: randomBytes(150 * 1024) },
+    { name: "second.txt", mimeType: "text/plain", buffer: Buffer.from("a second file") },
+  ];
+  const req = watch(await ctx.newPage(), "request", errors);
+  await req.goto(`${BASE}/request`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await req.getByRole("button", { name: /create request|anfrage erstellen/i }).click();
+  const requestUrl = await waitForLink(req, "/r/");
+  const collectUrl = await waitForLink(req, "/c/");
+  if (!requestUrl.includes("#p=") || !collectUrl.includes("#c=")) fail("request links without their keys");
+  const slug = new URL(requestUrl).pathname.split("/").pop();
+  if (new URL(collectUrl).pathname.split("/").pop() !== slug) fail("the two links name different requests");
+
+  const send = watch(await ctx.newPage(), "send", errors);
+  await send.goto(requestUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await send.locator('input[type="file"]').setInputFiles(files);
+  await send.getByRole("button", { name: /encrypt and send|verschlüsseln und senden/i }).click();
+  await send.getByText(/^sent\.|^gesendet\./i).waitFor({ timeout: 120_000 });
+
+  // What someone with only the request link can try against the API.
+  const requestKey = Buffer.from(new URL(requestUrl).hash.slice(3), "base64url").subarray(2).toString("base64url");
+  for (const [path, headers] of [
+    [`/api/r/${slug}/uploads`, { "x-fd-request-key": requestKey }],
+    [`/api/r/${slug}/uploads`, { "x-fd-collect-token": requestKey }],
+    [`/api/r/${slug}`, {}],
+  ]) {
+    const res = await send.request.get(`${BASE}${path}`, { headers });
+    if (res.status() !== 404) fail(`request link reached ${path}: ${res.status()}`);
+  }
+  const info = await send.request.get(`${BASE}/api/r/${slug}`, { headers: { "x-fd-request-key": requestKey } });
+  const infoKeys = Object.keys(await info.json()).sort().join(",");
+  if (infoKeys !== "expiresAt,maxSize,open") fail("the uploader learns " + infoKeys);
+
+  const col = watch(await ctx.newPage(), "collect", errors);
+  const downloads = [];
+  col.on("download", (d) => downloads.push(d));
+  await col.goto(collectUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  for (const f of files) await col.getByText(f.name, { exact: true }).waitFor({ timeout: 120_000 });
+  await col.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).click();
+  const deadline = Date.now() + 120_000;
+  while (downloads.length < files.length && Date.now() < deadline) await col.waitForTimeout(100);
+  if (downloads.length !== files.length) fail(`request: ${downloads.length} downloads`);
+  for (const [i, d] of downloads.entries()) {
+    const got = readFileSync(await d.path());
+    if (d.suggestedFilename() !== files[i].name || !got.equals(files[i].buffer)) {
+      fail(`request: ${d.suggestedFilename()} does not match ${files[i].name}`);
+    }
+  }
+
+  await col.getByRole("button", { name: /close request|anfrage schließen/i }).click();
+  await col.getByRole("button", { name: /click again to confirm|zum bestätigen erneut klicken/i }).click();
+  await col.getByText(/request closed|anfrage geschlossen/i).waitFor({ timeout: 30_000 });
+  // The closed request answers 404, which the browser logs, so only page
+  // errors count here.
+  const after = await ctx.newPage();
+  after.on("pageerror", (e) => errors.push("collect after close: " + e));
+  await after.goto(collectUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await after.getByText(/has expired, or the link is incomplete|abgelaufen oder der link/i).waitFor({ timeout: 30_000 });
+  if (errors.length) fail("page/console errors occurred (request)");
+  console.log("request: sent through the request link, collected and closed through the collect link ✓");
 }
