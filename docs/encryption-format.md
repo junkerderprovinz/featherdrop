@@ -361,7 +361,7 @@ constant time. A matching key lets a tus upload pass without the upload
 password; a tus create must also declare its length, fit the size cap and find
 the request open. A request with a maximum takes no more uploads in progress
 than it has places left, and further creates get `429` until one of them is
-attached or cleaned up a day after its last byte. The server remembers which
+attached or cleaned up an hour after its last byte. The server remembers which
 request an upload was started for and attaches it to no other. An upload
 without a declared length is refused at the attach too, since it could still
 grow after the server checked its size.

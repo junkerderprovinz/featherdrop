@@ -26,6 +26,10 @@ const (
 	// StaleUploadAge is how long a tus upload may go untouched before it
 	// counts as abandoned.
 	StaleUploadAge = 24 * time.Hour
+	// StaleRequestUploadAge is the same for an upload to a file request. It
+	// holds one of the request's few places while it runs, so a sender who
+	// reloads mid-upload must not lock the request for a day.
+	StaleRequestUploadAge = time.Hour
 )
 
 // Result counts what one Sweep removed.
@@ -59,12 +63,13 @@ func Run(ctx context.Context, cfg config.Config, db *sql.DB, interval time.Durat
 
 // Sweep deletes the shares expired at now, the used-up shares whose resume
 // tokens have all run out, the requests expired at now with their uploads, and
-// the tus uploads untouched for StaleUploadAge. A failure in one part does not
+// the tus uploads untouched for StaleUploadAge, or StaleRequestUploadAge for
+// one sent to a file request. A failure in one part does not
 // stop the others.
 func Sweep(cfg config.Config, db *sql.DB, now time.Time) (Result, error) {
 	shares, sharesErr := deleteShares(cfg.UploadsDir, db, now.UnixMilli())
 	requests, requestsErr := deleteRequests(cfg.UploadsDir, db, now.UnixMilli())
-	uploads, uploadsErr := removeStaleUploads(cfg.TmpDir, db, now.Add(-StaleUploadAge))
+	uploads, uploadsErr := removeStaleUploads(cfg.TmpDir, db, now)
 	return Result{Shares: shares, Requests: requests, Uploads: uploads}, errors.Join(sharesErr, requestsErr, uploadsErr)
 }
 
@@ -151,12 +156,17 @@ func deleteRequests(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 	return deleted, nil
 }
 
-// removeStaleUploads removes the tus uploads in tmpDir last modified at or
-// before cutoff, and stops counting them toward the quota. tusd writes the
+// removeStaleUploads removes the tus uploads in tmpDir that have gone idle,
+// and stops counting them toward the quota. tusd writes the
 // .info sidecar at creation and appends every PATCH to the bytes, so the newer
 // of the two files tells when the upload was last active, and one still in
 // progress never looks stale.
-func removeStaleUploads(tmpDir string, db *sql.DB, cutoff time.Time) (int, error) {
+func removeStaleUploads(tmpDir string, db *sql.DB, now time.Time) (int, error) {
+	cutoff := now.Add(-StaleUploadAge)
+	forRequest, err := store.PendingRequestUploads(db)
+	if err != nil {
+		return 0, err
+	}
 	entries, err := os.ReadDir(tmpDir)
 	if err != nil {
 		return 0, fmt.Errorf("read tmp dir: %w", err)
@@ -179,7 +189,11 @@ func removeStaleUploads(tmpDir string, db *sql.DB, cutoff time.Time) (int, error
 
 	removed, stuck := 0, 0
 	for id, t := range lastActive {
-		if t.After(cutoff) {
+		idleSince := cutoff
+		if forRequest[id] {
+			idleSince = now.Add(-StaleRequestUploadAge)
+		}
+		if t.After(idleSince) {
 			continue
 		}
 		gone, kept := false, false
@@ -198,6 +212,9 @@ func removeStaleUploads(tmpDir string, db *sql.DB, cutoff time.Time) (int, error
 		}
 		if !kept {
 			delete(lastActive, id)
+			if err := store.DeletePendingUpload(db, id); err != nil {
+				return removed, err
+			}
 		}
 	}
 

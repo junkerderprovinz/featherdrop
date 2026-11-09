@@ -163,6 +163,28 @@ func ListPendingUploads(db *sql.DB, cutoffMs int64) ([]string, error) {
 	return ids, nil
 }
 
+// PendingRequestUploads returns the ids of the pending uploads started for a
+// file request.
+func PendingRequestUploads(db *sql.DB) (map[string]bool, error) {
+	rows, err := db.Query(`SELECT id FROM pending_uploads WHERE request_slug IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("list pending request uploads: %w", err)
+	}
+	defer rows.Close()
+	ids := make(map[string]bool)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("list pending request uploads: scan: %w", err)
+		}
+		ids[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list pending request uploads: iterate: %w", err)
+	}
+	return ids, nil
+}
+
 // DeletePendingUpload stops counting the pending upload id.
 func DeletePendingUpload(db *sql.DB, id string) error {
 	if _, err := db.Exec(`DELETE FROM pending_uploads WHERE id = ?`, id); err != nil {

@@ -505,3 +505,31 @@ func TestSweepDropsAPendingUploadWhoseFilesAreGone(t *testing.T) {
 		t.Error("a long upload still running stopped counting")
 	}
 }
+
+func TestSweepGivesUpARequestUploadIdleForAnHour(t *testing.T) {
+	cfg, db := newTestEnv(t)
+	now := time.Now()
+	idle := makeTusUpload(t, cfg, now.Add(-61*time.Minute))
+	if err := store.TrackPendingUpload(db, store.PendingUpload{ID: idle, Size: 72, RequestSlug: "req", CreatedAt: now.Add(-61 * time.Minute).UnixMilli()}); err != nil {
+		t.Fatal(err)
+	}
+	busy := makeTusUpload(t, cfg, now.Add(-59*time.Minute))
+	if err := store.TrackPendingUpload(db, store.PendingUpload{ID: busy, Size: 72, RequestSlug: "req", CreatedAt: now.Add(-2 * time.Hour).UnixMilli()}); err != nil {
+		t.Fatal(err)
+	}
+	share := makeTusUpload(t, cfg, now.Add(-61*time.Minute))
+	trackPending(t, db, share, now.Add(-61*time.Minute))
+
+	if _, err := Sweep(cfg, db, now); err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	if tmpFileExists(t, cfg, idle) || isPending(t, db, idle) {
+		t.Error("a request upload idle for over an hour still holds its place")
+	}
+	if !tmpFileExists(t, cfg, busy) || !isPending(t, db, busy) {
+		t.Error("a request upload active within the hour was removed")
+	}
+	if !tmpFileExists(t, cfg, share) || !isPending(t, db, share) {
+		t.Error("an upload for a share was removed before a day")
+	}
+}
