@@ -78,3 +78,13 @@ svg { display: block; }
 
 
 .cp-confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+
+.cp-more { display: flex; gap: 1.5rem; margin: .25rem 0 0; font-size: 13px; }
+.cp-more a { color: var(--carbon-text-sub); text-underline-offset: 3px; }
+.cp-more a:hover { color: var(--carbon-text); }
+.cp-more a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 2px; }
+.cp-resume { width: min(44rem, 100%); margin-bottom: 1.5rem; text-align: start; }
+.cp-hint-line { margin: 0; color: var(--status-warn-text); font-size: 13px; }
+.cp-note { display: flex; flex-direction: column; gap: .9rem; }
+.cp-note-text { margin: 0; max-height: 30rem; overflow: auto; padding: .9rem 1rem; border-radius: var(--radius-control); background: var(--carbon-surface2); font-family: ui-monospace, "Cascadia Code", Menlo, monospace; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cp-note-input textarea { min-height: 12rem; }
