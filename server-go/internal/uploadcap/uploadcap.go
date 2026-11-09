@@ -8,9 +8,10 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"net/netip"
 	"sync"
 	"time"
+
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 )
 
 // Window is how long an upload counts against its client.
@@ -101,14 +102,10 @@ func (c *Cap) release(key string, id uint64) {
 	}
 }
 
-// clientKey is the HMAC of the client's address. IPv6 clients are counted per
-// /64, since one host can usually pick any address in its prefix.
+// clientKey is the HMAC of the client's network (see clientip.Network).
 func (c *Cap) clientKey(ip string) string {
-	if addr, err := netip.ParseAddr(ip); err == nil && addr.Is6() && !addr.Is4In6() {
-		ip = netip.PrefixFrom(addr, 64).Masked().String()
-	}
 	mac := hmac.New(sha256.New, c.key)
-	mac.Write([]byte(ip))
+	mac.Write([]byte(clientip.Network(ip)))
 	return string(mac.Sum(nil))
 }
 

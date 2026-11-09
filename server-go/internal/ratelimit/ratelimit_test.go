@@ -227,3 +227,26 @@ func TestMiddleware_MethodFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestMiddleware_IPv6AddressesInOneSlash64ShareABucket(t *testing.T) {
+	clock := newFakeClock()
+	h := Middleware(NewLimiter(30, 1, clock.now), clientip.Proxies{}, "", okHandler())
+
+	send := func(addr string) int {
+		req := httptest.NewRequest(http.MethodGet, "/x", nil)
+		req.RemoteAddr = addr
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	if code := send("[2001:db8:1:2::1]:1111"); code != http.StatusOK {
+		t.Fatalf("first address = %d, want 200", code)
+	}
+	if code := send("[2001:db8:1:2:ffff:ffff:ffff:fffe]:2222"); code != http.StatusTooManyRequests {
+		t.Fatalf("second address in the same /64 = %d, want 429", code)
+	}
+	if code := send("[2001:db8:1:3::1]:1111"); code != http.StatusOK {
+		t.Fatalf("address in the neighbouring /64 = %d, want 200", code)
+	}
+}

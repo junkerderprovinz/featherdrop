@@ -76,3 +76,21 @@ func TestProxies_ClientIP(t *testing.T) {
 		})
 	}
 }
+
+func TestNetwork(t *testing.T) {
+	tests := []struct {
+		name, ip, want string
+	}{
+		{"IPv4 stays whole", "203.0.113.7", "203.0.113.7"},
+		{"IPv6 masks to /64", "2001:db8:1:2:3:4:5:6", "2001:db8:1:2::/64"},
+		{"IPv4-mapped IPv6 is not masked", "::ffff:203.0.113.7", "::ffff:203.0.113.7"},
+		{"no address", "unix-socket", "unix-socket"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Network(tt.ip); got != tt.want {
+				t.Fatalf("Network(%q) = %q, want %q", tt.ip, got, tt.want)
+			}
+		})
+	}
+}

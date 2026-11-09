@@ -101,3 +101,14 @@ func (p Proxies) ClientIP(r *http.Request) string {
 	}
 	return client.String()
 }
+
+// Network returns the key a per-client limit counts ip under: the address
+// itself for IPv4, its /64 for IPv6, since one host can usually pick any
+// address in its prefix. A value that is no address comes back unchanged.
+func Network(ip string) string {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil || !addr.Is6() || addr.Is4In6() {
+		return ip
+	}
+	return netip.PrefixFrom(addr, 64).Masked().String()
+}

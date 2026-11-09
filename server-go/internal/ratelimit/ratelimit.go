@@ -1,4 +1,4 @@
-// Package ratelimit implements the per-client-IP token buckets behind
+// Package ratelimit implements the per-client token buckets behind
 // RATE_LIMIT. Each key owns a bucket that refills continuously up to a burst
 // capacity; a request takes one token or is refused with the time until the
 // next one. Buckets live in memory, so a restart clears them, which is fine for
@@ -92,7 +92,8 @@ func (l *Limiter) sweepLocked(now time.Time) {
 	}
 }
 
-// Middleware limits next with l, keyed by the client IP. A non-empty method
+// Middleware limits next with l, keyed by the client's network (see
+// clientip.Network). A non-empty method
 // limits only that method, so the tus handler can limit upload creation while
 // resumes stay free. A refused request gets 429 with Retry-After and the API's
 // JSON error body.
@@ -102,7 +103,7 @@ func Middleware(l *Limiter, proxies clientip.Proxies, method string, next http.H
 			next.ServeHTTP(w, r)
 			return
 		}
-		if allowed, retryAfter := l.Allow(proxies.ClientIP(r)); !allowed {
+		if allowed, retryAfter := l.Allow(clientip.Network(proxies.ClientIP(r))); !allowed {
 			secs := int(math.Ceil(retryAfter.Seconds()))
 			if secs < 1 {
 				secs = 1
