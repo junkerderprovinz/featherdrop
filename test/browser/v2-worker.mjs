@@ -24,8 +24,8 @@ async function bundle(contents) {
 const workerBundle = await bundle(`import "./lib/e2e/v2/worker.ts";`);
 const pageBundle = await bundle(`
 import { connect } from "./lib/e2e/v2/protocol.ts";
-import { cipherRange } from "./lib/e2e/v2/share.ts";
-globalThis.__V2 = { connect, cipherRange };
+import { cipherRange, blobLength, plainSpan } from "./lib/e2e/v2/share.ts";
+globalThis.__V2 = { connect, cipherRange, blobLength, plainSpan };
 `);
 
 const server = createServer((req, res) => {
@@ -50,7 +50,7 @@ await page.addScriptTag({ url: "/page.mjs", type: "module" });
 await page.waitForFunction(() => typeof globalThis.__V2 !== "undefined", { timeout: 30_000 });
 
 const result = await page.evaluate(async () => {
-  const { connect, cipherRange } = globalThis.__V2;
+  const { connect, cipherRange, blobLength, plainSpan } = globalThis.__V2;
   const worker = () => connect(new Worker("/worker.mjs", { type: "module" }));
   const pattern = (n, seed) => {
     const b = new Uint8Array(n);
@@ -70,19 +70,17 @@ const result = await page.evaluate(async () => {
 
   async function encrypt(files, data, password) {
     const w = worker();
-    const open = await w.request({ op: "encrypt-open", session: 1, files, password });
-    const parts = [open.prefix];
-    for (let i = 0; i < data.length; i += 1 << 20) {
-      const slice = data.slice(i, i + (1 << 20));
-      parts.push(...(await w.request({ op: "encrypt-write", session: 1, data: slice }, [slice.buffer])).chunks);
-    }
-    for (;;) {
-      const r = await w.request({ op: "encrypt-close", session: 1 });
-      parts.push(...r.chunks);
-      if (r.done) break;
+    const { token, verifier, state } = await w.request({ op: "create", files, password });
+    const size = blobLength(state);
+    const parts = [];
+    for (let at = 0; at < size; at += 1 << 20) {
+      const end = Math.min(at + (1 << 20), size);
+      const span = plainSpan(state, at, end);
+      const plain = data.slice(span.from, Math.max(span.from, span.to));
+      parts.push((await w.request({ op: "seal", state, start: at, end, plain }, [plain.buffer])).data);
     }
     const blob = join(parts);
-    return { blob, token: open.token, verifier: open.verifier, lengthOk: blob.length === open.blobLength };
+    return { blob, token, verifier, lengthOk: blob.length === size };
   }
 
   // A fresh worker, so the keys come from the token and password alone.
@@ -137,13 +135,14 @@ const result = await page.evaluate(async () => {
   const start = 2_000_000;
   const end = 2_100_000;
   const plan = cipherRange(header, contentOffset, start, end);
-  const r = await w.request({
-    op: "range",
-    session: 3,
-    start,
-    end,
-    data: single.blob.slice(plan.from, plan.to + 1),
-  });
+  await w.request({ op: "range-open", session: 3, start, end });
+  const out = [];
+  for (let at = plan.from; at <= plan.to; at += 50_000) {
+    const data = single.blob.slice(at, Math.min(at + 50_000, plan.to + 1));
+    out.push(...(await w.request({ op: "range-write", session: 3, data }, [data.buffer])).chunks);
+  }
+  await w.request({ op: "range-close", session: 3 });
+  const r = { chunks: out };
   checks.seek = same(join(r.chunks), big.subarray(start, end + 1));
   return checks;
 });
