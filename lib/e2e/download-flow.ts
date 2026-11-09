@@ -82,11 +82,36 @@ export async function downloadDecryptedV2(
   const keys = "keys" in secret ? secret.keys : await openKeys(secret.token, secret.password);
   const stream = await fetchBlob(keys.verifier);
   const { header, plaintext } = await decryptShare(streamToAsyncIterable(stream), keys);
+  let left = header.files.length;
   for await (const { entry, bytes } of splitByManifest(plaintext, header)) {
-    await save(asyncIterableToStream(bytes), entry.name);
+    const last = --left === 0;
+    let read!: () => void;
+    let failed!: (e: unknown) => void;
+    const consumed = new Promise<void>((resolve, reject) => {
+      read = resolve;
+      failed = reject;
+    });
+    consumed.catch(() => {});
+    async function* whole(): AsyncGenerator<Uint8Array> {
+      let complete = false;
+      try {
+        yield* bytes;
+        // The last file ends only after the final chunk and the padding
+        // check out, so a truncated share never looks like a finished save.
+        if (last) for await (const _ of plaintext) throw new Error("v2: more plaintext than the header declares");
+        complete = true;
+      } catch (e) {
+        failed(e);
+        throw e;
+      } finally {
+        if (complete) read();
+        else failed(new Error("v2: the save stopped reading"));
+      }
+    }
+    // save may resolve before it has read the stream, as streamToDownload
+    // does, and the next file starts where this one ends.
+    await save(asyncIterableToStream(whole()), entry.name);
+    await consumed;
   }
-  // splitByManifest stops after the last file; draining the rest checks the
-  // final chunk and the padding.
-  for await (const _ of plaintext) throw new Error("v2: more plaintext than the header declares");
   return { header };
 }

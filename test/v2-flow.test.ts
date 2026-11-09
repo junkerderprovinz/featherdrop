@@ -233,3 +233,61 @@ test("a v2 link-and-password download takes keys derived once for the listing", 
 
   assert.deepEqual(saved, [data]);
 });
+
+/** A save like streamToDownload: it hands the stream on and resolves before anything is read. */
+function earlySave() {
+  const reads: Promise<{ name: string; data: Uint8Array }>[] = [];
+  return {
+    reads,
+    save: async (plaintext: ReadableStream<Uint8Array>, name: string) => {
+      reads.push(new Promise((r) => setTimeout(r, 5)).then(async () => ({ name, data: await readAll(plaintext) })));
+    },
+  };
+}
+
+test("a single file arrives whole through a save that resolves before reading", async () => {
+  const server = fakeServer();
+  const { data, token } = await uploadV2(server);
+  const { reads, save } = earlySave();
+
+  await downloadDecryptedV2((v) => server.fetchBlob(v), { token }, save);
+
+  assert.deepEqual(await Promise.all(reads), [{ name: "film.mp4", data }]);
+});
+
+test("every file of a bundle arrives through a save that resolves before reading", async () => {
+  const server = fakeServer();
+  const a = bytes(70_000, 1);
+  const b = bytes(5000, 2);
+  const { shareUrl } = await uploadEncrypted(
+    [new File([a], "a.bin"), new File([b], "b.bin")],
+    { expiry: "1d", maxDownloads: null, format: 4 },
+    server.deps,
+  );
+  const { reads, save } = earlySave();
+
+  await downloadDecryptedV2((v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save);
+
+  assert.deepEqual(await Promise.all(reads), [
+    { name: "a.bin", data: a },
+    { name: "b.bin", data: b },
+  ]);
+});
+
+test("the last file's stream fails instead of ending when the final chunk is missing", async () => {
+  const server = fakeServer();
+  const size = 4 * 1024 * 1024 + 65_536;
+  const { shareUrl } = await uploadEncrypted(
+    [new File([bytes(size)], "x")],
+    { expiry: "1d", maxDownloads: null, format: 4 },
+    server.deps,
+  );
+  server.cut(65_536 + 16);
+  const { reads, save } = earlySave();
+
+  await assert.rejects(
+    downloadDecryptedV2((v) => server.fetchBlob(v), { token: new URL(shareUrl).hash.slice(3) }, save),
+    /v2: blob truncated/,
+  );
+  await assert.rejects(reads[0], /v2: blob truncated/);
+});
