@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -96,11 +97,14 @@ func isExpired(rec *store.FileRecord, nowMs int64) bool {
 
 // DownloadHandler builds GET /api/d/{slug}, which serves the raw ciphertext.
 // The real file name and type live inside the encrypted blob, so
-// Content-Disposition uses a fixed name. A nil now means time.Now.
+// Content-Disposition uses a fixed name. A download counts, and a share at its
+// limit burns, only once the whole blob is delivered. The handler holds the
+// downloads in flight, so a server builds one. A nil now means time.Now.
 func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.HandlerFunc {
 	if now == nil {
 		now = time.Now
 	}
+	slots := newDownloadSlots(db)
 	return func(w http.ResponseWriter, r *http.Request) {
 		setNoIndex(w)
 		slug := chi.URLParam(r, "slug")
@@ -145,17 +149,25 @@ func DownloadHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		dl, err := store.RegisterDownload(db, rec.Slug)
-		if err != nil {
+		state, err := slots.acquire(rec.Slug)
+		switch {
+		case err != nil || state == slotGone:
 			writeJSONError(w, http.StatusNotFound, "not found")
 			return
-		}
-		if !dl.Allowed {
-			writeJSONError(w, http.StatusNotFound, "not found")
+		case state == slotBusy:
+			writeJSONError(w, http.StatusConflict, "download in progress")
 			return
 		}
 
-		serveWhole(w, rec, blobPath, dl.Burned)
+		delivered := serveWhole(w, rec, blobPath)
+		dl, err := slots.finish(rec.Slug, delivered)
+		if err != nil {
+			log.Printf("download: register: %v", err)
+			return
+		}
+		if dl.Burned {
+			_ = os.Remove(blobPath)
+		}
 	}
 }
 
@@ -212,14 +224,17 @@ func commonPreviewHeaders(w http.ResponseWriter) {
 	h.Set("Accept-Ranges", "bytes")
 }
 
-// serveWhole streams the whole blob for a counted download and, when burn is
-// set, removes it once the body is written.
-func serveWhole(w http.ResponseWriter, rec *store.FileRecord, blobPath string, burn bool) {
+// serveWhole streams the whole blob for a counted download and reports whether
+// it was delivered: every byte written and flushed to the connection. A client
+// that stops short of the last byte misses the final chunk and its
+// authentication tag, so it never holds the complete file uncounted.
+func serveWhole(w http.ResponseWriter, rec *store.FileRecord, blobPath string) bool {
 	f, err := os.Open(blobPath)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "not found")
-		return
+		return false
 	}
+	defer f.Close()
 
 	h := w.Header()
 	h.Set("Content-Type", "application/octet-stream")
@@ -228,11 +243,9 @@ func serveWhole(w http.ResponseWriter, rec *store.FileRecord, blobPath string, b
 	h.Set("Cache-Control", "private, no-store")
 	h.Set("Content-Length", strconv.FormatInt(rec.Size, 10))
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, f)
-
-	// On Windows an open handle blocks os.Remove.
-	_ = f.Close()
-	if burn {
-		_ = os.Remove(blobPath)
+	n, err := io.Copy(w, f)
+	if err != nil || n != rec.Size {
+		return false
 	}
+	return http.NewResponseController(w).Flush() == nil
 }
