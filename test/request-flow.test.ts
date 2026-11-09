@@ -21,6 +21,7 @@ import { readNote } from "../lib/e2e/note";
 import { headerLength } from "../lib/e2e/v2/share";
 import type { UploadSource } from "../lib/e2e/upload-flow";
 import { recordingWorker } from "./crypto-worker";
+import { readZip } from "./zip-reader";
 
 interface StoredRequest {
   body: Record<string, unknown>;
@@ -134,12 +135,15 @@ test("files sent to a request come back through the collect link", async () => {
     [["a.bin", a.length], ["b.txt", b.length]],
   );
 
-  const saved = new Map<string, Uint8Array>();
+  let zip: { name: string; bytes: Uint8Array } | null = null;
   await downloadDecryptedV2(srv.crypto, fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }, async (s, name) => {
-    saved.set(name, await bytesOf(s));
+    zip = { name, bytes: await bytesOf(s) };
   });
-  assert.deepEqual(saved.get("a.bin"), a);
-  assert.deepEqual(saved.get("b.txt"), b);
+  assert.equal(zip!.name, "files.zip");
+  const entries = readZip(zip!.bytes);
+  assert.deepEqual(entries.map((e) => e.name), ["a.bin", "b.txt"]);
+  assert.ok(Buffer.from(entries[0].data!).equals(Buffer.from(a)), "a.bin differs");
+  assert.ok(Buffer.from(entries[1].data!).equals(Buffer.from(b)), "b.txt differs");
 });
 
 test("a note sent to a request is read as a note", async () => {
