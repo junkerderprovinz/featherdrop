@@ -46,6 +46,7 @@ export interface Responses {
   "encrypt-write": { chunks: Uint8Array[] };
   "encrypt-close": { chunks: Uint8Array[]; done: boolean };
   "decrypt-open": { verifier: string };
+  /** header is set once, in the reply that completed it. */
   "decrypt-write": { header: Header | null; chunks: Uint8Array[] };
   "decrypt-close": Record<string, never>;
   "read-header": { header: Header; contentOffset: number };
@@ -136,8 +137,9 @@ export function serve(port: Port): void {
       }
       case "decrypt-write": {
         const { dec } = get(req.session, "decrypt");
+        const before = dec.header;
         const chunks = dec.push(req.data);
-        return { header: dec.header, chunks };
+        return { header: before === null ? dec.header : null, chunks };
       }
       case "decrypt-close":
         get(req.session, "decrypt").dec.finish();

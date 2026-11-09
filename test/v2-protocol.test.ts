@@ -50,7 +50,10 @@ async function decryptVia(client: Client, blob: Uint8Array, token: string, passw
   const out: Uint8Array[] = [];
   for (let i = 0; i < blob.length; i += 30_000) {
     const r = await client.request({ op: "decrypt-write", session: 2, data: blob.slice(i, i + 30_000) });
-    header ??= r.header;
+    if (r.header) {
+      assert.equal(header, null, "the header arrives once");
+      header = r.header;
+    }
     out.push(...r.chunks);
   }
   await client.request({ op: "decrypt-close", session: 2 });
