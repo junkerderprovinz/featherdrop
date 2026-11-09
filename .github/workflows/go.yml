@@ -186,6 +186,8 @@ jobs:
           DATA_DIR: /tmp/fd-go-e2e
           BASE_URL: http://localhost:3000
           E2E_BASE_URL: http://localhost:3000
+          # The run makes more share requests per minute than one address may.
+          RATE_LIMIT: "false"
         run: |
           set -e
           npm run build:spa
