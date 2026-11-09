@@ -2,7 +2,9 @@ name: Build & Push Docker Image
 
 # Builds the multi-arch image and pushes :latest and :sha-<short> to GHCR on
 # every push to main. With the DOCKERHUB_USERNAME variable and DOCKERHUB_TOKEN
-# secret set it also pushes to docker.io/<DOCKERHUB_USERNAME>/featherdrop.
+# secret set it also pushes to docker.io/<DOCKERHUB_USERNAME>/featherdrop. The
+# weekly cron and a manual run build without the layer cache, so :latest picks
+# up base image updates.
 
 on:
   push:
@@ -12,6 +14,9 @@ on:
       - "LICENSE"
       - "templates/**"
       - ".github/release-notes/**"
+  # Weekly, to rebuild latest on fresh base images and packages.
+  schedule:
+    - cron: '0 8 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -76,6 +81,7 @@ jobs:
           tags: featherdrop:smoke-amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
 
       - name: Build arm64 image for smoke test
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
@@ -87,6 +93,7 @@ jobs:
           tags: featherdrop:smoke-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
 
       # :latest is multi-arch, so a green amd64 alone could still ship a broken
       # arm64 image. arm64 runs under QEMU and gets a larger boot budget.
@@ -147,6 +154,7 @@ jobs:
           sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
 
       # Mirrors the README to the Docker Hub overview. An access token with read,
       # write and delete scope can edit the description, while the account
