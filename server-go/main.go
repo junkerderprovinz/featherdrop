@@ -9,6 +9,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/cleanup"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientmanifest"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/headers"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/ratelimit"
@@ -47,6 +49,11 @@ func main() {
 	// effects so the probe never touches the data dirs or the database.
 	if len(os.Args) > 1 && os.Args[1] == "-healthcheck" {
 		os.Exit(healthcheckMain())
+	}
+	// Lets anyone hash the client inside an image without starting a server:
+	// docker run --rm <image> -client-manifest
+	if len(os.Args) > 1 && os.Args[1] == "-client-manifest" {
+		os.Exit(printClientManifest(os.Stdout))
 	}
 
 	cfg := config.Load()
@@ -81,12 +88,17 @@ func main() {
 		log.Fatalf("render shell: %v", err)
 	}
 
+	client, err := clientmanifest.Load(assets)
+	if err != nil {
+		log.Fatalf("hash client: %v", err)
+	}
+
 	tusHandler, err := upload.NewHandler(cfg, db)
 	if err != nil {
 		log.Fatalf("build tus handler: %v", err)
 	}
 
-	r := newRouter(cfg, db, tusHandler, assets, shell)
+	r := newRouter(cfg, db, tusHandler, assets, shell, client)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -102,6 +114,7 @@ func main() {
 	}()
 
 	log.Printf("featherdrop: data=%s db=%s", cfg.DataDir, cfg.DBPath)
+	log.Printf("client: root %s, %d files, manifest at %s", client.Manifest.Root, len(client.Manifest.Files), clientmanifest.Path)
 	printBanner()
 	printReady("HTTP", cfg.Port)
 
@@ -121,7 +134,7 @@ func main() {
 
 // newRouter wires every route the server serves. It is separate from main so
 // tests can run the real routing, rate limits included.
-func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs.FS, shell []byte) chi.Router {
+func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs.FS, shell []byte, client clientmanifest.Served) chi.Router {
 	r := chi.NewRouter()
 	r.Use(headers.Middleware(headers.ContentSecurityPolicy(cfg.LogoOrigin())))
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -181,6 +194,9 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	r.Delete("/api/m/{slug}", revoke)
 	r.Get("/api/config", api.ConfigHandler(cfg))
 
+	r.Get(clientmanifest.Path, client.ManifestHandler())
+	r.Get(clientmanifest.TemplatePath, client.TemplateHandler())
+
 	// Without this, an unknown /api path would fall through to the SPA and
 	// answer 200 with the HTML shell.
 	r.HandleFunc("/api/*", api.NotFoundHandler())
@@ -207,6 +223,26 @@ func healthcheckMain() int {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Fprintf(os.Stderr, "healthcheck: status %d, want 200\n", resp.StatusCode)
+		return 1
+	}
+	return 0
+}
+
+// printClientManifest writes the manifest of the embedded client and returns
+// the process exit code.
+func printClientManifest(w io.Writer) int {
+	assets, err := fs.Sub(webroot, "webroot")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "client manifest: %v\n", err)
+		return 1
+	}
+	client, err := clientmanifest.Load(assets)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "client manifest: %v\n", err)
+		return 1
+	}
+	if _, err := w.Write(client.JSON()); err != nil {
+		fmt.Fprintf(os.Stderr, "client manifest: %v\n", err)
 		return 1
 	}
 	return 0

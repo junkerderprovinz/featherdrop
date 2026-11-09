@@ -1,0 +1,22 @@
+{
+  "format": "castleparcel-client/1",
+  "root": "560fffb6e9f5c06f1f10d265d871cb173c1634cb6c68d370473da92ae2f9b6ca",
+  "files": [
+    {
+      "path": "assets/app.css",
+      "sha256": "6d6068180a5c710c68c8ee0e290cb9b37b3450492d3f9e3ae46083deb152fbcf"
+    },
+    {
+      "path": "assets/app.js",
+      "sha256": "6f4c113f597494422a7a98c570a40307c74039f30cf5d7cb7bcfa1b5ed50c178"
+    },
+    {
+      "path": "index.html",
+      "sha256": "4a26107aedb5b0db04aaa1dfd502a23f08547760478117978ec456ff5562dec5"
+    },
+    {
+      "path": "sw-download.js",
+      "sha256": "00d0b6ae3710f408037ca9ab9882eecc0279e00f3dea47a0476330fc7ee2846b"
+    }
+  ]
+}
