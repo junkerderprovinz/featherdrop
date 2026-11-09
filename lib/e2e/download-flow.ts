@@ -80,8 +80,7 @@ export async function downloadDecrypted(
 /**
  * Downloads a format 4 share, decrypts it in the crypto worker and saves it: a
  * single file as itself, a bundle as one ZIP named bundleName, built while it
- * decrypts. save
- * gets the exact length for Content-Length. The secret is the token from the
+ * decrypts. save gets the exact length for Content-Length. The secret is the token from the
  * URL fragment with the password, or the keys already derived for the
  * listing. A wrong password cannot be told apart locally, so it shows up as a
  * verifier the server refuses, before anything is counted.

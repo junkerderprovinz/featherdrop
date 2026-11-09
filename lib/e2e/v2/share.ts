@@ -394,7 +394,7 @@ function layout(state: BlobState) {
   return { padded, n, full: header.chunk + TAG_BYTES, size: prefix.length + padded + n * TAG_BYTES };
 }
 
-/** Exact length of the blob state describes. */
+/** Exact length of the blob the state describes. */
 export function blobLength(state: BlobState): number {
   return layout(state).size;
 }
