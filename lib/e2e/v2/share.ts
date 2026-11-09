@@ -6,8 +6,8 @@
 //
 // The header names the kind, mode, KDF parameters, chunk size and padding
 // scheme, so the server can neither see nor swap them. Both the header and the
-// content are Padmé-padded; the server learns two padded lengths and nothing
-// else. Encryption and decryption are push-based so they run unchanged in a
+// content are Padmé-padded, so all the blob tells the server is two padded
+// lengths. Encryption and decryption are push-based so they run unchanged in a
 // Web Worker and can feed an upload as the bytes are produced.
 
 import { aeadEncrypt, aeadDecrypt, toBase64, fromBase64, loadSodium } from "../crypto";

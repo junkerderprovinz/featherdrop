@@ -282,7 +282,7 @@ is `{files: [{name, type, size}], cf?, chunkSize?, baseNonce?, size?}`.
   plaintext bytes per chunk, nonce `baseNonce XOR u64be(i)`, associated data
   `u32be(i) || final`, no padding.
 
-Format 1 (age ciphertext written by older servers) is no longer served.
+Format 1 (age ciphertext written by older servers) is not served; its shares answer 404.
 
 ## Test vectors
 
