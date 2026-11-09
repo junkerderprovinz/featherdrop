@@ -1,11 +1,13 @@
 // Lists what a share holds before the counted download. The server hands out
-// the blob header, [varint(metaLen)][enc_meta], without counting it, and only
-// to a client that proves it knows the key; the names and sizes inside are
-// decrypted here.
+// the blob header without counting it, [varint(metaLen)][enc_meta] in formats
+// 2 and 3 and the prefix and sealed header in format 4, and only to a client
+// that proves it knows the key; the names and sizes inside are decrypted here.
 
-import { computeKeyVerifier, decryptMeta } from "./crypto";
+import { computeKeyVerifier, decodeKey, decryptMeta, ready } from "./crypto";
 import { peekBlobHeader } from "./blob-layout";
 import { decryptManifest } from "./multi-file";
+import { isV2Link, type ShareKeys } from "./v2/keys";
+import { openKeys, readHeader } from "./v2/share";
 
 export interface ListedFile {
   name: string;
@@ -39,6 +41,11 @@ export function listShareFiles(
   throw new Error(`share listing: format ${format} is not supported`);
 }
 
+/** Opens the sealed header of a format 4 share and returns its files. */
+export function listV2ShareFiles(header: Uint8Array, keys: ShareKeys): ListedFile[] {
+  return readHeader(keys, header).header.files.map(({ name, type, size }) => ({ name, type, size }));
+}
+
 /** Fetches a share's blob header from GET /api/d/{slug}/header. */
 export async function fetchShareHeader(
   slug: string,
@@ -64,4 +71,38 @@ export async function fetchShareListing(
 ): Promise<ListedFile[]> {
   const header = await fetchShareHeader(slug, computeKeyVerifier(key), fetchImpl);
   return listShareFiles(header, key, format);
+}
+
+/** What the key in a share link opens: v2 keys or the content key of formats 2 and 3. */
+export type LinkKeys = { format: 4; keys: ShareKeys } | { format: 2 | 3; key: Uint8Array };
+
+/**
+ * Derives the keys for the #k= value of a share link. The link decides the
+ * path: a v2 token is refused unless the server reports format 4 and a bare
+ * key is refused for format 4, so a server cannot move a v2 link onto an older
+ * format. A link-and-password token needs the password, and the one Argon2id
+ * run serves both the listing and the download.
+ */
+export async function openLink(linkKey: string, serverFormat: number, password?: string): Promise<LinkKeys> {
+  if (isV2Link(linkKey)) {
+    if (serverFormat !== 4) throw new Error(`share listing: a v2 link cannot open format ${serverFormat}`);
+    return { format: 4, keys: await openKeys(linkKey, password) };
+  }
+  if (serverFormat !== 2 && serverFormat !== 3) {
+    throw new Error(`share listing: a bare key cannot open format ${serverFormat}`);
+  }
+  await ready();
+  return { format: serverFormat, key: decodeKey(linkKey) };
+}
+
+/** Lists a share's files with the keys from openLink. */
+export async function fetchLinkListing(
+  slug: string,
+  link: LinkKeys,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ListedFile[]> {
+  if (link.format === 4) {
+    return listV2ShareFiles(await fetchShareHeader(slug, link.keys.verifier, fetchImpl), link.keys);
+  }
+  return fetchShareListing(slug, link.key, link.format, fetchImpl);
 }

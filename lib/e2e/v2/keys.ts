@@ -33,6 +33,7 @@ export const FORMAT_VERSION = 0x02;
 const MODE_BYTES: Record<Mode, number> = { link: 0x01, "link+password": 0x02 };
 const SECRET_BYTES = 32;
 const TOKEN_BYTES = 2 + SECRET_BYTES;
+const TOKEN_CHARS = 46;
 
 /**
  * RFC 9106's second recommended setting (t=3, m=64 MiB, p=1). libsodium's
@@ -75,6 +76,15 @@ export function encodeToken(token: LinkToken): string {
   raw[1] = MODE_BYTES[token.mode];
   raw.set(token.secret, 2);
   return base64url(raw);
+}
+
+/**
+ * Whether the #k= value of a link is a v2 token. Older links carry a bare
+ * 43-character key, so the length alone tells them apart; decodeToken then
+ * checks the version and mode.
+ */
+export function isV2Link(k: string): boolean {
+  return k.length === TOKEN_CHARS;
 }
 
 export function decodeToken(s: string): LinkToken {
