@@ -322,3 +322,19 @@ test("a seek with a tampered chunk fails", async () => {
   const fetchRange = async (s: number, e: number) => blob.subarray(s, e + 1);
   await assert.rejects(collect(decryptRange(keys, header, contentOffset, fetchRange, 65540, 65600)), /chunk/);
 });
+
+test("a share with the largest chunk decrypts from small network reads in linear time", async () => {
+  const size = 16 * 1024 * 1024;
+  const { keys, blob } = await sealed([{ name: "big", type: "", size }], new Uint8Array(size), { chunk: size });
+  const dec = new ShareDecryptor(keys);
+  let got = 0;
+  const start = performance.now();
+  for (let i = 0; i < blob.length; i += 4096) {
+    for (const p of dec.push(blob.subarray(i, i + 4096))) got += p.length;
+  }
+  dec.finish();
+  const ms = performance.now() - start;
+  assert.equal(got, size);
+  // Re-copying the pending bytes on every read takes several seconds here.
+  assert.ok(ms < 1500, `decrypting took ${Math.round(ms)} ms`);
+});
