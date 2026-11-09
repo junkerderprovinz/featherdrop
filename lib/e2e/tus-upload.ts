@@ -40,6 +40,8 @@ export function tusUpload(
     resumeUrl?: string;
     /** Gets the URL of a new upload as soon as the server has made it. */
     onUploadUrl?: (url: string) => void;
+    /** Stops the upload and has the server delete what it received. */
+    signal?: AbortSignal;
   } = {},
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
@@ -71,6 +73,15 @@ export function tusUpload(
         else reject(new Error("tus upload missing URL"));
       },
     });
+    opts.signal?.addEventListener(
+      "abort",
+      () => {
+        const stopped = () => reject(new DOMException("upload cancelled", "AbortError"));
+        // A failed delete leaves the upload to the server's sweep of stale ones.
+        upload.abort(true).then(stopped, stopped);
+      },
+      { once: true },
+    );
     upload.start();
   });
 }
