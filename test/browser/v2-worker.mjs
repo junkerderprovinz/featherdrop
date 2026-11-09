@@ -140,8 +140,6 @@ const result = await page.evaluate(async () => {
   const r = await w.request({
     op: "range",
     session: 3,
-    header,
-    contentOffset,
     start,
     end,
     data: single.blob.slice(plan.from, plan.to + 1),

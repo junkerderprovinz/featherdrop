@@ -25,18 +25,13 @@ export type Request =
   | { op: "decrypt-open"; session: number; token: string; password?: string }
   | { op: "decrypt-write"; session: number; data: Uint8Array }
   | { op: "decrypt-close"; session: number }
-  /** Opens the header from the blob's first headerLength bytes, for seeking. */
+  /** Opens the header from the blob's first headerLength bytes and keeps it for seeking. */
   | { op: "read-header"; session: number; data: Uint8Array }
-  /** Decrypts [start, end] from the blob bytes cipherRange named. */
-  | {
-      op: "range";
-      session: number;
-      header: Header;
-      contentOffset: number;
-      start: number;
-      end: number;
-      data: Uint8Array;
-    }
+  /**
+   * Decrypts [start, end] from the blob bytes cipherRange named, under the
+   * header the worker opened, so the page cannot hand it another one.
+   */
+  | { op: "range"; session: number; start: number; end: number; data: Uint8Array }
   | { op: "close"; session: number }
   /** Unwraps the key of an older password share. */
   | { op: "unwrap"; wrapped: Uint8Array; salt: Uint8Array; password: string };
@@ -68,7 +63,12 @@ const DEFAULT_CLOSE_BYTES = 8 * 1024 * 1024;
 
 type Session =
   | { kind: "encrypt"; enc: ShareEncryptor; tail?: Generator<Uint8Array> }
-  | { kind: "decrypt"; keys: ShareKeys; dec: ShareDecryptor };
+  | {
+      kind: "decrypt";
+      keys: ShareKeys;
+      dec: ShareDecryptor;
+      seek?: { header: Header; contentOffset: number };
+    };
 
 function transferables(result: unknown): ArrayBuffer[] {
   const out = new Set<ArrayBuffer>();
@@ -145,13 +145,17 @@ export function serve(port: Port): void {
         get(req.session, "decrypt").dec.finish();
         sessions.delete(req.session);
         return {};
-      case "read-header":
-        return readHeader(get(req.session, "decrypt").keys, req.data);
+      case "read-header": {
+        const s = get(req.session, "decrypt");
+        s.seek = readHeader(s.keys, req.data);
+        return s.seek;
+      }
       case "range": {
-        const { keys } = get(req.session, "decrypt");
+        const { keys, seek } = get(req.session, "decrypt");
+        if (!seek) throw new Error("v2: read the header before seeking");
         const chunks: Uint8Array[] = [];
         const data = req.data;
-        for await (const c of decryptRange(keys, req.header, req.contentOffset, async () => data, req.start, req.end)) {
+        for await (const c of decryptRange(keys, seek.header, seek.contentOffset, async () => data, req.start, req.end)) {
           chunks.push(c);
         }
         return { chunks };

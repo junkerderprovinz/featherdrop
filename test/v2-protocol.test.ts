@@ -117,13 +117,23 @@ test("a seek decrypts the requested range from the fetched chunks", async () => 
   const r = await client.request({
     op: "range",
     session: 4,
-    header,
-    contentOffset,
     start,
     end,
     data: enc.blob.slice(from, to + 1),
   });
   assert.deepEqual(join(r.chunks), data.subarray(start, end + 1));
+});
+
+test("a seek before the worker opened the header is refused", async () => {
+  const client = pair();
+  const size = 10_000;
+  const enc = await encryptVia(client, bytes(size), [{ name: "v.mp4", type: "video/mp4", size }]);
+  await client.request({ op: "decrypt-open", session: 5, token: enc.token });
+
+  await assert.rejects(
+    client.request({ op: "range", session: 5, start: 0, end: 99, data: enc.blob.slice(0, 5000) }),
+    /header/,
+  );
 });
 
 test("an unknown session is an error", async () => {
