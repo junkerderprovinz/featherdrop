@@ -5,7 +5,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 )
 
 func TestFinalize_ExpiryCap(t *testing.T) {
@@ -152,5 +155,57 @@ func TestHealthcheck_OKTrue(t *testing.T) {
 	}
 	if got := rec.Body.String(); got != `{"ok":true}` {
 		t.Fatalf("body = %q, want {\"ok\":true}", got)
+	}
+}
+
+// makeTrackedTusUpload makes a tus upload and records it as pending, as the
+// tus create does.
+func (e *testEnv) makeTrackedTusUpload(t *testing.T, content []byte) string {
+	t.Helper()
+	id := e.makeTusUpload(t, content)
+	if err := store.TrackPendingUpload(e.db, store.PendingUpload{ID: id, Size: int64(len(content)), CreatedAt: 1}); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func TestFinalize_AnUploadInProgressCountsOnce(t *testing.T) {
+	e := newTestEnv(t)
+	e.cfg.StorageQuota = 150
+	e.seedV2(t, make([]byte, 100), nil)
+	id := e.makeTrackedTusUpload(t, make([]byte, 50))
+
+	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2}, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+	if used, _ := store.QuotaUsage(e.db, ""); used != 150 {
+		t.Errorf("usage after finalize = %d, want 150", used)
+	}
+	if up, _ := store.GetPendingUpload(e.db, id); up != nil {
+		t.Errorf("the share still counts as pending: %+v", up)
+	}
+}
+
+func TestFinalize_OtherUploadsInProgressCountTowardTheQuota(t *testing.T) {
+	e := newTestEnv(t)
+	e.cfg.StorageQuota = 150
+	e.seedV2(t, make([]byte, 100), nil)
+	e.makeTrackedTusUpload(t, make([]byte, 30))
+	id := e.makeTrackedTusUpload(t, make([]byte, 30))
+
+	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2}, nil)
+	if rec.Code != http.StatusInsufficientStorage {
+		t.Fatalf("status = %d, want 507 (body %s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestFinalize_RefusesAnOversizedBody(t *testing.T) {
+	e := newTestEnv(t)
+	id := e.makeTusUpload(t, []byte("small blob"))
+
+	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 2, "pad": strings.Repeat("x", 1<<20)}, nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("finalize with a 1 MiB body = %d, want 400", rec.Code)
 	}
 }

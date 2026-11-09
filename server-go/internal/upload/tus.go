@@ -1,12 +1,18 @@
 package upload
 
 import (
+	"context"
+	"crypto/rand"
 	"database/sql"
+	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tus/tusd/v2/pkg/filestore"
@@ -25,7 +31,7 @@ import (
 const BasePath = "/files/"
 
 // NewHandler builds the tus upload handler behind the upload gate and the
-// storage quota gate, ready to mount. db may be nil when cfg.StorageQuota is 0.
+// reservation gate, ready to mount.
 //
 // A tusd filestore writes each upload to cfg.TmpDir as <id> for the bytes and
 // <id>.info for the JSON FileInfo sidecar; finalize moves the bytes to
@@ -41,8 +47,12 @@ func NewHandler(cfg config.Config, db *sql.DB) (http.Handler, error) {
 func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, error) {
 	store := filestore.New(cfg.TmpDir)
 
+	// No concatenation or deferred length: no client uses them, and an upload
+	// has to declare its length up front to count toward the quota.
 	composer := tushandler.NewStoreComposer()
-	store.UseIn(composer)
+	composer.UseCore(store)
+	composer.UseTerminater(store)
+	composer.UseContentServer(store)
 
 	// A cross-origin browser may only attach the upload token header if the
 	// preflight allows it.
@@ -56,18 +66,23 @@ func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, er
 		RespectForwardedHeaders: true,
 		Cors:                    &cors,
 		Logger:                  slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelError})),
+		// The upload takes the id reserveGate recorded it under.
+		PreUploadCreateCallback: func(hook tushandler.HookEvent) (tushandler.HTTPResponse, tushandler.FileInfoChanges, error) {
+			id, _ := hook.Context.Value(uploadIDKey{}).(string)
+			return tushandler.HTTPResponse{}, tushandler.FileInfoChanges{ID: id}, nil
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var next http.Handler = stripBasePath(h)
+	next := reserveGate(cfg, db, stripBasePath(h))
 	if cfg.UploadLimitPerIP > 0 {
 		next = limitGate(uploadcap.New(cfg.UploadLimitPerIP, nil), cfg.TrustedProxies, next)
 	}
 	// The auth gate goes outermost so an unauthorized request learns nothing
 	// about the quota.
-	return uploadGate(cfg, db, quotaGate(cfg, db, next)), nil
+	return uploadGate(cfg, db, next), nil
 }
 
 // stripBasePath removes the "/files" or "/files/" prefix before tusd sees the
@@ -91,8 +106,12 @@ func stripBasePath(next http.Handler) http.Handler {
 // An upload for a file request proves the request link instead, see
 // requestGate. The OPTIONS preflight passes, because browsers send no custom
 // headers on it.
+//
+// tusd would turn a POST with X-HTTP-Method-Override into another method
+// after every gate has judged it as a create, so the header is dropped.
 func uploadGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Del("X-HTTP-Method-Override")
 		if r.Method == http.MethodOptions {
 			next.ServeHTTP(w, r)
 			return
@@ -123,9 +142,6 @@ func uploadGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 // the attach checks both again on the real bytes. It returns 0 to admit, else
 // the status and message to refuse with, a 404 alike for every wrong proof.
 func requestGate(db *sql.DB, r *http.Request, nowMs int64) (int, string) {
-	if db == nil {
-		return http.StatusNotFound, "not found"
-	}
 	rec, err := store.GetRequest(db, r.Header.Get(RequestHeader))
 	if err != nil || rec == nil || rec.Expired(nowMs) ||
 		!share.RequestKeyMatches(r.Header.Get(RequestKeyHeader), rec.PublicKey) {
@@ -147,29 +163,100 @@ func requestGate(db *sql.DB, r *http.Request, nowMs int64) (int, string) {
 	return 0, ""
 }
 
-// quotaGate refuses a tus create whose declared Upload-Length would push the
-// stored shares past STORAGE_QUOTA, before any byte is accepted. Resumes pass,
-// since tusd caps them at the declared length, and a deferred length cannot be
-// judged here; finalize checks the real size in both cases. Uploads still in
-// progress do not count toward the total.
+// uploadIDKey carries the id reserveGate recorded a create under to tusd's
+// pre-create hook.
+type uploadIDKey struct{}
+
+// reserveGate records every tus create as a pending upload under an id it
+// picks, before tusd writes a byte, so the declared length counts toward
+// STORAGE_QUOTA until the upload is stored, terminated or swept, and an
+// upload for a request takes one of its free places. A create over the quota
+// gets 507, one for a request whose free places all have an upload in
+// progress 429. A create that leaves no upload behind, and a
+// terminated upload, give their reservation back. Resumes pass, since tusd
+// caps them at the declared length.
 //
-// A store error lets the request through: blocking every upload on a transient
-// database error is worse than admitting one too many, and finalize checks
-// again before anything is published.
-func quotaGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
+// A store error refuses the create: an upload without its row would escape
+// the quota.
+func reserveGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if cfg.StorageQuota > 0 && db != nil && r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPost:
 			length, err := strconv.ParseInt(r.Header.Get("Upload-Length"), 10, 64)
-			if err == nil && length > 0 {
-				used, err := store.TotalStoredSize(db)
-				if err == nil && used+length > cfg.StorageQuota {
-					writeJSONError(w, http.StatusInsufficientStorage, "storage quota exceeded")
-					return
-				}
+			if err != nil || length < 0 {
+				writeJSONError(w, http.StatusBadRequest, "upload length required")
+				return
 			}
+			id := rand.Text()
+			res, err := store.ReservePendingUpload(db, store.PendingUpload{
+				ID:          id,
+				Size:        length,
+				RequestSlug: r.Header.Get(RequestHeader),
+				CreatedAt:   time.Now().UnixMilli(),
+			}, cfg.StorageQuota)
+			switch {
+			case err != nil:
+				log.Printf("upload: reserve: %v", err)
+				writeJSONError(w, http.StatusInternalServerError, "could not start upload")
+				return
+			case res == store.OverQuota:
+				writeJSONError(w, http.StatusInsufficientStorage, "storage quota exceeded")
+				return
+			case res == store.NoFreePlace:
+				writeJSONError(w, http.StatusTooManyRequests, "too many uploads in progress")
+				return
+			}
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), uploadIDKey{}, id)))
+			if _, err := os.Stat(filepath.Join(cfg.TmpDir, id+".info")); err != nil {
+				release(db, id)
+			}
+		case http.MethodDelete:
+			rec := &statusRecorder{ResponseWriter: w}
+			next.ServeHTTP(rec, r)
+			if rec.status == http.StatusNoContent {
+				release(db, strings.TrimPrefix(r.URL.Path, BasePath))
+			}
+		default:
+			next.ServeHTTP(w, r)
 		}
-		next.ServeHTTP(w, r)
 	})
+}
+
+// release stops counting a pending upload. A row left behind by a failed
+// delete is dropped by cleanup once it is a day old.
+func release(db *sql.DB, id string) {
+	if err := store.DeletePendingUpload(db, id); err != nil {
+		log.Printf("upload: release: %v", err)
+	}
+}
+
+// IndexPendingUploads counts every upload in tmpDir the store has no row
+// for, such as one started before the store kept them, with its declared
+// length. One whose sidecar does not read is left to cleanup.
+func IndexPendingUploads(tmpDir string, db *sql.DB, now time.Time) error {
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		return fmt.Errorf("index pending uploads: %w", err)
+	}
+	tus := filestore.New(tmpDir)
+	for _, e := range entries {
+		id, ok := strings.CutSuffix(e.Name(), ".info")
+		if !ok || !e.Type().IsRegular() {
+			continue
+		}
+		up, err := tus.GetUpload(context.Background(), id)
+		if err != nil {
+			continue
+		}
+		info, err := up.GetInfo(context.Background())
+		if err != nil {
+			continue
+		}
+		if err := store.TrackPendingUpload(db, store.PendingUpload{ID: id, Size: info.Size, CreatedAt: now.UnixMilli()}); err != nil {
+			return fmt.Errorf("index pending uploads: %w", err)
+		}
+	}
+	return nil
 }
 
 // limitGate charges a tus create's declared Upload-Length to its client under

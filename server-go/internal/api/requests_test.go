@@ -470,3 +470,59 @@ func TestRequestRoutes_RefuseOversizedBodies(t *testing.T) {
 		t.Errorf("send with a 1 MiB body: %d", rec.Code)
 	}
 }
+
+func TestDeleteRequestUpload_ReopensAFullRequest(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, map[string]any{"maxUploads": 1})
+	if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusNoContent {
+		t.Fatalf("send: %d", rec.Code)
+	}
+	if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusGone {
+		t.Fatalf("send to a full request: %d, want 410", rec.Code)
+	}
+	ups, _ := store.ListRequestUploads(e.db, slug)
+	if rec := e.do(t, nil, http.MethodDelete, "/api/r/"+slug+"/uploads/"+ups[0].ID, nil, asCollector()); rec.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d", rec.Code)
+	}
+	var info map[string]any
+	decodeJSON(t, e.do(t, nil, http.MethodGet, "/api/r/"+slug, nil, asUploader()), &info)
+	if info["open"] != true {
+		t.Errorf("after the delete the request reports %v", info)
+	}
+	if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusNoContent {
+		t.Errorf("send after the delete: %d, want 204", rec.Code)
+	}
+}
+
+func TestSendToRequest_AnUploadInProgressCountsOnce(t *testing.T) {
+	e := newTestEnv(t)
+	blob := v4Blob(1064, 4112)
+	e.cfg.StorageQuota = int64(len(blob))
+	slug := e.openRequest(t, nil, nil)
+	id := e.makeTrackedTusUpload(t, blob)
+	rec := e.do(t, nil, http.MethodPost, "/api/r/"+slug+"/uploads", map[string]any{"uploadId": id, "sealedKey": sealedKey(1)}, asUploader())
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("send: %d %s", rec.Code, rec.Body.String())
+	}
+	if used, _ := store.QuotaUsage(e.db, ""); used != int64(len(blob)) {
+		t.Errorf("usage after send = %d, want %d", used, len(blob))
+	}
+}
+
+func TestSendToRequest_RefusesAnUploadStartedForAnotherRequest(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, nil)
+	other := e.openRequest(t, nil, nil)
+	blob := v4Blob(1064, 4112)
+	id := e.makeTusUpload(t, blob)
+	if err := store.TrackPendingUpload(e.db, store.PendingUpload{ID: id, Size: int64(len(blob)), RequestSlug: other, CreatedAt: 1}); err != nil {
+		t.Fatal(err)
+	}
+	body := map[string]any{"uploadId": id, "sealedKey": sealedKey(1)}
+	if rec := e.do(t, nil, http.MethodPost, "/api/r/"+slug+"/uploads", body, asUploader()); rec.Code != http.StatusNotFound {
+		t.Errorf("send to another request: %d, want 404", rec.Code)
+	}
+	if rec := e.do(t, nil, http.MethodPost, "/api/r/"+other+"/uploads", body, asUploader()); rec.Code != http.StatusNoContent {
+		t.Errorf("send to its own request: %d, want 204", rec.Code)
+	}
+}

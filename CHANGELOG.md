@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Encrypted notes.** Share a piece of text instead of a file, with the same expiry, download limit, password and management link. The note is encrypted in your browser like a file, and to the server it looks like any other small share. The recipient sees it as plain text with a copy button; nothing in it is ever treated as a web page. Write one at `/note`.
 - **Ask someone for files.** At `/request` you open a file request and get two links: one to send to whoever should send you files, and a collect link to keep for yourself. Senders need no account and, with an upload password set, no password either. Their files are encrypted in their browser to a key that only your collect link holds, so the server can't open them, and someone who only has the request link can't list or download them. You choose how long the request stays open and how many uploads it takes, and the collect link deletes everything early. The construction and what the server learns are in `docs/encryption-format.md`.
 - **Trusted proxy list.** `TRUST_PROXY` also takes a comma-separated list of proxy addresses and CIDR ranges. Only a connection from one of them may name the visitor in `X-Forwarded-For`, and entries left of the last trusted proxy, which a client could have forged, are skipped. `true` and `false` work as before.
-- **A client you can check.** The web client builds to the same bytes on any machine, and every release carries `castleparcel-client.json` with the SHA-256 of each of its files and one root hash. Each instance serves the manifest of the client it embeds at `/.well-known/castleparcel-client.json` and logs the root at startup, and `-client-manifest` prints it from an image without starting it. `node scripts/verify-client.mjs <instance> <manifest>` checks a running instance against a release. `docs/verifying-the-client.md` explains how.
+- **A client you can check.** The web client builds to the same bytes on any machine, and every release carries `castleparcel-client.json` with the SHA-256 of each of its files and one root hash. Each instance serves the manifest of the client it embeds at `/.well-known/castleparcel-client.json` and logs the root at startup, and `-client-manifest` prints it from an image without starting it. `node scripts/verify-client.mjs <instance> <manifest>` checks a running instance against a release. The release text names the root hash as well. `docs/verifying-the-client.md` explains how.
 - **Subresource Integrity.** The page pins its script and stylesheet with `integrity` hashes, so the browser refuses a file that does not match.
 - The README has a threat model: what stays private, what the operator and the network can still see, why the served JavaScript is the part to verify, and how to handle links.
 
@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The README has a table of all settings.
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
 - Tidied the code comments and log messages.
+- Deleting an upload from a file request gives its place back, so a request someone filled with junk takes uploads again.
 
 ### Removed
 
@@ -48,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `RATE_LIMIT` counts IPv6 visitors per /64, like the upload cap, so one host can no longer multiply its budget by rotating through the addresses of its prefix.
 - **`RATE_LIMIT` on the share routes counts misses, not reads.** A visitor gets 10 failed lookups, wrong keys and new downloads at once and 20 a minute after that. Reads that pass, like a video seeking through a large file or a download picking up after a break, only count toward a wide limit of 600 a minute, so recipients no longer run into `429` while they watch.
 - An upload that never declared its length can't become a share. It could otherwise keep growing after it was stored, past the storage quota.
+- **Uploads in progress count toward `STORAGE_QUOTA`.** An upload counts with the size it declared from the moment it starts until it becomes a share, is sent to a request or is cleaned up a day after its last byte. Before, only finished uploads counted, so a stack of started uploads nobody finished could fill the disk past the quota. The count is kept in the database and survives a restart. Every upload has to declare its size up front.
+- **A request link can't pile up unfinished uploads.** A file request with a maximum takes no more uploads in progress than it has places left, and further uploads get `429` until one is sent or cleaned up. An upload started for one request can't be sent to another.
+- The upload server no longer offers the tus concatenation and deferred-length extensions, which no client uses, and ignores `X-HTTP-Method-Override`, which could turn a request the upload checks had judged as a new upload into another method.
+- `POST /api/finalize` refuses a body over 64 KiB, like the file request routes.
 
 ## [1.9.0] - 2026-07-15
 

@@ -64,7 +64,7 @@ func Run(ctx context.Context, cfg config.Config, db *sql.DB, interval time.Durat
 func Sweep(cfg config.Config, db *sql.DB, now time.Time) (Result, error) {
 	shares, sharesErr := deleteShares(cfg.UploadsDir, db, now.UnixMilli())
 	requests, requestsErr := deleteRequests(cfg.UploadsDir, db, now.UnixMilli())
-	uploads, uploadsErr := removeStaleUploads(cfg.TmpDir, now.Add(-StaleUploadAge))
+	uploads, uploadsErr := removeStaleUploads(cfg.TmpDir, db, now.Add(-StaleUploadAge))
 	return Result{Shares: shares, Requests: requests, Uploads: uploads}, errors.Join(sharesErr, requestsErr, uploadsErr)
 }
 
@@ -152,10 +152,11 @@ func deleteRequests(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 }
 
 // removeStaleUploads removes the tus uploads in tmpDir last modified at or
-// before cutoff. tusd writes the .info sidecar at creation and appends every
-// PATCH to the bytes, so the newer of the two files tells when the upload was
-// last active, and one still in progress never looks stale.
-func removeStaleUploads(tmpDir string, cutoff time.Time) (int, error) {
+// before cutoff, and stops counting them toward the quota. tusd writes the
+// .info sidecar at creation and appends every PATCH to the bytes, so the newer
+// of the two files tells when the upload was last active, and one still in
+// progress never looks stale.
+func removeStaleUploads(tmpDir string, db *sql.DB, cutoff time.Time) (int, error) {
 	entries, err := os.ReadDir(tmpDir)
 	if err != nil {
 		return 0, fmt.Errorf("read tmp dir: %w", err)
@@ -181,7 +182,7 @@ func removeStaleUploads(tmpDir string, cutoff time.Time) (int, error) {
 		if t.After(cutoff) {
 			continue
 		}
-		gone := false
+		gone, kept := false, false
 		for _, name := range []string{id, id + ".info"} {
 			err := os.Remove(filepath.Join(tmpDir, name))
 			switch {
@@ -189,10 +190,30 @@ func removeStaleUploads(tmpDir string, cutoff time.Time) (int, error) {
 				gone = true
 			case !errors.Is(err, fs.ErrNotExist):
 				stuck++
+				kept = true
 			}
 		}
 		if gone {
 			removed++
+		}
+		if !kept {
+			delete(lastActive, id)
+		}
+	}
+
+	// A row is written before tusd creates the files, so a younger row
+	// without files may be a create in flight. An older one belongs to an
+	// upload removed here, or lost to a crash or a failed finalize.
+	pending, err := store.ListPendingUploads(db, cutoff.UnixMilli())
+	if err != nil {
+		return removed, err
+	}
+	for _, id := range pending {
+		if _, ok := lastActive[id]; ok {
+			continue
+		}
+		if err := store.DeletePendingUpload(db, id); err != nil {
+			return removed, err
 		}
 	}
 	if stuck > 0 {

@@ -78,6 +78,10 @@ func main() {
 	}
 	defer db.Close()
 
+	if err := upload.IndexPendingUploads(cfg.TmpDir, db, time.Now()); err != nil {
+		log.Fatalf("index uploads in progress: %v", err)
+	}
+
 	assets, err := fs.Sub(webroot, "webroot")
 	if err != nil {
 		log.Fatalf("sub fs: %v", err)
