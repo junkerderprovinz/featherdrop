@@ -771,7 +771,7 @@ export function DownloadView({
             <Text fw={700} size="xl" ta="center" lineClamp={2}>
               {v2Files
                 ? v2Files.length === 1
-                  ? v2Files[0].name
+                  ? v2Files[0].name || t("note.title")
                   : t("download.fileCount", { count: v2Files.length })
                 : isV3
                   ? manifest
