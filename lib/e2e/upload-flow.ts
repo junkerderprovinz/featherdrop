@@ -5,7 +5,8 @@
 import { encryptForUpload, type EncryptResult } from "./pipeline";
 import { encryptFilesForUpload } from "./multi-pipeline";
 import { type PackFile } from "./multi-file";
-import { createEncryptor, blobSource } from "./v2/share";
+import { workerBlobSource } from "./v2/remote";
+import type { Client } from "./v2/protocol";
 import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
 import { createManageToken, manageUrl } from "./manage-link";
@@ -73,6 +74,8 @@ export interface UploadDeps {
   baseUrl: string;
   /** Where a format 4 upload keeps what it needs to resume after a reload; without it nothing is kept. */
   resume?: ResumeStore;
+  /** The crypto worker that derives the keys of a format 4 upload and seals its chunks. */
+  crypto: Client;
 }
 
 function packFiles(files: File[]): PackFile[] {
@@ -104,14 +107,15 @@ export async function uploadEncrypted(
   if (opts.format === 4) {
     // A password here is a second factor next to the link token, so unlike
     // the older password mode the server stores no wrapped key.
-    const enc = await createEncryptor(
-      files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
-      { password: opts.password || undefined },
-    );
+    const { token, verifier, state: blob } = await deps.crypto.request({
+      op: "create",
+      files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+      password: opts.password || undefined,
+    });
     const state: ResumeState = {
-      token: enc.token,
-      verifier: enc.verifier,
-      blob: enc.state,
+      token,
+      verifier,
+      blob,
       files: [],
       expiry: opts.expiry,
       maxDownloads: opts.maxDownloads,
@@ -206,17 +210,20 @@ export async function resumeUpload(
   return sendV2(state, ordered, { id, uploadUrl }, deps, onPhase);
 }
 
-/** Uploads and finalizes a format 4 blob, then deletes its resume record. */
-async function sendV2(
+/**
+ * Uploads and finalizes a format 4 blob, sealed in the crypto worker from the
+ * plaintext of files laid end to end, then deletes its resume record.
+ */
+export async function sendV2(
   state: ResumeState,
-  files: File[],
+  files: Blob[],
   pending: { id: string | null; uploadUrl: string | null },
   deps: UploadDeps,
   onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
 ): Promise<{ shareUrl: string; manageUrl: string }> {
   const tracker = pending.id && deps.resume ? trackUpload(deps.resume, pending.id) : null;
   onPhase?.("uploading", 0);
-  const uploadId = await deps.upload(blobSource(state.blob, readFiles(files)), {
+  const uploadId = await deps.upload(workerBlobSource(deps.crypto, state.blob, readFiles(files)), {
     onProgress: (sent, total) => {
       tracker?.touch();
       onPhase?.("uploading", total > 0 ? sent / total : 0);
@@ -236,7 +243,7 @@ async function sendV2(
 }
 
 /** Reads the plaintext range [start, end) of the files laid end to end. */
-function readFiles(files: Blob[]): (start: number, end: number) => Promise<Uint8Array> {
+export function readFiles(files: Blob[]): (start: number, end: number) => Promise<Uint8Array> {
   return async (start, end) => {
     const parts: Blob[] = [];
     let base = 0;
@@ -249,8 +256,6 @@ function readFiles(files: Blob[]): (start: number, end: number) => Promise<Uint8
     return new Uint8Array(await new Blob(parts).arrayBuffer());
   };
 }
-
-
 
 type FinalizeFields = Omit<FinalizeRequest, "uploadId" | "manageTokenHash">;
 

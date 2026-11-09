@@ -38,4 +38,14 @@ export default defineConfig({
       output: { codeSplitting: false },
     },
   },
+  // The crypto worker is imported with ?worker&inline, so its bundle lands in
+  // the main chunk as a string and runs from a blob: URL under the main
+  // chunk's integrity hash. It must be one chunk for the same reason, and an
+  // ES module because libsodium uses top-level await.
+  worker: {
+    format: "es",
+    rolldownOptions: {
+      output: { codeSplitting: false },
+    },
+  },
 });

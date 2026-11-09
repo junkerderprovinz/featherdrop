@@ -19,3 +19,18 @@ export function cryptoWorker(): Client {
   serve(ch.port1 as unknown as Port);
   return connect(ch.port2 as unknown as Port);
 }
+
+/** A worker that also records the op of every request it gets. */
+export function recordingWorker(): { client: Client; ops: string[] } {
+  const inner = cryptoWorker();
+  const ops: string[] = [];
+  return {
+    ops,
+    client: {
+      request(req, transfer) {
+        ops.push(req.op);
+        return inner.request(req, transfer);
+      },
+    },
+  };
+}

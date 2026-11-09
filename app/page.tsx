@@ -38,6 +38,7 @@ import { collectSharedFiles, isShareTargetLaunch } from "@/lib/share-target";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { uploadEncrypted, type UploadDeps } from "@/lib/e2e/upload-flow";
 import { tusUpload } from "@/lib/e2e/tus-upload";
+import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 
 // The header server-go/internal/upload/auth.go checks.
 const UPLOAD_TOKEN_HEADER = "x-fd-upload-token";
@@ -257,6 +258,7 @@ export default function HomePage() {
         });
       },
       baseUrl,
+      crypto: cryptoWorker,
     };
 
     uploadEncrypted(

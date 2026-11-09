@@ -1,5 +1,4 @@
-// Entry of the crypto Web Worker, loaded with
-// new Worker(new URL("./worker.ts", import.meta.url), { type: "module" }).
+// Entry of the crypto Web Worker, started by ./crypto-worker.ts.
 
 import { serve, type Port } from "./protocol";
 

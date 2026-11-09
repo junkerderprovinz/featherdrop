@@ -1,11 +1,13 @@
 // Browser test for the v2 crypto worker: lib/e2e/v2/worker.ts runs as a real
-// module Web Worker in Chromium, and the page encrypts, decrypts and seeks
-// through the message protocol.
+// module Web Worker in Chromium, started from a blob: URL as in the client
+// build, and the page encrypts, decrypts and seeks through the message
+// protocol.
 import { createServer } from "node:http";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { inlineWorker } from "../inline-worker.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -17,22 +19,22 @@ async function bundle(contents) {
     format: "esm",
     platform: "browser",
     write: false,
+    plugins: [inlineWorker],
   });
   return out.outputFiles[0].text;
 }
 
-const workerBundle = await bundle(`import "./lib/e2e/v2/worker.ts";`);
 const pageBundle = await bundle(`
+import CryptoWorker from "./lib/e2e/v2/worker.ts?worker&inline";
 import { connect } from "./lib/e2e/v2/protocol.ts";
 import { cipherRange, blobLength, plainSpan } from "./lib/e2e/v2/share.ts";
-globalThis.__V2 = { connect, cipherRange, blobLength, plainSpan };
+globalThis.__V2 = { CryptoWorker, connect, cipherRange, blobLength, plainSpan };
 `);
 
 const server = createServer((req, res) => {
-  const js = { "/worker.mjs": workerBundle, "/page.mjs": pageBundle }[req.url];
-  if (js) {
+  if (req.url === "/page.mjs") {
     res.writeHead(200, { "Content-Type": "text/javascript" });
-    res.end(js);
+    res.end(pageBundle);
     return;
   }
   res.writeHead(200, { "Content-Type": "text/html" });
@@ -45,13 +47,15 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(String(e)));
+const workerUrls = [];
+page.on("worker", (w) => workerUrls.push(w.url()));
 await page.goto(`http://127.0.0.1:${port}/`);
 await page.addScriptTag({ url: "/page.mjs", type: "module" });
 await page.waitForFunction(() => typeof globalThis.__V2 !== "undefined", { timeout: 30_000 });
 
 const result = await page.evaluate(async () => {
-  const { connect, cipherRange, blobLength, plainSpan } = globalThis.__V2;
-  const worker = () => connect(new Worker("/worker.mjs", { type: "module" }));
+  const { CryptoWorker, connect, cipherRange, blobLength, plainSpan } = globalThis.__V2;
+  const worker = () => connect(new CryptoWorker());
   const pattern = (n, seed) => {
     const b = new Uint8Array(n);
     for (let i = 0; i < n; i++) b[i] = (i * 7 + seed) % 251;
@@ -150,6 +154,7 @@ const result = await page.evaluate(async () => {
 await browser.close();
 server.close();
 
+result.workersFromBlob = workerUrls.length > 0 && workerUrls.every((u) => u.startsWith("blob:"));
 const failed = Object.entries(result).filter(([, ok]) => ok !== true);
 for (const [name, ok] of Object.entries(result)) console.log(`${ok === true ? "ok  " : "FAIL"} ${name}`);
 if (pageErrors.length) console.log("page errors:", pageErrors);

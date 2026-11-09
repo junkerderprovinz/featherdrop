@@ -1,16 +1,16 @@
 // The network side of file requests (./v2/request.ts holds the keys). The
 // requester creates a request and keeps the collect link; whoever has the
 // request link sends files or a note; the requester lists, downloads and
-// closes with the collect link. fetch and the tus upload are injected for
-// tests.
+// closes with the collect link. fetch, the tus upload and the crypto worker
+// are injected for tests.
 
 import { toBase64, fromBase64 } from "./crypto";
-import { concatFiles, type PackFile } from "./multi-file";
-import { canUseOpfs, writeMemoryScratch, writeScratch } from "./opfs-scratch";
-import { streamToAsyncIterable } from "./stream-adapters";
 import { hashManageToken } from "./manage-link";
 import { noteContent } from "./note";
-import { createEncryptor, encryptStream, openKeys, readHeader, type Header } from "./v2/share";
+import { readFiles, type UploadSource } from "./upload-flow";
+import { openKeys, readHeader, type FileEntry, type Header } from "./v2/share";
+import { workerBlobSource } from "./v2/remote";
+import type { Client } from "./v2/protocol";
 import type { ShareKeys } from "./v2/keys";
 import {
   newRequestSecret,
@@ -28,9 +28,6 @@ const REQUEST_HEADER = "x-fd-request";
 const REQUEST_KEY_HEADER = "x-fd-request-key";
 const COLLECT_TOKEN_HEADER = "x-fd-collect-token";
 const UPLOAD_TOKEN_HEADER = "x-fd-upload-token";
-
-// As in upload-flow.ts: without OPFS the encrypted blob sits in memory.
-const MEMORY_FALLBACK_MAX_BYTES = 500 * 1024 * 1024;
 
 /** What the request link names: the request and the key uploads are sealed to. */
 export interface RequestLink {
@@ -159,83 +156,67 @@ export async function fetchRequestInfo(link: RequestLink, fetchImpl: typeof fetc
 
 export interface SendDeps {
   /** Uploads with tus, sending headers with every tus request, and resolves to the upload id. */
-  upload(file: File, headers: Record<string, string>, onProgress: (sent: number, total: number) => void): Promise<string>;
+  upload(
+    source: UploadSource,
+    opts: { headers: Record<string, string>; onProgress: (sent: number, total: number) => void },
+  ): Promise<string>;
+  /** The crypto worker that makes the share's keys and seals its chunks. */
+  crypto: Client;
   fetchImpl?: typeof fetch;
-}
-
-function packFiles(files: File[]): PackFile[] {
-  return files.map((f) => ({
-    name: f.name,
-    type: f.type || "application/octet-stream",
-    size: f.size,
-    stream: () => streamToAsyncIterable(f.stream()),
-  }));
 }
 
 /**
  * Encrypts files, or a note when content is a string, as a fresh link-mode
  * share, uploads it for the request and attaches the share's link token
- * sealed to the request's public key. The uploader keeps no link: once sent,
- * only the collect link opens the upload.
+ * sealed to the request's public key. The chunks are sealed in the crypto
+ * worker as tus sends them. The uploader keeps no link: once sent, only the
+ * collect link opens the upload.
  */
 export async function sendToRequest(
   content: File[] | string,
   link: RequestLink,
   deps: SendDeps,
-  onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
+  onProgress?: (fraction: number) => void,
 ): Promise<void> {
   const fetchImpl = deps.fetchImpl ?? fetch;
   const info = await fetchRequestInfo(link, fetchImpl);
   if (!info.open) throw new RequestClosedError();
 
-  let enc: Awaited<ReturnType<typeof createEncryptor>>;
-  let plaintext: AsyncIterable<Uint8Array>;
+  let entries: FileEntry[];
+  let plain: Blob[];
   if (typeof content === "string") {
     const { bytes, entry } = noteContent(content);
-    enc = await createEncryptor([entry], { kind: "text" });
-    plaintext = (async function* () {
-      yield bytes;
-    })();
+    entries = [entry];
+    plain = [new Blob([bytes])];
   } else {
     if (content.length === 0) throw new Error("sendToRequest: no files given");
-    const packed = packFiles(content);
-    enc = await createEncryptor(packed.map(({ name, type, size }) => ({ name, type, size })));
-    plaintext = content.length === 1 ? packed[0].stream() : concatFiles(packed);
+    entries = content.map((f) => ({ name: f.name, type: f.type || "application/octet-stream", size: f.size }));
+    plain = content;
   }
-  if (info.maxSize !== null && enc.blobLength > info.maxSize) throw new RequestTooLargeError(info.maxSize);
+  const { token, state } = await deps.crypto.request({
+    op: "create",
+    files: entries,
+    kind: typeof content === "string" ? "text" : undefined,
+  });
+  const source = workerBlobSource(deps.crypto, state, readFiles(plain));
+  if (info.maxSize !== null && source.size > info.maxSize) throw new RequestTooLargeError(info.maxSize);
 
-  onPhase?.("encrypting", 0);
-  let scratch: { file: File; cleanup: () => Promise<void> };
-  if (canUseOpfs()) {
-    scratch = await writeScratch(encryptStream(enc, plaintext));
-  } else {
-    if (enc.blobLength > MEMORY_FALLBACK_MAX_BYTES) {
-      throw new Error("These files are too large to encrypt without OPFS. Open this page over HTTPS.");
-    }
-    scratch = await writeMemoryScratch(encryptStream(enc, plaintext));
-  }
-  onPhase?.("encrypting", 1);
-
-  try {
-    onPhase?.("uploading", 0);
-    const headers = { [REQUEST_HEADER]: link.slug, ...uploaderHeaders(link) };
-    const uploadId = await deps.upload(scratch.file, headers, (sent, total) =>
-      onPhase?.("uploading", total > 0 ? sent / total : 0),
-    );
-    const sealed = await sealToken(enc.token, link.publicKey);
-    const res = await fetchImpl(`/api/r/${encodeURIComponent(link.slug)}/uploads`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...uploaderHeaders(link) },
-      body: JSON.stringify({ uploadId, sealedKey: toBase64(sealed) }),
-    });
-    if (res.status === 410) throw new RequestClosedError();
-    if (res.status === 413) throw new RequestTooLargeError(info.maxSize ?? 0);
-    if (res.status === 404) throw new RequestNotFoundError();
-    if (!res.ok) throw new Error(`send ${res.status}`);
-    onPhase?.("uploading", 1);
-  } finally {
-    await scratch.cleanup();
-  }
+  onProgress?.(0);
+  const uploadId = await deps.upload(source, {
+    headers: { [REQUEST_HEADER]: link.slug, ...uploaderHeaders(link) },
+    onProgress: (sent, total) => onProgress?.(total > 0 ? sent / total : 0),
+  });
+  const sealed = await sealToken(token, link.publicKey);
+  const res = await fetchImpl(`/api/r/${encodeURIComponent(link.slug)}/uploads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...uploaderHeaders(link) },
+    body: JSON.stringify({ uploadId, sealedKey: toBase64(sealed) }),
+  });
+  if (res.status === 410) throw new RequestClosedError();
+  if (res.status === 413) throw new RequestTooLargeError(info.maxSize ?? 0);
+  if (res.status === 404) throw new RequestNotFoundError();
+  if (!res.ok) throw new Error(`send ${res.status}`);
+  onProgress?.(1);
 }
 
 async function collectHeaders(collect: CollectLink): Promise<Record<string, string>> {

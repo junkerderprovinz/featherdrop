@@ -5,14 +5,17 @@ import type { FinalizeRequest, UploadDeps } from "../lib/e2e/upload-flow";
 import { buildEncryptor, createEncryptor } from "../lib/e2e/v2/share";
 import { deriveKeys } from "../lib/e2e/v2/keys";
 import { fetchShareBlob } from "../lib/e2e/download-flow";
+import { recordingWorker } from "./crypto-worker";
 
 // An in-memory stand-in for tus, finalize and the counted download, which
 // checks the key verifier as the server does.
 function fakeServer() {
   const uploads = new Map<string, Uint8Array>();
   const shares = new Map<string, { blob: Uint8Array; body: FinalizeRequest }>();
+  const worker = recordingWorker();
   const deps: UploadDeps = {
     baseUrl: "https://drop.example",
+    crypto: worker.client,
     async upload(source) {
       const id = `up${uploads.size}`;
       uploads.set(id, new Uint8Array(await new Blob([(await source.slice(0, source.size)) as BlobPart]).arrayBuffer()));
@@ -32,7 +35,7 @@ function fakeServer() {
     if (verifier !== share.body.keyVerifier) return new Response(null, { status: 401 });
     return new Response(share.blob.slice());
   }) as typeof fetch;
-  return { deps, shares, fetchImpl };
+  return { deps, shares, fetchImpl, crypto: worker.client, ops: worker.ops };
 }
 
 function linkParts(shareUrl: string) {
@@ -53,8 +56,18 @@ test("a note round trips in link mode", async () => {
   assert.equal(stored.body.maxDownloads, 1);
   assert.equal(stored.body.expiry, "1d");
 
-  const text = await readNote(fetchShareBlob(slug, srv.fetchImpl), { token });
+  const text = await readNote(srv.crypto, fetchShareBlob(slug, srv.fetchImpl), { token });
   assert.equal(text, NOTE);
+});
+
+test("a note is sealed and opened in the crypto worker", async () => {
+  const srv = fakeServer();
+  const { shareUrl } = await uploadNote(NOTE, { expiry: "1d", maxDownloads: null }, srv.deps);
+  assert.deepEqual([...new Set(srv.ops)], ["create", "seal"]);
+  srv.ops.length = 0;
+  const { slug, token } = linkParts(shareUrl);
+  assert.equal(await readNote(srv.crypto, fetchShareBlob(slug, srv.fetchImpl), { token }), NOTE);
+  assert.deepEqual([...new Set(srv.ops)], ["decrypt-open", "decrypt-write", "decrypt-close", "close"]);
 });
 
 test("a note round trips in link and password mode", async () => {
@@ -64,9 +77,9 @@ test("a note round trips in link and password mode", async () => {
   const { slug, token } = linkParts(shareUrl);
   assert.equal(srv.shares.get(slug)!.body.wrappedKey, undefined);
 
-  assert.equal(await readNote(fetchShareBlob(slug, srv.fetchImpl), { token, password }), NOTE);
+  assert.equal(await readNote(srv.crypto, fetchShareBlob(slug, srv.fetchImpl), { token, password }), NOTE);
   await assert.rejects(
-    readNote(fetchShareBlob(slug, srv.fetchImpl), { token, password: "wrong horse battery" }),
+    readNote(srv.crypto, fetchShareBlob(slug, srv.fetchImpl), { token, password: "wrong horse battery" }),
     /401/,
   );
 });
@@ -91,7 +104,7 @@ test("reading a file share as a note fails", async () => {
   });
   const blob = new Uint8Array(Buffer.concat([enc.prefix, ...enc.finish()]));
   const fetchBlob = async () => new Response(blob).body!;
-  await assert.rejects(readNote(fetchBlob, { keys }), /not a note/);
+  await assert.rejects(readNote(fakeServer().crypto, fetchBlob, { keys }), /not a note/);
 });
 
 test("an empty note or one over the cap is refused before anything is sent", async () => {
