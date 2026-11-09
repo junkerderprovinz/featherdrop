@@ -10,7 +10,7 @@ body { background: var(--carbon-bg); color: var(--carbon-text); font-family: var
 svg { display: block; }
 :root[dir="rtl"] .glyph-flip { scale: -1 1; }
 
-.cp { min-height: 100vh; display: flex; flex-direction: column; }
+.cp { min-height: 100vh; display: flex; flex-direction: column; overflow-x: clip; }
 .cp-head { display: flex; align-items: center; gap: .6rem; height: 3.75rem; padding: 0 1.25rem; flex: none; }
 .cp-spacer { flex: 1; }
 .cp-logo { display: block; flex: none; }
