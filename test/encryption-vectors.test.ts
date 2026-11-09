@@ -16,6 +16,7 @@ import { decryptFilesFromDownload } from "../lib/e2e/multi-pipeline";
 import { computeKeyVerifier } from "../lib/e2e/crypto";
 
 interface KeyVector {
+  name: string;
   token: string;
   password: string | null;
   salt: string | null;
@@ -82,7 +83,7 @@ test("padme matches the vectors", () => {
 });
 
 for (const k of v2.keys) {
-  test(`the key schedule matches the vector for ${decodeToken(k.token).mode}`, async () => {
+  test(`the key schedule matches the vector "${k.name}"`, async () => {
     const token = decodeToken(k.token);
     const password = k.password ?? undefined;
     if (k.salt !== null) assert.equal(hex(await passwordSalt(token.secret)), k.salt);

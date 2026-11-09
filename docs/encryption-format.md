@@ -300,9 +300,10 @@ Format 1 (age ciphertext written by older servers) is not served; its shares ans
 - `padme`: pairs of `[L, padme(L)]`.
 - `keys`: for a link token and a link-and-password token, the salt, R, the
   header and content keys and the verifier, all in hex except the verifier.
+  One password appears in NFC and in NFD and gives the same keys.
 - `blobs`: complete blobs with every input fixed (token, password, kind, chunk
   size, both nonces, files, plaintext), the exact header JSON, and the
-  resulting blob in hex.
+  resulting blob in hex. In one of them the final chunk holds only padding.
 
 `scripts/encryption-vectors.ts` wrote the file once; `test/encryption-vectors.test.ts`
 checks the reference implementation against it.
