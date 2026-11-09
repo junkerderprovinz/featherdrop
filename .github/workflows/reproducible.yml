@@ -1,0 +1,126 @@
+name: Reproducible client
+
+# A release publishes the hashes of the web client, and a running instance can
+# only be checked against them if the client builds to the same bytes anywhere.
+# Every OS builds the commit twice, the second time from another directory with
+# an empty npm cache and another time zone and locale, and all builds must
+# agree.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "components/**"
+      - "lib/**"
+      - "app/**"
+      - "public/**"
+      - "index.html"
+      - "theme.ts"
+      - "vite.config.ts"
+      - "postcss.config.cjs"
+      - "tsconfig.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".nvmrc"
+      - "scripts/build-client.mjs"
+      - "scripts/client-integrity.mjs"
+      - "scripts/client-manifest.mjs"
+      - ".github/workflows/reproducible.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: build twice (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: first
+
+      # No cache option, so the first build starts from an empty npm cache too.
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: first/.nvmrc
+
+      # Copied before the install, so the second build starts from the bare
+      # checkout.
+      - name: Copy the checkout to a second directory
+        run: cp -R first "$RUNNER_TEMP/elsewhere"
+
+      - name: First build
+        working-directory: first
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run build:spa
+          node scripts/client-manifest.mjs --out "$RUNNER_TEMP/first.json"
+
+      - name: Second build, elsewhere, with an empty cache and another clock
+        working-directory: ${{ runner.temp }}/elsewhere
+        env:
+          npm_config_cache: ${{ runner.temp }}/npm-cache-second
+          TZ: Pacific/Kiritimati
+          LANG: de_AT.UTF-8
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run build:spa
+          node scripts/client-manifest.mjs --out "$RUNNER_TEMP/second.json"
+
+      - name: Both builds must be identical
+        run: |
+          set -euo pipefail
+          if ! diff "$RUNNER_TEMP/first.json" "$RUNNER_TEMP/second.json"; then
+            echo "::error::two builds of the same commit differ on ${RUNNER_OS}"
+            exit 1
+          fi
+          cp "$RUNNER_TEMP/first.json" "manifest-${RUNNER_OS}.json"
+          echo "client root on ${RUNNER_OS}: $(node -p "require('./manifest-${RUNNER_OS}.json').root")"
+
+      - name: Upload the manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: manifest-${{ runner.os }}
+          path: manifest-${{ runner.os }}.json
+          if-no-files-found: error
+
+  compare:
+    name: same bytes on every OS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the manifests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: manifest-*
+          merge-multiple: true
+
+      - name: Compare
+        run: |
+          set -euo pipefail
+          for os in Windows macOS; do
+            if ! diff manifest-Linux.json "manifest-${os}.json"; then
+              echo "::error::the client built on ${os} differs from the Linux build"
+              exit 1
+            fi
+          done
+          root="$(jq -r .root manifest-Linux.json)"
+          echo "Client root \`${root}\`, identical on Linux, Windows and macOS." >> "$GITHUB_STEP_SUMMARY"
