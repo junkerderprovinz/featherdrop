@@ -1,92 +1,95 @@
 <!DOCTYPE html>
 <!--
-  Unraid Community Applications support thread for featherdrop.
-  Structure mirrors the sister-app threads (e.g. Krusader):
-  title -> subtitle -> banner -> badges -> What is this? -> Highlights ->
-  Requirements -> Posting a bug report -> Credits -> disclaimer.
-  Open standalone in a browser, or paste into the Unraid forum editor's source.
-  Title: [Support] junkerderprovinz - featherdrop
+  Unraid Community Applications support thread for CastleParcel.
+  Structure: name and claim -> banner -> buttons -> What is this? ->
+  Highlights & Features -> Requirements -> Bugs, Problems, Wishes -> Credits
+  -> disclaimer.
+  The forum drops <style> and class attributes, so sizes are attributes and the
+  buttons sit in a one-row table to stay side by side.
+  Paste into the Unraid forum editor's source view.
+  Title: [Support] junkerderprovinz - CastleParcel
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>[Support] junkerderprovinz - featherdrop</title>
+<title>[Support] junkerderprovinz - CastleParcel</title>
 </head>
 <body>
 
-<h1 style="text-align:center">featherdrop: a feather-light file sharer for Unraid</h1>
-<p style="text-align:center"><em>Drop a file, get a link. Encrypted, self-destructing, no accounts.</em></p>
+<h1 style="text-align:center">CastleParcel</h1>
+<p style="text-align:center"><em>Sealed in the keep. Only your link gets in.</em></p>
 
 <p style="text-align:center">
-  <a href="https://github.com/junkerderprovinz/featherdrop">
-    <img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/featherdrop-banner-logo.png" alt="featherdrop" width="100%">
+  <a href="https://github.com/junkerderprovinz/castleparcel">
+    <img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/castleparcel-banner-logo.png" alt="CastleParcel" width="100%">
   </a>
 </p>
 
 <table>
   <tbody>
     <tr>
-      <td><p><a href="https://ca.unraid.net/apps/featherdrop-1fxtgu11wume2t"><img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/support-buttons/install-on-unraid.svg" alt="Install on Unraid" width="240"></a></p></td>
-      <td><p><a href="https://github.com/junkerderprovinz/featherdrop"><img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/support-buttons/view-on-github.svg" alt="View on GitHub" width="240"></a></p></td>
-      <td><p><a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/featherdrop/main/.github/assets/support-buttons/buy-me-a-coffee.svg" alt="Buy me a coffee" width="240"></a></p></td>
+      <td><p><a href="https://ca.unraid.net/apps?q=castleparcel"><img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/support-buttons/install-on-unraid.svg" alt="Install on Unraid" width="240"></a></p></td>
+      <td><p><a href="https://github.com/junkerderprovinz/castleparcel"><img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/support-buttons/view-on-github.svg" alt="View on GitHub" width="240"></a></p></td>
+      <td><p><a href="https://buymeacoffee.com/junkerderprovinz"><img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/support-buttons/buy-me-a-coffee.svg" alt="Buy me a coffee" width="240"></a></p></td>
     </tr>
   </tbody>
 </table>
 
 <h2>What is this?</h2>
-<p>A feather-light, login-free, self-hosted file sharer. Open the page, drop a file, set an
-expiry (plus an optional password or download limit), and share a short link or QR
-code. Files are <strong>end-to-end encrypted in your browser</strong> before upload,
-uploads are <strong>resumable</strong>, and metadata is a single SQLite file. No
-accounts, no separate database, no tracking.
-Built with Go, React and Mantine, it runs as one small container and is configured entirely
-from the Unraid template, with no SSH or config-file editing.</p>
+<p>CastleParcel is a self-hosted file sharer, a WeTransfer of your own without accounts or a size
+paywall. Open the page, drop your files, choose how long they stay and how often they can be
+downloaded, and share a short link or a QR code. Everything is encrypted in your browser before it
+uploads, so the server only ever stores ciphertext. It runs as one small container and is set up
+entirely from the Unraid template.</p>
+<p>CastleParcel used to be called featherdrop. If you run featherdrop, open the container's settings,
+change the Repository to <code>junkerderprovinz/castleparcel:latest</code> and leave the paths as they
+are. Your shares and every link you sent keep working.</p>
 
-<h2>Highlights</h2>
+<h2>Highlights &amp; Features</h2>
 <ul>
-  <li><strong>Zero-knowledge</strong>: files are end-to-end encrypted in your browser (libsodium XChaCha20-Poly1305); the server only ever stores opaque ciphertext and never sees your files, their names, or the key</li>
-  <li><strong>Link mode</strong> carries the key in the URL <code>#fragment</code>; an optional <strong>password</strong> (Argon2id) keeps it off the link entirely, and either way the key never reaches the server</li>
-  <li><strong>Self-destructing</strong>: expiry from 1 hour to 30 days (or never), plus optional <strong>burn-after-N-downloads</strong></li>
-  <li>Inline <strong>image/PDF preview</strong>, a savable <strong>QR code</strong>, and clean <strong>link previews</strong> that never leak the file's name</li>
-  <li><strong>26 UI languages</strong> (right-to-left for Arabic &amp; Hebrew), light/dark, picked from the browser</li>
-  <li><strong>Custom branding</strong>: app name, logo and accent colour via env vars</li>
-  <li><strong>One container</strong>: resumable uploads (tus), a single SQLite file, separate data/config volumes</li>
-  <li><strong>Private by design</strong>: no accounts, no telemetry, no third-party calls at runtime</li>
-  <li>Multi-arch: amd64 + arm64</li>
-  <li>Image: <code>ghcr.io/junkerderprovinz/featherdrop:latest</code></li>
+  <li>Zero-knowledge: files and their names are encrypted in the browser with libsodium (XChaCha20-Poly1305), and the key travels in the part of the link after the <code>#</code>, which browsers never send to the server</li>
+  <li>An optional password on top of the link, to send over a second channel</li>
+  <li>Expiry from one hour to 30 days or never, and an optional download limit. A download counts when it starts, and one that breaks off picks up where it stopped</li>
+  <li>Several files under one link, saved as one ZIP, plus encrypted text notes and file requests, where someone sends you files without an account</li>
+  <li>A private management link to delete a share early</li>
+  <li>Resumable uploads in 64 MiB chunks, so big files and size-capped proxies such as Cloudflare are fine</li>
+  <li>Previews for images, video, audio, text and PDF, and photos lose their EXIF and GPS data before they are encrypted</li>
+  <li>26 languages, light and dark, and your own name, logo and accent colour through the template</li>
+  <li>Rate limits, a storage quota, an expiry cap and an optional upload password for an instance on the internet</li>
+  <li>A client you can check: every release lists the hash of each file, and a script compares a running instance against it</li>
+  <li>Images: <code>junkerderprovinz/castleparcel:latest</code> on Docker Hub and <code>ghcr.io/junkerderprovinz/castleparcel:latest</code>, for amd64 and arm64</li>
 </ul>
 
 <h2>Requirements</h2>
 <ul>
   <li>Unraid 6.10+</li>
-  <li>A reverse proxy with <strong>HTTPS</strong> is recommended: set <code>BASE_URL</code> to your public URL so share links are correct (and so a link's decryption key in the URL fragment stays private in transit)</li>
-  <li>Allow <strong>large uploads</strong> in your proxy (e.g. <code>client_max_body_size 0</code> and generous timeouts) for big files</li>
+  <li>HTTPS in front of it before you share links outside your network. Set <code>BASE_URL</code> to the public address so the links point there. Over plain HTTP, uploads stop at 500 MB</li>
+  <li>Let large uploads through your reverse proxy, for example <code>client_max_body_size 0</code> and long timeouts in Nginx</li>
 </ul>
 
-<h2>Posting a bug report</h2>
-<p>Please post:</p>
+<h2>Bugs, Problems, Wishes</h2>
+<p>Something not working, a question or an idea? The best place for it is an issue on GitHub:
+<a href="https://github.com/junkerderprovinz/castleparcel/issues">github.com/junkerderprovinz/castleparcel/issues</a>.
+Everything stays in one place there, and nothing gets lost in a long thread.</p>
+<p>For a bug, whether you post it there or here, these help:</p>
 <ul>
   <li>Unraid version (Settings → System Information)</li>
-  <li>Image tag (<code>latest</code> or a pinned <code>vX.Y.Z</code>)</li>
-  <li>Output of <code>docker logs --tail 200 featherdrop</code></li>
-  <li>Browser + OS you're using</li>
-  <li>Whether you changed <code>BASE_URL</code>, <code>DEFAULT_EXPIRY</code>, the branding vars, or the <code>/data</code> / <code>/config</code> mounts</li>
+  <li>Image tag (<code>latest</code> or a pinned version)</li>
+  <li>Output of <code>docker logs --tail 200 CastleParcel</code></li>
+  <li>The browser and operating system on both ends, the sender's and the recipient's</li>
+  <li>Whether you changed <code>BASE_URL</code>, the expiry settings, the branding or the <code>/data</code> and <code>/config</code> paths</li>
 </ul>
-<p>GitHub issues with the same info are also welcome:
-<a href="https://github.com/junkerderprovinz/featherdrop/issues">github.com/junkerderprovinz/featherdrop/issues</a></p>
 
 <h2>Credits</h2>
-<p>A much simpler take inspired by
-<a href="https://github.com/stonith404/pingvin-share">Pingvin Share</a>. Built on
-<a href="https://doc.libsodium.org">libsodium</a> (encryption),
-<a href="https://tus.io">tus</a> (resumable uploads), Go, React, Mantine and
-SQLite. If featherdrop saves you a trip to a third-party host, you can
-<a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
+<p>A much smaller take inspired by <a href="https://github.com/stonith404/pingvin-share">Pingvin Share</a>.
+Built with Go on <a href="https://doc.libsodium.org">libsodium</a> for the encryption,
+<a href="https://tus.io">tus</a> for resumable uploads and SQLite. If CastleParcel saves you a trip
+to someone else's cloud, you can <a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
 
 <hr>
 
-<p style="text-align:center"><em>Self-hosted, MIT-licensed: you run it, you own your data and the responsibility.</em></p>
+<p style="text-align:center"><em>Self-hosted, AGPL-3.0 licensed: you run it, you own your data and the responsibility.</em></p>
 
 </body>
 </html>
