@@ -13,9 +13,9 @@ function fakeServer() {
   const shares = new Map<string, { blob: Uint8Array; body: FinalizeRequest }>();
   const deps: UploadDeps = {
     baseUrl: "https://drop.example",
-    async upload(file) {
+    async upload(source) {
       const id = `up${uploads.size}`;
-      uploads.set(id, new Uint8Array(await file.arrayBuffer()));
+      uploads.set(id, new Uint8Array(await new Blob([(await source.slice(0, source.size)) as BlobPart]).arrayBuffer()));
       return id;
     },
     async finalize(body) {
