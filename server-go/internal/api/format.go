@@ -39,9 +39,6 @@ func checkFormat(format int64, body finalizeBody, keyVerifier *string, path stri
 	if body.WrappedKey != "" || body.KDFSalt != "" {
 		return errors.New("format 4 takes no wrapped key")
 	}
-	if size < format4PrefixLen {
-		return errors.New("malformed format 4 blob")
-	}
 	f, err := os.Open(path)
 	if err != nil {
 		return errors.New("malformed format 4 blob")
@@ -51,11 +48,24 @@ func checkFormat(format int64, body finalizeBody, keyVerifier *string, path stri
 	if _, err := io.ReadFull(f, prefix[:]); err != nil {
 		return errors.New("malformed format 4 blob")
 	}
-	headerLen := int64(binary.BigEndian.Uint32(prefix[1:]))
-	if prefix[0] != format4Version ||
-		headerLen < format4MinHeader || headerLen > format4MaxHeader ||
-		size-format4PrefixLen-headerLen < format4MinChunk {
+	if _, ok := format4HeaderLength(prefix[:], size); !ok {
 		return errors.New("malformed format 4 blob")
 	}
 	return nil
+}
+
+// format4HeaderLength reads the prefix of a format 4 blob of size bytes and
+// returns the length of the prefix and the sealed header, where the content
+// starts. It fails for another version, a header length out of range and a
+// blob too short to hold a chunk after the header.
+func format4HeaderLength(prefix []byte, size int64) (int64, bool) {
+	if len(prefix) < format4PrefixLen || prefix[0] != format4Version {
+		return 0, false
+	}
+	headerLen := int64(binary.BigEndian.Uint32(prefix[1:format4PrefixLen]))
+	if headerLen < format4MinHeader || headerLen > format4MaxHeader ||
+		size-format4PrefixLen-headerLen < format4MinChunk {
+		return 0, false
+	}
+	return format4PrefixLen + headerLen, true
 }
