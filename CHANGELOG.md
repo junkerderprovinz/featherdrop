@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A download counts as soon as it starts, and a broken one picks up where it stopped.** The response carries a resume token that stays in the open page. With it the download continues by Range without counting again, for half an hour after the last byte arrived and at most a day. A one-time share keeps its file until that download is complete or the token runs out, and a second attempt meanwhile gets `409 download in progress`. Cutting the connection just before the end no longer lets anyone read a limited share without spending a download.
 - The upload server logs errors only, so the container log no longer lists every upload with its id and size.
 - The README has a table of all settings.
-- **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
+- **Boot log banner.** New knight artwork, shared across all junkerderprovinz containers. The name and subtitle sit on one line, and so does the ready line, as in the other containers.
 - Tidied the code comments and log messages.
 - Deleting an upload from a file request gives its place back, so a request someone filled with junk takes uploads again.
 - **All of the client's encryption runs in the crypto worker.** Formats 2 and 3, share listings, password unwrapping and the keys and hashes behind management links and file requests moved off the page as well, so libsodium ships once instead of twice. The main script drops from about 680 kB to about 490 kB gzipped. Existing shares open exactly as before, and the build stops if libsodium ever turns up twice.
