@@ -36,9 +36,9 @@ const TOKEN_BYTES = 2 + SECRET_BYTES;
 const TOKEN_CHARS = 46;
 
 /**
- * RFC 9106's second recommended setting (t=3, m=64 MiB, p=1). libsodium's
- * crypto_pwhash always runs one lane, and 64 MiB still fits the WASM heap of
- * a mobile browser tab.
+ * The time and memory cost of RFC 9106's second recommended setting (t=3,
+ * m=64 MiB). The RFC names four lanes, but libsodium's crypto_pwhash always
+ * runs one, and 64 MiB still fits the WASM heap of a mobile browser tab.
  */
 export const ARGON2ID = { ops: 3, mem: 64 * 1024 * 1024 } as const;
 
