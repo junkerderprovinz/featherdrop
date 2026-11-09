@@ -52,6 +52,7 @@ import { deriveContentKey, decryptWithKey } from "@/lib/e2e/pipeline";
 import { computeKeyVerifier, fromBase64 } from "@/lib/e2e/crypto";
 import { peekBlobHeader } from "@/lib/e2e/blob-layout";
 import { fetchShareListing } from "@/lib/e2e/share-listing";
+import { fetchResumable } from "@/lib/e2e/resumable-fetch";
 import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
 import type { Manifest } from "@/lib/e2e/multi-file";
 import {
@@ -219,7 +220,7 @@ export function DownloadView({
 
       const { meta } = await downloadDecrypted(
         (keyVerifier) =>
-          fetch(downloadUrl, {
+          fetchResumable(downloadUrl, {
             headers: { "x-fd-key-verifier": keyVerifier },
           }).then((r) => {
             if (!r.ok) throw new Error(`fetch ${r.status}`);
@@ -285,7 +286,7 @@ export function DownloadView({
     secret: DownloadSecret,
   ): Promise<MultiDownload> => {
     const key = await deriveContentKey(secret);
-    const res = await fetch(downloadUrl, {
+    const res = await fetchResumable(downloadUrl, {
       headers: { "x-fd-key-verifier": computeKeyVerifier(key) },
     });
     if (!res.ok) throw new Error(`fetch ${res.status}`);
@@ -592,7 +593,7 @@ export function DownloadView({
         const chunks: Uint8Array<ArrayBuffer>[] = [];
         const { meta } = await downloadDecrypted(
           (keyVerifier) =>
-            fetch(downloadUrl, {
+            fetchResumable(downloadUrl, {
               headers: { "x-fd-key-verifier": keyVerifier },
             }).then((r) => {
               if (!r.ok) throw new Error(`fetch ${r.status}`);
