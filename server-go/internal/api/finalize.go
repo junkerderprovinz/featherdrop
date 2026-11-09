@@ -134,11 +134,11 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		// The tus create checked the quota before other uploads finished, so
-		// this check on the stored total is the one that counts. It runs before
-		// the rename so a 507 leaves the upload for a later retry.
+		// QuotaUsage leaves out this upload's own reservation, so its bytes
+		// count once. The check catches a quota lowered since the create and
+		// runs before the rename, so a 507 leaves the upload for a later retry.
 		if cfg.StorageQuota > 0 {
-			used, err := store.TotalStoredSize(db)
+			used, err := store.QuotaUsage(db, body.UploadID)
 			if err != nil {
 				writeJSONError(w, http.StatusInternalServerError, "could not check storage quota")
 				return
@@ -201,6 +201,7 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 		if err := store.CreateFileRecord(db, rec); err != nil {
 			// Without a row the renamed blob would be unreachable and leak disk.
 			_ = os.Remove(storedPath)
+			_ = store.DeletePendingUpload(db, body.UploadID)
 			writeJSONError(w, http.StatusInternalServerError, "could not create record")
 			return
 		}

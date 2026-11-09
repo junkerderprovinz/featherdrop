@@ -493,3 +493,18 @@ func TestDeleteRequestUpload_ReopensAFullRequest(t *testing.T) {
 		t.Errorf("send after the delete: %d, want 204", rec.Code)
 	}
 }
+
+func TestSendToRequest_AnUploadInProgressCountsOnce(t *testing.T) {
+	e := newTestEnv(t)
+	blob := v4Blob(1064, 4112)
+	e.cfg.StorageQuota = int64(len(blob))
+	slug := e.openRequest(t, nil, nil)
+	id := e.makeTrackedTusUpload(t, blob)
+	rec := e.do(t, nil, http.MethodPost, "/api/r/"+slug+"/uploads", map[string]any{"uploadId": id, "sealedKey": sealedKey(1)}, asUploader())
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("send: %d %s", rec.Code, rec.Body.String())
+	}
+	if used, _ := store.QuotaUsage(e.db, ""); used != int64(len(blob)) {
+		t.Errorf("usage after send = %d, want %d", used, len(blob))
+	}
+}

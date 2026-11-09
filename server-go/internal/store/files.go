@@ -52,9 +52,17 @@ const selectAllSQL = `SELECT
 	manage_token_hash
  FROM files`
 
-// CreateFileRecord inserts a new share row.
+// CreateFileRecord inserts a new share row and stops counting the pending
+// upload it was made from, in one transaction, so its bytes count toward the
+// quota once throughout.
 func CreateFileRecord(db *sql.DB, rec FileRecord) error {
-	_, err := db.Exec(insertSQL,
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("create file record: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.Exec(insertSQL,
 		rec.ID,
 		rec.Slug,
 		rec.OriginalName,
@@ -72,9 +80,14 @@ func CreateFileRecord(db *sql.DB, rec FileRecord) error {
 		nullableBlob(rec.KDFSalt),
 		rec.KeyVerifier,
 		rec.ManageTokenHash,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf("create file record: %w", err)
+	}
+	if _, err := tx.Exec(`DELETE FROM pending_uploads WHERE id = ?`, rec.ID); err != nil {
+		return fmt.Errorf("create file record: pending: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("create file record: commit: %w", err)
 	}
 	return nil
 }
@@ -144,19 +157,6 @@ func ListExpired(db *sql.DB, nowMs int64) ([]FileRecord, error) {
 		return nil, fmt.Errorf("list expired: iterate: %w", err)
 	}
 	return out, nil
-}
-
-// TotalStoredSize returns the sum of all share and request upload sizes in
-// bytes, for STORAGE_QUOTA. It is not cached: the tables have one row per live
-// blob, and a cache would need invalidating on every finalize, burn and expiry.
-func TotalStoredSize(db *sql.DB) (int64, error) {
-	var total int64
-	if err := db.QueryRow(
-		`SELECT (SELECT COALESCE(SUM(size), 0) FROM files) + (SELECT COALESCE(SUM(size), 0) FROM request_uploads)`,
-	).Scan(&total); err != nil {
-		return 0, fmt.Errorf("total stored size: %w", err)
-	}
-	return total, nil
 }
 
 // rowScanner is satisfied by both *sql.Row and *sql.Rows.

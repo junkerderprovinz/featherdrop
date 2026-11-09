@@ -282,7 +282,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.cfg.StorageQuota > 0 {
-		used, err := store.TotalStoredSize(h.db)
+		used, err := store.QuotaUsage(h.db, body.UploadID)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "could not check storage quota")
 			return
@@ -309,6 +309,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 	if err != nil || !added {
 		// Without a row the blob would be unreachable and leak disk.
 		_ = os.Remove(storedPath)
+		_ = store.DeletePendingUpload(h.db, body.UploadID)
 		if err != nil {
 			log.Printf("requests: add upload: %v", err)
 			writeJSONError(w, http.StatusInternalServerError, "could not store upload")

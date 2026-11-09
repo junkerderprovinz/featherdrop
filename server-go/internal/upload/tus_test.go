@@ -2,6 +2,7 @@ package upload
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
@@ -10,8 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/tus/tusd/v2/pkg/filestore"
+	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
@@ -19,9 +23,12 @@ import (
 )
 
 // newTestRouter mounts the tus handler on chi at "/files" and "/files/*" as
-// main.go does. db may be nil when no quota is set.
+// main.go does. A nil db gets an empty store.
 func newTestRouter(t *testing.T, cfg config.Config, db *sql.DB) http.Handler {
 	t.Helper()
+	if db == nil {
+		db = openTestDB(t)
+	}
 	h, err := NewHandler(cfg, db)
 	if err != nil {
 		t.Fatalf("NewHandler: %v", err)
@@ -30,6 +37,16 @@ func newTestRouter(t *testing.T, cfg config.Config, db *sql.DB) http.Handler {
 	r.Handle("/files", h)
 	r.Handle("/files/*", h)
 	return r
+}
+
+func openTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	return db
 }
 
 func openCfg(t *testing.T) config.Config {
@@ -215,7 +232,7 @@ func TestTus_Quota_Unlimited_201(t *testing.T) {
 func TestTus_LogsOnlyErrors(t *testing.T) {
 	cfg := openCfg(t)
 	var logs bytes.Buffer
-	h, err := newHandler(cfg, nil, &logs)
+	h, err := newHandler(cfg, openTestDB(t), &logs)
 	if err != nil {
 		t.Fatalf("newHandler: %v", err)
 	}
@@ -356,11 +373,7 @@ const requestKey = "cHVibGljcHVibGljcHVibGljcHVibGljcHVibGljcHU"
 // requestEnv opens a store holding the request "req", limited by mutate.
 func requestEnv(t *testing.T, cfg config.Config, mutate func(*store.RequestRecord)) *sql.DB {
 	t.Helper()
-	db, err := store.Open(filepath.Join(t.TempDir(), "db.sqlite"))
-	if err != nil {
-		t.Fatalf("open store: %v", err)
-	}
-	t.Cleanup(func() { _ = db.Close() })
+	db := openTestDB(t)
 	rec := store.RequestRecord{
 		Slug:             "req",
 		PublicKey:        requestKey,
@@ -475,5 +488,123 @@ func TestTus_RequestUploadMustDeclareItsLength(t *testing.T) {
 	srv.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("deferred create for a request = %d, want 400", rec.Code)
+	}
+}
+
+// uploadID returns the id at the end of a create's Location.
+func uploadID(rec *httptest.ResponseRecorder) string {
+	loc := rec.Header().Get("Location")
+	return loc[strings.LastIndex(loc, "/")+1:]
+}
+
+func TestTus_Quota_UploadsInProgressCount(t *testing.T) {
+	cfg, db := quotaEnv(t, 150, 100)
+	srv := newTestRouter(t, cfg, db)
+
+	if rec := tusCreateLen(srv, 30); rec.Code != http.StatusCreated {
+		t.Fatalf("first create = %d, want 201", rec.Code)
+	}
+	if rec := tusCreateLen(srv, 30); rec.Code != http.StatusInsufficientStorage {
+		t.Errorf("create past the quota with the first still in progress = %d, want 507", rec.Code)
+	}
+	if rec := tusCreateLen(srv, 20); rec.Code != http.StatusCreated {
+		t.Errorf("create that fits = %d, want 201", rec.Code)
+	}
+}
+
+func TestTus_CreateIsRecordedWithItsLengthAndRequest(t *testing.T) {
+	cfg := openCfg(t)
+	db := requestEnv(t, cfg, nil)
+	srv := newTestRouter(t, cfg, db)
+
+	plain := tusCreateLen(srv, 11)
+	forReq := tusCreateFrom(srv, "203.0.113.7:1000", 7, forRequest(requestKey))
+	if plain.Code != http.StatusCreated || forReq.Code != http.StatusCreated {
+		t.Fatalf("creates = %d, %d, want 201", plain.Code, forReq.Code)
+	}
+	if up, err := store.GetPendingUpload(db, uploadID(plain)); err != nil || up == nil || up.Size != 11 || up.RequestSlug != "" {
+		t.Errorf("pending plain upload = %+v, %v", up, err)
+	}
+	if up, err := store.GetPendingUpload(db, uploadID(forReq)); err != nil || up == nil || up.Size != 7 || up.RequestSlug != "req" {
+		t.Errorf("pending request upload = %+v, %v", up, err)
+	}
+}
+
+func TestTus_RefusedCreateHoldsNoQuota(t *testing.T) {
+	cfg, db := quotaEnv(t, 11, 0)
+	srv := newTestRouter(t, cfg, db)
+
+	bad := httptest.NewRequest(http.MethodPost, "/files", nil)
+	bad.Header.Set("Tus-Resumable", "0.0.1")
+	bad.Header.Set("Upload-Length", "11")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, bad)
+	if rec.Code == http.StatusCreated {
+		t.Fatal("tusd accepted an unsupported protocol version")
+	}
+	if used, _ := store.QuotaUsage(db, ""); used != 0 {
+		t.Errorf("a refused create holds %d bytes", used)
+	}
+	if rec := tusCreateLen(srv, 11); rec.Code != http.StatusCreated {
+		t.Errorf("create after a refused one = %d, want 201", rec.Code)
+	}
+}
+
+func TestTus_TerminatedUploadStopsCounting(t *testing.T) {
+	cfg, db := quotaEnv(t, 11, 0)
+	srv := newTestRouter(t, cfg, db)
+
+	create := tusCreateLen(srv, 11)
+	if create.Code != http.StatusCreated {
+		t.Fatalf("create = %d, want 201", create.Code)
+	}
+	del := httptest.NewRequest(http.MethodDelete, create.Header().Get("Location"), nil)
+	del.Header.Set("Tus-Resumable", "1.0.0")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, del)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("terminate = %d, want 204", rec.Code)
+	}
+	if rec := tusCreateLen(srv, 11); rec.Code != http.StatusCreated {
+		t.Errorf("create after the terminate = %d, want 201", rec.Code)
+	}
+}
+
+func TestTus_CreateMustDeclareItsLength(t *testing.T) {
+	srv := newTestRouter(t, openCfg(t), nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/files", nil)
+	req.Header.Set("Tus-Resumable", "1.0.0")
+	req.Header.Set("Upload-Defer-Length", "1")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("deferred-length create = %d, want 400", rec.Code)
+	}
+}
+
+func TestIndexPendingUploads_CountsUploadsAlreadyOnDisk(t *testing.T) {
+	cfg, db := quotaEnv(t, 0, 0)
+	cfg.TmpDir = t.TempDir()
+	srv := newTestRouter(t, cfg, db)
+	known := tusCreateLen(srv, 5)
+	if known.Code != http.StatusCreated {
+		t.Fatalf("create = %d", known.Code)
+	}
+
+	up, err := filestore.New(cfg.TmpDir).NewUpload(context.Background(), tushandler.FileInfo{Size: 40})
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, _ := up.GetInfo(context.Background())
+
+	if err := IndexPendingUploads(cfg.TmpDir, db, time.Now()); err != nil {
+		t.Fatalf("index: %v", err)
+	}
+	if got, _ := store.GetPendingUpload(db, info.ID); got == nil || got.Size != 40 {
+		t.Errorf("upload found on disk = %+v, want counted with 40 bytes", got)
+	}
+	if used, _ := store.QuotaUsage(db, ""); used != 45 {
+		t.Errorf("usage = %d, want 45", used)
 	}
 }

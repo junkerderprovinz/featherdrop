@@ -92,10 +92,11 @@ func GetRequest(db *sql.DB, slug string) (*RequestRecord, error) {
 	return rec, nil
 }
 
-// AddRequestUpload records a finished upload and counts it, unless the
-// request is gone, expired or closed at nowMs or has taken its maximum. The
-// count and the insert share one transaction, so parallel uploads never pass
-// the maximum, and none lands after CloseRequest.
+// AddRequestUpload records a finished upload, counts it and stops counting
+// its pending upload, unless the request is gone, expired or closed at nowMs
+// or has taken its maximum. All of it shares one transaction, so parallel
+// uploads never pass the maximum, none lands after CloseRequest, and the bytes
+// count toward the quota once throughout.
 func AddRequestUpload(db *sql.DB, slug string, up RequestUpload, nowMs int64) (bool, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -125,6 +126,9 @@ func AddRequestUpload(db *sql.DB, slug string, up RequestUpload, nowMs int64) (b
 		slug, up.ID, up.FileID, up.Size, up.SealedKey, up.CreatedAt,
 	); err != nil {
 		return false, fmt.Errorf("add request upload: insert: %w", err)
+	}
+	if _, err := tx.Exec(`DELETE FROM pending_uploads WHERE id = ?`, up.FileID); err != nil {
+		return false, fmt.Errorf("add request upload: pending: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
 		return false, fmt.Errorf("add request upload: commit: %w", err)

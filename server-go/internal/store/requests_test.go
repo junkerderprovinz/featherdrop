@@ -151,7 +151,7 @@ func TestListExpiredRequests(t *testing.T) {
 	}
 }
 
-func TestTotalStoredSize_CountsRequestUploads(t *testing.T) {
+func TestQuotaUsage_CountsRequestUploads(t *testing.T) {
 	db := openTestDB(t)
 	if err := CreateFileRecord(db, FileRecord{ID: "f", Slug: "s", Size: 100, CreatedAt: 1, Format: 4}); err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func TestTotalStoredSize_CountsRequestUploads(t *testing.T) {
 	if _, err := AddRequestUpload(db, "req", upload("u1", 23), 1); err != nil {
 		t.Fatal(err)
 	}
-	total, err := TotalStoredSize(db)
+	total, err := QuotaUsage(db, "")
 	if err != nil || total != 123 {
 		t.Errorf("total = %d, %v", total, err)
 	}
