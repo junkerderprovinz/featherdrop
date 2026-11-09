@@ -43,7 +43,10 @@ export async function uploadNote(
     yield* enc.finish();
   })();
   const { file } = await writeMemoryScratch(blob);
-  const uploadId = await deps.upload(file, () => {});
+  const uploadId = await deps.upload(
+    { size: file.size, slice: async (start, end) => file.slice(start, end) },
+    { onProgress: () => {} },
+  );
   const manage = await createManageToken();
   const { slug } = await deps.finalize({
     uploadId,

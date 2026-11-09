@@ -10,7 +10,8 @@ import { ExpirySelect } from "@/components/ExpirySelect";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { clampExpiry } from "@/lib/expiry";
 import { MAX_NOTE_BYTES, uploadNote } from "@/lib/e2e/note";
-import { storedUploadToken, tusUpload } from "@/lib/tus-upload";
+import { storedUploadToken } from "@/lib/tus-upload";
+import { tusUpload } from "@/lib/e2e/tus-upload";
 
 // A UTF-16 code unit takes at most three bytes in UTF-8.
 const MAX_NOTE_CHARS = Math.floor(MAX_NOTE_BYTES / 3);
@@ -36,7 +37,7 @@ export function NotePage() {
           { expiry, maxDownloads: typeof maxDownloads === "number" ? maxDownloads : null, password: password || undefined },
           {
             baseUrl,
-            upload: (file, onProgress) => tusUpload(file, auth, onProgress),
+            upload: (source, { onProgress }) => tusUpload(source, { headers: auth, onProgress }),
             finalize: async (body) => {
               const res = await fetch("/api/finalize", {
                 method: "POST",
