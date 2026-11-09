@@ -114,6 +114,8 @@ try {
   }
   console.log("crypto workers:", workerUrls.length, "all from blob: URLs");
   await limitedShareListsBeforeDownload();
+  await startPageShortcuts();
+  await infoTabStaysInSettings();
   if (errors.length) fail("page/console errors occurred");
   console.log("E2E PASSED: zero-knowledge upload→download round trip verified");
 } catch (e) {
@@ -619,4 +621,59 @@ async function limitedShareListsBeforeDownload() {
   const m = await (await meta(dl, slugOf(shareUrl))).json();
   if (m.downloadsLeft !== 1) fail("listing spent the share: downloadsLeft " + m.downloadsLeft);
   console.log("limited share: name shown before the download, nothing spent ✓");
+}
+
+// The ways in and out of the start page that need no upload: the Back button
+// of a secondary page, text pasted outside a field, and files dropped away
+// from the castle.
+async function startPageShortcuts() {
+  const page = await open("shortcuts", BASE);
+  for (const [to, path] of [["to-note", "/note"], ["to-request", "/request"]]) {
+    await page.locator(`[data-cp=${to}]`).click();
+    await page.waitForURL(`${BASE}${path}`, WAIT);
+    await page.locator("[data-cp=back]").click();
+    await page.waitForURL(`${BASE}/`, WAIT);
+  }
+
+  const text = "pasted on the start page\nsecond line";
+  await page.evaluate((t) => {
+    const data = new DataTransfer();
+    data.setData("text/plain", t);
+    document.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  }, text);
+  await page.waitForURL(`${BASE}/note`, WAIT);
+  if ((await page.locator("textarea").inputValue()) !== text) fail("pasted text did not open the note page with it");
+  await page.locator("[data-cp=back]").click();
+  await page.waitForURL(`${BASE}/`, WAIT);
+  if (await page.locator("[data-cp=share-note]").count()) fail("the note page is still showing");
+
+  await page.evaluate(() => {
+    const data = new DataTransfer();
+    data.items.add(new File(["dropped"], "dropped-anywhere.txt", { type: "text/plain" }));
+    const at = document.querySelector(".cp-trust");
+    at.dispatchEvent(new DragEvent("dragover", { dataTransfer: data, bubbles: true, cancelable: true }));
+    at.dispatchEvent(new DragEvent("drop", { dataTransfer: data, bubbles: true, cancelable: true }));
+  });
+  await page.getByText("dropped-anywhere.txt", { exact: true }).waitFor(WAIT);
+  if (await page.locator("[data-cp=dropzone]").count()) fail("the drop zone stayed after the drop");
+  await page.close();
+  console.log("start page: Back returns home, pasted text opens a note, a drop anywhere adds files ✓");
+}
+
+// Every settings tile opens inside Settings, and none of them opens a window.
+// Back leads to the page Settings was opened from.
+async function infoTabStaysInSettings() {
+  const page = await open("settings", `${BASE}/note`);
+  await page.locator("[data-cp=settings]").click();
+  await page.waitForURL(`${BASE}/settings/general`, WAIT);
+  const before = ctx.pages().length;
+  await page.locator("[data-sel-id=info]").click();
+  await page.waitForURL(`${BASE}/settings/info`, WAIT);
+  await page.getByText("CastleParcel", { exact: true }).first().waitFor(WAIT);
+  await page.waitForTimeout(500);
+  if (ctx.pages().length !== before) fail(`the Info tab opened ${ctx.pages().length - before} more page(s)`);
+  await page.locator("[data-cp=back]").click();
+  await page.waitForURL(`${BASE}/note`, WAIT);
+  await page.close();
+  console.log("settings: the Info tab opens in place, Back leads where Settings was opened from ✓");
 }
