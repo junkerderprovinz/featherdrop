@@ -55,13 +55,13 @@ func TestFinalize_Format4RejectsMalformed(t *testing.T) {
 		blob []byte
 		body map[string]any
 	}{
-		"no verifier":      {v4Blob(1064, 4112), map[string]any{}},
-		"wrapped key":      {v4Blob(1064, 4112), map[string]any{"keyVerifier": goodVerifier, "wrappedKey": "q83v", "kdfSalt": "q83v"}},
-		"too short":        {[]byte{0x02, 0, 0}, map[string]any{"keyVerifier": goodVerifier}},
-		"wrong version":    {wrongVersion, map[string]any{"keyVerifier": goodVerifier}},
-		"header too long":  {v4Blob(1064, 4112)[:1064], map[string]any{"keyVerifier": goodVerifier}},
-		"header too short": {v4Blob(39, 4112), map[string]any{"keyVerifier": goodVerifier}},
-		"no content":       {v4Blob(1064, 15), map[string]any{"keyVerifier": goodVerifier}},
+		"no verifier":       {v4Blob(1064, 4112), map[string]any{}},
+		"wrapped key":       {v4Blob(1064, 4112), map[string]any{"keyVerifier": goodVerifier, "wrappedKey": "q83v", "kdfSalt": "q83v"}},
+		"too short":         {[]byte{0x02, 0, 0}, map[string]any{"keyVerifier": goodVerifier}},
+		"wrong version":     {wrongVersion, map[string]any{"keyVerifier": goodVerifier}},
+		"header too long":   {v4Blob(1064, 4112)[:1064], map[string]any{"keyVerifier": goodVerifier}},
+		"header too short":  {v4Blob(1063, 4112), map[string]any{"keyVerifier": goodVerifier}},
+		"content too short": {v4Blob(1064, 4111), map[string]any{"keyVerifier": goodVerifier}},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

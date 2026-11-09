@@ -125,10 +125,10 @@ func TestHeader_NotFound(t *testing.T) {
 		{"length past the blob", []byte{40, 'm', 'e', 't', 'a'}, nil},
 		{"truncated length", []byte{0x80}, nil},
 		{"format 4 with another version", v4WithVersion(0x01), format4},
-		{"format 4 header too short", v4Blob(39, 4112), format4},
+		{"format 4 header too short", v4Blob(1063, 4112), format4},
 		{"format 4 header too long", v4Blob(16<<20+1, 0), format4},
 		{"format 4 header past the blob", v4Blob(1064, 4112)[:1000], format4},
-		{"format 4 without a chunk", v4Blob(1064, 15), format4},
+		{"format 4 content too short", v4Blob(1064, 4111), format4},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

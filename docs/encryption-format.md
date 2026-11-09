@@ -219,8 +219,8 @@ authenticated on its own.
 For a format 4 share the server stores the blob, its length, the format number,
 the key verifier, the expiry, the download limit and the download count. It
 rejects a finalize request whose blob does not start with `0x02`, whose header
-length is outside 40 bytes to 16 MiB, whose content is shorter than one tag,
-which has no verifier, or which carries a wrapped key or salt. It does no
+length is outside 1064 bytes to 16 MiB, whose content is shorter than the
+smallest padded content (4096 bytes and one tag), which has no verifier, or which carries a wrapped key or salt. It does no
 cryptography.
 
 | | Formats 2 and 3 | Format 4 |
