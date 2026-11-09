@@ -508,3 +508,21 @@ func TestSendToRequest_AnUploadInProgressCountsOnce(t *testing.T) {
 		t.Errorf("usage after send = %d, want %d", used, len(blob))
 	}
 }
+
+func TestSendToRequest_RefusesAnUploadStartedForAnotherRequest(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, nil)
+	other := e.openRequest(t, nil, nil)
+	blob := v4Blob(1064, 4112)
+	id := e.makeTusUpload(t, blob)
+	if err := store.TrackPendingUpload(e.db, store.PendingUpload{ID: id, Size: int64(len(blob)), RequestSlug: other, CreatedAt: 1}); err != nil {
+		t.Fatal(err)
+	}
+	body := map[string]any{"uploadId": id, "sealedKey": sealedKey(1)}
+	if rec := e.do(t, nil, http.MethodPost, "/api/r/"+slug+"/uploads", body, asUploader()); rec.Code != http.StatusNotFound {
+		t.Errorf("send to another request: %d, want 404", rec.Code)
+	}
+	if rec := e.do(t, nil, http.MethodPost, "/api/r/"+other+"/uploads", body, asUploader()); rec.Code != http.StatusNoContent {
+		t.Errorf("send to its own request: %d, want 204", rec.Code)
+	}
+}

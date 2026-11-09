@@ -75,6 +75,51 @@ func TestStoringAnUploadMovesItsBytesFromPendingToStored(t *testing.T) {
 	}
 }
 
+func TestReservePendingUpload_KeepsARequestToItsFreePlaces(t *testing.T) {
+	db := openTestDB(t)
+	if err := CreateRequest(db, newRequest("req", new(int64(2)), nil)); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := AddRequestUpload(db, "req", upload("u1", 1), 1); err != nil || !ok {
+		t.Fatalf("add = %v, %v", ok, err)
+	}
+	first := PendingUpload{ID: "p1", Size: 1, RequestSlug: "req", CreatedAt: 1}
+	if got, err := ReservePendingUpload(db, first, 0); err != nil || got != Reserved {
+		t.Fatalf("reserve the free place = %v, %v", got, err)
+	}
+	if got, _ := ReservePendingUpload(db, PendingUpload{ID: "p2", Size: 1, RequestSlug: "req", CreatedAt: 1}, 0); got != NoFreePlace {
+		t.Errorf("reserve past the free places = %v, want NoFreePlace", got)
+	}
+	if got, _ := ReservePendingUpload(db, PendingUpload{ID: "p3", Size: 1, CreatedAt: 1}, 0); got != Reserved {
+		t.Errorf("an upload for no request = %v, want Reserved", got)
+	}
+	if err := DeletePendingUpload(db, "p1"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := ReservePendingUpload(db, PendingUpload{ID: "p4", Size: 1, RequestSlug: "req", CreatedAt: 1}, 0); got != Reserved {
+		t.Errorf("reserve after a release = %v, want Reserved", got)
+	}
+	if got, _ := ReservePendingUpload(db, PendingUpload{ID: "p5", Size: 1, RequestSlug: "gone", CreatedAt: 1}, 0); got != NoFreePlace {
+		t.Errorf("reserve for a missing request = %v, want NoFreePlace", got)
+	}
+	up, err := GetPendingUpload(db, "p4")
+	if err != nil || up == nil || up.RequestSlug != "req" || up.Size != 1 {
+		t.Errorf("pending p4 = %+v, %v", up, err)
+	}
+}
+
+func TestReservePendingUpload_LeavesAnUnlimitedRequestUnbounded(t *testing.T) {
+	db := openTestDB(t)
+	if err := CreateRequest(db, newRequest("req", nil, nil)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"p1", "p2", "p3"} {
+		if got, err := ReservePendingUpload(db, PendingUpload{ID: id, Size: 1, RequestSlug: "req", CreatedAt: 1}, 0); err != nil || got != Reserved {
+			t.Errorf("reserve %s = %v, %v", id, got, err)
+		}
+	}
+}
+
 func TestListPendingUploads_ReturnsThoseCreatedByTheCutoff(t *testing.T) {
 	db := openTestDB(t)
 	for _, up := range []PendingUpload{{ID: "old", Size: 1, CreatedAt: 10}, {ID: "edge", Size: 1, CreatedAt: 20}, {ID: "new", Size: 1, CreatedAt: 30}} {

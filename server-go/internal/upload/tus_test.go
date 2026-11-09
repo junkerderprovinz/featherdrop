@@ -608,3 +608,27 @@ func TestIndexPendingUploads_CountsUploadsAlreadyOnDisk(t *testing.T) {
 		t.Errorf("usage = %d, want 45", used)
 	}
 }
+
+func TestTus_RequestTakesNoMoreUploadsInProgressThanFreePlaces(t *testing.T) {
+	cfg := openCfg(t)
+	two := int64(2)
+	db := requestEnv(t, cfg, func(r *store.RequestRecord) { r.MaxUploads = &two })
+	if _, err := store.AddRequestUpload(db, "req", store.RequestUpload{ID: "a", FileID: "f", Size: 1, SealedKey: []byte{1}}, 1); err != nil {
+		t.Fatal(err)
+	}
+	srv := newTestRouter(t, cfg, db)
+
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, forRequest(requestKey)); rec.Code != http.StatusCreated {
+		t.Fatalf("create for the free place = %d, want 201", rec.Code)
+	}
+	rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, forRequest(requestKey))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("create past the free places = %d, want 429", rec.Code)
+	}
+	if got := rec.Body.String(); got != `{"error":"too many uploads in progress"}` {
+		t.Errorf("429 body = %q", got)
+	}
+	if rec := tusCreateFrom(srv, "203.0.113.7:1000", 11, nil); rec.Code != http.StatusCreated {
+		t.Errorf("an upload for no request = %d, want 201", rec.Code)
+	}
+}

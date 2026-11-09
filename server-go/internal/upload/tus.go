@@ -161,8 +161,10 @@ type uploadIDKey struct{}
 
 // reserveGate records every tus create as a pending upload under an id it
 // picks, before tusd writes a byte, so the declared length counts toward
-// STORAGE_QUOTA until the upload is stored, terminated or swept. A create
-// over the quota gets 507. A create that leaves no upload behind, and a
+// STORAGE_QUOTA until the upload is stored, terminated or swept, and an
+// upload for a request takes one of its free places. A create over the quota
+// gets 507, one for a request whose free places all have an upload in
+// progress 429. A create that leaves no upload behind, and a
 // terminated upload, give their reservation back. Resumes pass, since tusd
 // caps them at the declared length.
 //
@@ -191,6 +193,9 @@ func reserveGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler 
 				return
 			case res == store.OverQuota:
 				writeJSONError(w, http.StatusInsufficientStorage, "storage quota exceeded")
+				return
+			case res == store.NoFreePlace:
+				writeJSONError(w, http.StatusTooManyRequests, "too many uploads in progress")
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), uploadIDKey{}, id)))

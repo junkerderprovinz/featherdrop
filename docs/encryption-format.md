@@ -359,8 +359,12 @@ Every uploader request (the info, every tus request and the attach) carries
 `x-fd-request: <slug>`. The server compares the key with the stored one in
 constant time. A matching key lets a tus upload pass without the upload
 password; a tus create must also declare its length, fit the size cap and find
-the request open. An upload without a declared length is refused at the
-attach too, since it could still grow after the server checked its size.
+the request open. A request with a maximum takes no more uploads in progress
+than it has places left, and further creates get `429` until one of them is
+attached or cleaned up a day after its last byte. The server remembers which
+request an upload was started for and attaches it to no other. An upload
+without a declared length is refused at the attach too, since it could still
+grow after the server checked its size.
 Wrong keys, unknown slugs and expired requests all get the same 404, so the
 slug alone, without the fragment, sends nothing and confirms nothing.
 
@@ -402,9 +406,10 @@ an extra round trip and gains nothing while the token goes over TLS only.
 
 For a request the server stores the slug, `pk`, `collectHash`, the expiry, the
 upload count and its cap and the size cap. For each upload it stores the blob,
-its length, the sealed key and the time. It never has `Q`, `sk` or any share
-token, so it opens nothing. It sees the collect token on every collect request
-and keeps only its hash. The token opens nothing either, but whoever reads it,
+its length, the sealed key and the time, and while it is still uploading, its
+declared length and the request it was started for. It never has `Q`, `sk` or
+any share token, so it opens nothing. It sees the collect token on every
+collect request and keeps only its hash. The token opens nothing either, but whoever reads it,
 from a proxy that logs request headers for example, can list, fetch the
 ciphertext and delete until the request expires.
 

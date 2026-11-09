@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`RATE_LIMIT` on the share routes counts misses, not reads.** A visitor gets 10 failed lookups, wrong keys and new downloads at once and 20 a minute after that. Reads that pass, like a video seeking through a large file or a download picking up after a break, only count toward a wide limit of 600 a minute, so recipients no longer run into `429` while they watch.
 - An upload that never declared its length can't become a share. It could otherwise keep growing after it was stored, past the storage quota.
 - **Uploads in progress count toward `STORAGE_QUOTA`.** An upload counts with the size it declared from the moment it starts until it becomes a share, is sent to a request or is cleaned up a day after its last byte. Before, only finished uploads counted, so a stack of started uploads nobody finished could fill the disk past the quota. The count is kept in the database and survives a restart. Every upload has to declare its size up front.
+- **A request link can't pile up unfinished uploads.** A file request with a maximum takes no more uploads in progress than it has places left, and further uploads get `429` until one is sent or cleaned up. An upload started for one request can't be sent to another.
 
 ## [1.9.0] - 2026-07-15
 

@@ -22,6 +22,9 @@ type Reservation int
 const (
 	Reserved Reservation = iota
 	OverQuota
+	// NoFreePlace means every free place of the request already has an
+	// upload in progress, or the request is gone.
+	NoFreePlace
 )
 
 // The row is written before tusd creates the upload and removed in the same
@@ -60,8 +63,9 @@ func QuotaUsage(db *sql.DB, skip string) (int64, error) {
 }
 
 // ReservePendingUpload records up unless its length would take QuotaUsage
-// past quota, when quota is set. Check and insert share one transaction, so
-// parallel creates never pass the quota.
+// past quota, when quota is set, or up is for a request whose free places all
+// have an upload in progress. Check and insert share one transaction, so
+// parallel creates never pass either limit.
 func ReservePendingUpload(db *sql.DB, up PendingUpload, quota int64) (Reservation, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -76,6 +80,24 @@ func ReservePendingUpload(db *sql.DB, up PendingUpload, quota int64) (Reservatio
 		}
 		if used+up.Size > quota {
 			return OverQuota, nil
+		}
+	}
+	if up.RequestSlug != "" {
+		var full bool
+		err := tx.QueryRow(
+			`SELECT max_uploads IS NOT NULL AND upload_count +
+			   (SELECT COUNT(*) FROM pending_uploads WHERE request_slug = slug) >= max_uploads
+			 FROM requests WHERE slug = ?`,
+			up.RequestSlug,
+		).Scan(&full)
+		if errors.Is(err, sql.ErrNoRows) {
+			return NoFreePlace, nil
+		}
+		if err != nil {
+			return 0, fmt.Errorf("reserve pending upload: places: %w", err)
+		}
+		if full {
+			return NoFreePlace, nil
 		}
 	}
 	if _, err := tx.Exec(

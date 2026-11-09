@@ -225,9 +225,11 @@ type sendBody struct {
 	SealedKey string `json:"sealedKey"`
 }
 
-// send attaches a finished tus upload to the request. The blob has to be a
-// well-formed format 4 container and the sealed key the length a sealed link
-// token has; neither can be checked further without the requester's key.
+// send attaches a finished tus upload to the request. An upload started for
+// another request is refused, so one request link cannot fill another
+// request's places. The blob has to be a well-formed format 4 container and
+// the sealed key the length a sealed link token has; neither can be checked
+// further without the requester's key.
 func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 	rec, ok := h.forUploader(w, r)
 	if !ok {
@@ -248,6 +250,16 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pending, err := store.GetPendingUpload(h.db, body.UploadID)
+	if err != nil {
+		log.Printf("requests: get pending upload: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not store upload")
+		return
+	}
+	if pending != nil && pending.RequestSlug != "" && pending.RequestSlug != rec.Slug {
+		writeJSONError(w, http.StatusNotFound, "upload not found")
+		return
+	}
 	up, err := h.tus.GetUpload(r.Context(), body.UploadID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "upload not found")
