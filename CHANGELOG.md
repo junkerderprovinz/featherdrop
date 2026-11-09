@@ -284,13 +284,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/render-assets.mjs` renders the banner and icon from the logo SVG (with `@resvg/resvg-js` installed on demand).
 - Unraid Community Applications template, multi-arch image (`ghcr.io/junkerderprovinz/featherdrop`, amd64 and arm64), ASCII init-log banner, CI (ESLint, typecheck, XML template lint) and a release workflow. CI opts JavaScript actions into Node 24 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`).
 
-[1.9.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.8.0...v1.9.0
-[1.8.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.7.0...v1.8.0
-[1.7.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.6.0...v1.7.0
-[1.6.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.5.0...v1.6.0
-[1.5.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.4.0...v1.5.0
-[1.4.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.3.0...v1.4.0
-[1.3.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/junkerderprovinz/featherdrop/releases/tag/v1.0.0
+[1.9.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.8.0...v1.9.0
+[1.8.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/junkerderprovinz/castleparcel/releases/tag/v1.0.0
