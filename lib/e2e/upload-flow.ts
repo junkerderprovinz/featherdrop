@@ -3,7 +3,8 @@
 
 import { encryptForUpload, type EncryptResult } from "./pipeline";
 import { encryptFilesForUpload } from "./multi-pipeline";
-import type { PackFile } from "./multi-file";
+import { concatFiles, type PackFile } from "./multi-file";
+import { createEncryptor, encryptStream } from "./v2/share";
 import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
 
@@ -15,15 +16,19 @@ export interface FinalizeRequest {
   uploadId: string;
   expiry: string;
   maxDownloads: number | null;
-  /** 2 for a single file, 3 for a multi-file manifest blob. */
-  format: 2 | 3;
+  /**
+   * 2 for a single file, 3 for a multi-file manifest blob, 4 for the v2
+   * container, which hides the kind inside the encrypted header.
+   */
+  format: 2 | 3 | 4;
   /** Password mode: the wrapped content key in base64. */
   wrappedKey?: string;
   /** Password mode: the KDF salt in base64. */
   kdfSalt?: string;
   /**
-   * base64url(SHA-256(content key)). The server requires the same value before
-   * counting a download, so a leaked slug alone cannot burn the share.
+   * Proof of the key: base64url(SHA-256(content key)) for formats 2 and 3, a
+   * key-schedule subkey for format 4. The server requires the same value
+   * before counting a download, so a leaked slug alone cannot burn the share.
    */
   keyVerifier: string;
 }
@@ -37,15 +42,25 @@ export interface UploadDeps {
   baseUrl: string;
 }
 
+function packFiles(files: File[]): PackFile[] {
+  return files.map((f) => ({
+    name: f.name,
+    type: f.type || "application/octet-stream",
+    size: f.size,
+    stream: () => streamToAsyncIterable(f.stream()),
+  }));
+}
+
 /**
  * Encrypts files and uploads them under one share link. A single file becomes
  * format 2 and keeps the inline preview; several files are packed into one
- * format 3 blob and unpacked on download. The scratch file is removed even when
- * the upload fails.
+ * format 3 blob and unpacked on download. With opts.format 4 either becomes a
+ * v2 container (./v2/share.ts). The scratch file is removed even when the
+ * upload fails.
  */
 export async function uploadEncrypted(
   files: File[],
-  opts: { expiry: string; maxDownloads: number | null; password?: string },
+  opts: { expiry: string; maxDownloads: number | null; password?: string; format?: 4 },
   deps: UploadDeps,
   onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
 ): Promise<{ shareUrl: string }> {
@@ -56,8 +71,19 @@ export async function uploadEncrypted(
   onPhase?.("encrypting", 0);
   const password = opts.password ? { password: opts.password } : undefined;
   let result: EncryptResult;
-  let format: 2 | 3;
-  if (files.length === 1) {
+  let format: 2 | 3 | 4;
+  if (opts.format === 4) {
+    // A password here is a second factor next to the link token, so unlike
+    // the older password mode the server stores no wrapped key.
+    const enc = await createEncryptor(
+      files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+      { password: opts.password || undefined },
+    );
+    const plaintext =
+      files.length === 1 ? streamToAsyncIterable(files[0].stream()) : concatFiles(packFiles(files));
+    result = { blob: encryptStream(enc, plaintext), keyForUrl: enc.token, keyVerifier: enc.verifier };
+    format = 4;
+  } else if (files.length === 1) {
     const file = files[0];
     result = await encryptForUpload(
       streamToAsyncIterable(file.stream()),
@@ -69,13 +95,7 @@ export async function uploadEncrypted(
     );
     format = 2;
   } else {
-    const packFiles: PackFile[] = files.map((f) => ({
-      name: f.name,
-      type: f.type || "application/octet-stream",
-      size: f.size,
-      stream: () => streamToAsyncIterable(f.stream()),
-    }));
-    result = await encryptFilesForUpload(packFiles, password);
+    result = await encryptFilesForUpload(packFiles(files), password);
     format = 3;
   }
   const { blob, keyForUrl, wrapped, keyVerifier } = result;
@@ -119,7 +139,7 @@ export async function uploadEncrypted(
     const { slug } = await deps.finalize(body);
 
     // In link mode the key rides in the fragment, which never reaches the
-    // server; in password mode the link carries no key.
+    // server; in the older password mode the link carries no key.
     const shareUrl =
       keyForUrl ? `${deps.baseUrl}/d/${slug}#k=${keyForUrl}` : `${deps.baseUrl}/d/${slug}`;
 
