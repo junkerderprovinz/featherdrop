@@ -6,6 +6,37 @@ import { deriveContentKey, decryptWithKey } from "./pipeline";
 import { streamToAsyncIterable, asyncIterableToStream } from "./stream-adapters";
 import { splitByManifest } from "./multi-file";
 import { openKeys, decryptShare, type Header } from "./v2/share";
+import type { ShareKeys } from "./v2/keys";
+
+/**
+ * The server's 409: every download a limited share has left is streaming to
+ * someone else right now. Trying again later can still work.
+ */
+export class DownloadInProgressError extends Error {
+  constructor() {
+    super("download in progress");
+    this.name = "DownloadInProgressError";
+  }
+}
+
+/**
+ * Returns a fetchBlob for the counted download GET /api/d/{slug}. The server
+ * counts it only once the whole body has been sent, so the caller has to read
+ * the stream to its end.
+ */
+export function fetchShareBlob(
+  slug: string,
+  fetchImpl: typeof fetch = fetch,
+): (keyVerifier: string) => Promise<ReadableStream<Uint8Array>> {
+  return async (keyVerifier) => {
+    const res = await fetchImpl(`/api/d/${encodeURIComponent(slug)}`, {
+      headers: { "x-fd-key-verifier": keyVerifier },
+    });
+    if (res.status === 409) throw new DownloadInProgressError();
+    if (!res.ok || !res.body) throw new Error(`download ${res.status}`);
+    return res.body;
+  };
+}
 
 /**
  * The decryption secret: the key from the URL fragment in link mode, or a
@@ -38,16 +69,17 @@ export async function downloadDecrypted(
 
 /**
  * Downloads and decrypts a format 4 share and saves each file in turn. The
- * token comes from the URL fragment. A wrong password cannot be told apart
+ * secret is the token from the URL fragment with the password, or the keys
+ * already derived for the listing. A wrong password cannot be told apart
  * locally, so it shows up as a verifier the server refuses, before anything
  * is counted.
  */
 export async function downloadDecryptedV2(
   fetchBlob: (keyVerifier: string) => Promise<ReadableStream<Uint8Array>>,
-  secret: { token: string; password?: string },
+  secret: { token: string; password?: string } | { keys: ShareKeys },
   save: (plaintext: ReadableStream<Uint8Array>, filename: string) => Promise<void>,
 ): Promise<{ header: Header }> {
-  const keys = await openKeys(secret.token, secret.password);
+  const keys = "keys" in secret ? secret.keys : await openKeys(secret.token, secret.password);
   const stream = await fetchBlob(keys.verifier);
   const { header, plaintext } = await decryptShare(streamToAsyncIterable(stream), keys);
   for await (const { entry, bytes } of splitByManifest(plaintext, header)) {
