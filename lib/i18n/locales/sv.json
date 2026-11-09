@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Skicka filer som bara mottagaren kan öppna",
-    "drop": "Släpp filer på slottet, klistra in dem eller välj dem",
+    "drop": "Släpp filer var som helst på sidan, klistra in dem eller välj dem",
     "choose": "Välj filer",
     "dropping": "Släpp för att lägga till dem",
     "trust": "Krypterat i din webbläsare. Borta när du vill. Inget konto.",

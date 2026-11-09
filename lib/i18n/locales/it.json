@@ -35,7 +35,7 @@
   },
   "home": {
     "claim": "Invia file che solo il destinatario può aprire",
-    "drop": "Trascina i file sul castello, incollali o sceglili",
+    "drop": "Trascina i file in un punto qualsiasi della pagina, incollali o sceglili",
     "choose": "Scegli file",
     "dropping": "Rilascia per aggiungerli",
     "trust": "Cifrati nel tuo browser. Spariscono quando vuoi tu. Senza account.",

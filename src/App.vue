@@ -6,7 +6,7 @@ import TopBar from '@/src/components/TopBar.vue';
 import { config, insecure } from '@/src/config';
 import { ConfirmHost } from '@/src/confirm';
 import { t } from '@/src/i18n';
-import { picked, setInput } from '@/src/intake';
+import { dragging, picked, setInput } from '@/src/intake';
 import { route } from '@/src/router';
 import Collect from '@/src/screens/Collect.vue';
 import Manage from '@/src/screens/Manage.vue';
@@ -36,6 +36,7 @@ watchEffect(() => {
     <main class="cp-main">
       <component :is="screen" :key="route.parts.slice(0, inSettings ? 1 : 2).join('/')" class="glim-page-enter" />
     </main>
+    <div v-if="dragging" class="cp-dropzone" aria-hidden="true" data-cp="dropzone"></div>
     <input :ref="setInput" type="file" multiple hidden data-cp="files" @change="picked">
     <ToastHost />
     <ConfirmHost />

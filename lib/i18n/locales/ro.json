@@ -35,7 +35,7 @@
   },
   "home": {
     "claim": "Trimite fișiere pe care doar destinatarul le poate deschide",
-    "drop": "Lasă fișierele pe castel, lipește-le sau alege-le",
+    "drop": "Lasă fișierele oriunde pe pagină, lipește-le sau alege-le",
     "choose": "Alege fișiere",
     "dropping": "Dă drumul ca să le adaugi",
     "trust": "Criptate în browserul tău. Șterse când spui tu. Fără cont.",

@@ -35,7 +35,7 @@
   },
   "home": {
     "claim": "Envoyez des fichiers que seul le destinataire peut ouvrir",
-    "drop": "Déposez vos fichiers sur le château, collez-les ou choisissez-les",
+    "drop": "Déposez vos fichiers n’importe où sur la page, collez-les ou choisissez-les",
     "choose": "Choisir des fichiers",
     "dropping": "Lâchez pour les ajouter",
     "trust": "Chiffré dans votre navigateur. Supprimé quand vous voulez. Sans compte.",

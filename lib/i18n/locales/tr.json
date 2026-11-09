@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Yalnızca alıcının açabileceği dosyalar gönder",
-    "drop": "Dosyaları kalenin üstüne bırak, yapıştır ya da seç",
+    "drop": "Dosyaları sayfanın herhangi bir yerine bırak, yapıştır ya da seç",
     "choose": "Dosya seç",
     "dropping": "Eklemek için bırak",
     "trust": "Tarayıcında şifrelenir. Sen ne zaman dersen silinir. Hesap yok.",

@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Text pasted on the start page opens a note with that text already in it, ready to check and share.
 - Every page but the start page has a Back button in the same place at the top, and the header leaves the name and logo to the castle on the start page.
 - The start page offers Choose files, Write a note and Ask for files as three equal buttons, and its heading keeps to one line where it fits.
+- Files can be dropped anywhere on the page, and the whole window shows it while they hover over it.
 - **featherdrop is now CastleParcel**, with a new logo: a castle tower with a sealed letter. The image is `junkerderprovinz/castleparcel` on Docker Hub and `ghcr.io/junkerderprovinz/castleparcel` on GHCR, and the featherdrop images get no more updates. Share formats, the database and every link stay as they were, and the Unraid template keeps the `appdata/featherdrop` folder, so an existing install only needs the new repository in its settings. The default `APP_NAME` is CastleParcel, and the threat model is a section of its own in the README.
 - The client is built as one script instead of loading libsodium and the confetti later, since a chunk loaded later could not be pinned with an integrity hash. The download size stays about the same.
 - The Node version that builds the client is pinned in `.nvmrc` and the Dockerfile, and the image builds the client once for both architectures.

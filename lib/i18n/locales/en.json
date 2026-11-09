@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Send files only the recipient can open",
-    "drop": "Drop files on the castle, paste them, or choose them",
+    "drop": "Drop files anywhere on the page, paste them, or choose them",
     "choose": "Choose files",
     "dropping": "Let go to add them",
     "trust": "Encrypted in your browser. Gone when you say. No account.",

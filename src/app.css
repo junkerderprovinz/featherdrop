@@ -84,3 +84,8 @@ svg { display: block; }
 .cp-note { display: flex; flex-direction: column; gap: .9rem; }
 .cp-note-text { margin: 0; max-height: 30rem; overflow: auto; padding: .9rem 1rem; border-radius: var(--radius-control); background: var(--carbon-surface2); font-family: ui-monospace, "Cascadia Code", Menlo, monospace; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .cp-note-input textarea { min-height: 12rem; }
+
+/* A screen that takes files takes them anywhere in the window, so the whole window shows it while they hover. */
+.cp-dropzone { position: fixed; inset: .75rem; z-index: 50; pointer-events: none; border: 2px dashed var(--accent); border-radius: var(--radius-card); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+@media (prefers-reduced-motion: no-preference) { :root:not([data-motion="off"]) .cp-dropzone { animation: cp-fade-in var(--motion-control-dur, .15s) ease-out; } }
+@keyframes cp-fade-in { from { opacity: 0; } }

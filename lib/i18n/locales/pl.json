@@ -36,7 +36,7 @@
   },
   "home": {
     "claim": "Wysyłaj pliki, które otworzy tylko odbiorca",
-    "drop": "Upuść pliki na zamek, wklej je albo wybierz",
+    "drop": "Upuść pliki w dowolnym miejscu strony, wklej je albo wybierz",
     "choose": "Wybierz pliki",
     "dropping": "Puść, aby je dodać",
     "trust": "Szyfrowane w Twojej przeglądarce. Znikają, kiedy zechcesz. Bez konta.",

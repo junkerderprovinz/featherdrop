@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Send filer, som kun modtageren kan åbne",
-    "drop": "Slip filer på borgen, indsæt dem, eller vælg dem",
+    "drop": "Slip filer hvor som helst på siden, indsæt dem, eller vælg dem",
     "choose": "Vælg filer",
     "dropping": "Slip for at tilføje dem",
     "trust": "Krypteret i din browser. Væk, når du siger til. Ingen konto.",

@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Küldj fájlokat, amelyeket csak a címzett nyithat meg",
-    "drop": "Dobd a fájlokat a várra, illeszd be, vagy válaszd ki őket",
+    "drop": "Dobd a fájlokat bárhová az oldalon, illeszd be, vagy válaszd ki őket",
     "choose": "Fájlok kiválasztása",
     "dropping": "Engedd el, és bekerülnek",
     "trust": "Titkosítás a böngésződben. Akkor tűnik el, amikor mondod. Fiók nélkül.",
