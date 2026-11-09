@@ -47,8 +47,12 @@ func NewHandler(cfg config.Config, db *sql.DB) (http.Handler, error) {
 func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, error) {
 	store := filestore.New(cfg.TmpDir)
 
+	// No concatenation or deferred length: no client uses them, and an upload
+	// has to declare its length up front to count toward the quota.
 	composer := tushandler.NewStoreComposer()
-	store.UseIn(composer)
+	composer.UseCore(store)
+	composer.UseTerminater(store)
+	composer.UseContentServer(store)
 
 	// A cross-origin browser may only attach the upload token header if the
 	// preflight allows it.
@@ -102,8 +106,12 @@ func stripBasePath(next http.Handler) http.Handler {
 // An upload for a file request proves the request link instead, see
 // requestGate. The OPTIONS preflight passes, because browsers send no custom
 // headers on it.
+//
+// tusd would turn a POST with X-HTTP-Method-Override into another method
+// after every gate has judged it as a create, so the header is dropped.
 func uploadGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Del("X-HTTP-Method-Override")
 		if r.Method == http.MethodOptions {
 			next.ServeHTTP(w, r)
 			return

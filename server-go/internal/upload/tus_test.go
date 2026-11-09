@@ -632,3 +632,32 @@ func TestTus_RequestTakesNoMoreUploadsInProgressThanFreePlaces(t *testing.T) {
 		t.Errorf("an upload for no request = %d, want 201", rec.Code)
 	}
 }
+
+func TestTus_OffersNoConcatenationOrDeferredLength(t *testing.T) {
+	srv := newTestRouter(t, openCfg(t), nil)
+
+	ext := tusOptions(srv).Header().Get("Tus-Extension")
+	for _, off := range []string{"concatenation", "creation-defer-length"} {
+		if strings.Contains(ext, off) {
+			t.Errorf("Tus-Extension %q offers %s", ext, off)
+		}
+	}
+}
+
+func TestTus_MethodOverrideIsIgnored(t *testing.T) {
+	cfg := openCfg(t)
+	srv := newTestRouter(t, cfg, nil)
+	create := tusCreateLen(srv, 11)
+	if create.Code != http.StatusCreated {
+		t.Fatalf("create = %d", create.Code)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, create.Header().Get("Location"), nil)
+	req.Header.Set("Tus-Resumable", "1.0.0")
+	req.Header.Set("Upload-Length", "11")
+	req.Header.Set("X-HTTP-Method-Override", http.MethodDelete)
+	srv.ServeHTTP(httptest.NewRecorder(), req)
+	if _, err := os.Stat(filepath.Join(cfg.TmpDir, uploadID(create)+".info")); err != nil {
+		t.Errorf("a POST with a method override terminated the upload: %v", err)
+	}
+}

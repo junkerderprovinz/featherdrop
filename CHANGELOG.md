@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An upload that never declared its length can't become a share. It could otherwise keep growing after it was stored, past the storage quota.
 - **Uploads in progress count toward `STORAGE_QUOTA`.** An upload counts with the size it declared from the moment it starts until it becomes a share, is sent to a request or is cleaned up a day after its last byte. Before, only finished uploads counted, so a stack of started uploads nobody finished could fill the disk past the quota. The count is kept in the database and survives a restart. Every upload has to declare its size up front.
 - **A request link can't pile up unfinished uploads.** A file request with a maximum takes no more uploads in progress than it has places left, and further uploads get `429` until one is sent or cleaned up. An upload started for one request can't be sent to another.
+- The upload server no longer offers the tus concatenation and deferred-length extensions, which no client uses, and ignores `X-HTTP-Method-Override`, which could turn a request the upload checks had judged as a new upload into another method.
 
 ## [1.9.0] - 2026-07-15
 
