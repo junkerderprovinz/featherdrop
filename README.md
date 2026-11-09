@@ -132,6 +132,7 @@ The weak spot is the JavaScript. Your browser runs whatever code the server send
 - Every release carries `castleparcel-client.json`, with the SHA-256 of every file of the client and one root hash over all of them.
 - Each instance serves the manifest of the client it embeds at `/.well-known/castleparcel-client.json` and prints the root hash in its log at startup.
 - `index.html` pins its script and stylesheet with Subresource Integrity, so the browser refuses a file that does not match. The page itself is the release's template with the instance's name filled in.
+- The crypto worker that encrypts and decrypts v2 shares is part of that pinned script. The page starts it from a `blob:` URL made from the script's own code, so there is no separate worker file to check.
 - The service worker `sw-download.js` cannot be pinned that way, and it handles downloads after they are decrypted. It is in the manifest like every other file, so the check below covers it.
 
 To check an instance against a release, run this from a checkout of this repository (Node 20 or newer):

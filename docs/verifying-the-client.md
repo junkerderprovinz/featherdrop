@@ -54,7 +54,9 @@ them only if their bytes match. The client is built as a single chunk because
 a chunk loaded later through `import()` cannot be pinned this way: when a
 `modulepreload` fails its integrity check, the later `import()` fetches the same
 URL again and runs whatever comes back. `scripts/build-client.mjs` stops the
-build if a script or stylesheet turns up that the page does not load.
+build if a script or stylesheet turns up that the page does not load. The
+crypto worker, which encrypts and decrypts v2 shares, is built into that same
+script and started from a `blob:` URL, so it is pinned with it.
 
 Fonts and images that the stylesheet loads carry no integrity attribute, and
 neither does the service worker `sw-download.js`, which browsers never check
