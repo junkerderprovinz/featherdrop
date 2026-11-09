@@ -12,601 +12,239 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Boot log banner** — new knight artwork (shared across all junkerderprovinz containers), and the name/subtitle + READY line are now each a single combined line, matching the house format.
 - Tidied the code comments and log messages.
 
-## [6.1.0] — 2026-07-15
+## [1.9.0] - 2026-07-15
 
 ### Added
 
-- **Paste to upload** — Ctrl/Cmd+V drops clipboard files (e.g. screenshots) into the selection.
-- **Remembered options** — last-used expiry/limit/metadata choice restored per browser (never the password); the operator's `DEFAULT_EXPIRY` is honoured again.
-- **Photo metadata removal** — EXIF/GPS/IPTC stripped from JPEGs in the browser before encryption (default on, opt-out switch; unparseable files pass through untouched).
-- **PWA + Android share target** — installable; "Share → featherdrop" feeds shared files into the upload flow.
-- **Operator guardrails** — `MAX_EXPIRY`, `STORAGE_QUOTA` (507 on over-quota), `RATE_LIMIT` (per-IP, default on), `TRUST_PROXY`.
-- **Healthcheck** — `GET /api/healthcheck` + Dockerfile `HEALTHCHECK` (self-check flag, distroless-safe).
+- **Paste to upload.** Ctrl/Cmd+V drops clipboard files (screenshots, for example) into the selection. Pasting into text fields is unaffected.
+- **Remembered options.** The last-used expiry, download limit and metadata choice are restored per browser. The password is never stored.
+- **Photo metadata removal.** EXIF, GPS and IPTC data is stripped from JPEGs in the browser before encryption. On by default with an opt-out switch, and files that can't be parsed pass through untouched.
+- **PWA and Android share target.** featherdrop is installable, and "Share → featherdrop" feeds shared files into the upload flow.
+- **Operator guardrails.** `MAX_EXPIRY`, `STORAGE_QUOTA` (507 when over quota), `RATE_LIMIT` (per IP, on by default, 429 with `Retry-After`) and `TRUST_PROXY`.
+- **Healthcheck.** `GET /api/healthcheck` and a Dockerfile `HEALTHCHECK` (a self-check flag that works in the distroless image).
 
 ### Changed
 
-- Share pages opt out of search engines (`robots.txt` + uniform `X-Robots-Tag: noindex, nofollow`).
-- Boot-time config validation with clear messages; `BASE_URL`/`UPLOAD_PASSWORD` sanity warnings.
+- Share pages opt out of search engines (`robots.txt` and a uniform `X-Robots-Tag: noindex, nofollow` on 200, 401 and 404).
+- Boot-time config validation with clear messages naming the variable, plus warnings for a non-absolute `BASE_URL` and a short `UPLOAD_PASSWORD`.
+- A shorter README with download buttons at the top, three new screenshots, and only what a first start needs.
+
+### Fixed
+
+- The operator's `DEFAULT_EXPIRY` is used as the starting expiry again.
 
 ### Security
 
-- Path audit (delete/finalize/download): constant-time token comparisons, uniform 404s, no unauthenticated mutation surface; rate limiter now covers key-verifier guessing.
+- Audit of the delete, finalize and download paths: constant-time token comparisons, uniform 404s, no unauthenticated route that changes anything. The rate limiter also covers key-verifier guessing.
 
-### Design
-
-- A shorter README with new pictures: download buttons at the top, three new screenshots, and only what a first start needs.
-
-## [6.0.2] — 2026-07-12
+## [1.8.0] - 2026-07-12
 
 ### Added
 
-- **Startup log banner.** The server now prints the shared "Junker der Provinz"
-  ASCII banner and a loud `FEATHERDROP IS READY` box on boot (to stdout), matching
-  the other own-image containers' logs — so a running instance is obvious at a
-  glance in the Docker/Unraid log.
-
-### Fixed
-
-- **Uploads are now chunked (64 MiB) so they survive size-capped proxies and
-  actually resume.** tus-js-client previously sent the whole (encrypted) blob in
-  one PATCH request, so a CDN with a request-body cap (Cloudflare Free/Pro: 100 MB)
-  rejected any larger upload with `413`, and a dropped upload restarted from zero.
-  Uploads now go in 64 MiB chunks: files of any size pass through Cloudflare, and
-  an interrupted upload resumes from the last completed chunk.
+- **Seekable encryption format (`cf=2`).** Each 64 KiB chunk is encrypted on its own with XChaCha20-Poly1305, so large encrypted videos seek for real: the preview fetches and decrypts only the chunks it needs. New uploads use it automatically, and shares in the sequential format keep working.
+- **Startup log banner.** On boot the server prints the shared "Junker der Provinz" ASCII banner and a `FEATHERDROP IS READY` box to stdout, matching the other own-image containers.
+- More formats offered for the inline video preview (`.mkv`, `.avi`, `.mpeg`, `.3gp`, `.wmv`, `.flv`, `.ts` and more). Playback depends on the browser's codec support, and undecodable files show a safe, inert player.
 
 ### Changed
 
-- **Reverse-proxy docs (README §8).** Documented the Cloudflare/CDN request-body
-  limit (which overrides `client_max_body_size`), noted the new upload chunking,
-  and added a short comparison of the remote-access options (direct/port-forward
-  vs Cloudflare Tunnel vs a self-hosted tunnel such as Pangolin).
+- **The server is a single static Go binary.** One CGO-free binary (`chi`, `tusd`, pure-Go `modernc.org/sqlite`) replaces the Node and Next.js server and serves the React client as embedded static assets plus the JSON and file API. The result is a ~15 MB `distroless` image with lower RAM use and proper HTTP streaming and Range support. The browser-side crypto and the UI stay in TypeScript.
+- **Drop-in upgrade.** The SQLite schema mirrors the old one byte for byte and the blob layout is unchanged, so the same `db.sqlite`, `/config` and `/data` volumes, ports and environment variables keep working. The previous image stays buildable from `Dockerfile.next` for a rollback.
+- **Uploads go in 64 MiB chunks**, so they pass through CDNs with a request-body cap (Cloudflare Free and Pro: 100 MB, which answers a single large PATCH with 413) and resume from the last chunk after an interruption.
+- **Streamed preview starts faster.** It serves a bounded window per request instead of fetching and decrypting the whole file up front.
+- Home page redesigned in a Smash-style layout: the big, centered logo is the upload target (click it or drop files anywhere), and the text moves to the top. The result window, inline preview size, copy buttons and centered windows were reworked to match, and choosing a file cross-fades the feather into the options panel.
+- New banner claim, "Big files, zero baggage.", and a description that presents featherdrop as your own private, self-hosted WeTransfer across the README, the repo description and the Unraid template and CA feed card. `.github/assets/gen-banner.mjs` regenerates the banner SVG and PNG, with the claim set in Lato.
+- Browser-tab favicon: the transparent gold gradient feather (`public/favicon.svg`) is linked from the app shell and served at `/favicon.svg` as `image/svg+xml`.
+- Reverse-proxy docs (README §8): a proxying CDN enforces its own request-body limit before your reverse proxy, so `client_max_body_size 0` can't override Cloudflare's 100 MB. Added a short comparison of remote-access options (direct or port-forward, Cloudflare Tunnel, a self-hosted tunnel such as Pangolin).
+- CI builds and boots the image, runs the real zero-knowledge browser round trip (upload, download, preview, multi-file) against the Go server on every change, and runs `govulncheck`.
 
-## [6.0.1] — 2026-07-10
+### Removed
 
-### Changed
-
-- **New banner claim and a WeTransfer framing for the description.** The README
-  banner claim is now *"Big files, zero baggage."* (was "Drop it like it's hot.")
-  — on-theme for file sharing and the feather-light brand. The short description
-  now positions featherdrop as your own private WeTransfer (no accounts, no size
-  paywalls) across the README, the GitHub repo description, and the Unraid
-  template / CA-feed card. Added `.github/assets/gen-banner.mjs`, which
-  regenerates the banner SVG + PNG (the feather and wordmark stay verbatim; only
-  the claim is regenerated, set in Lato).
+- **The management link.** Shares are removed by their expiry and, if set, the download limit. Management links already handed out stop working.
 
 ### Fixed
 
-- **Browser-tab favicon restored.** The gold-feather favicon went missing in the
-  v6.0.0 Go/Vite rebuild — the HTML shell no longer linked one and no icon asset
-  was served, so browsers showed a blank tab. The transparent gradient feather is
-  back as `public/favicon.svg`, linked from the app shell (`<link rel="icon"
-  type="image/svg+xml">`) and served at `/favicon.svg` (Go's embedded static
-  server returns it as `image/svg+xml`).
+- The inline preview of large streamed videos works on the first visit to a share link, not only after a reload. It used to give up before the service worker controlled the page.
 
 ### Security
 
-- **Zero-knowledge downloads now require proof of key knowledge before
-  counting.** For format=2 shares, `GET /api/d/<slug>` used to count — and, at
-  the limit, burn — a download with no credential at all, so anyone who learned
-  the slug (proxy/access logs) could exhaust a limited share and destroy the
-  file without ever holding the key. The uploader's browser now stores a one-way
-  *key verifier* (`base64url(SHA-256(content key))`, new nullable `key_verifier`
-  column) at finalize, and the download GET requires the same value in the
-  `x-fd-key-verifier` header — compared constant-time — before anything is
-  counted or served; missing/wrong is a `401` with zero side effects. The
-  verifier reveals nothing about the key (the server still can't decrypt), the
-  client derives the key *before* fetching (a wrong password still fails without
-  a request), and both download paths (button + small-file preview prefetch)
-  send the header. Shares uploaded before this change (`key_verifier` NULL) keep
-  downloading exactly as before.
-- Pinned the Go toolchain to `go1.26.5`, which carries the standard-library fix
-  for GO-2026-5856 (an Encrypted Client Hello privacy leak in `crypto/tls`).
+- **The key verifier covers seekable shares.** For `cf=2` shares the browser stores `base64url(SHA-256(content key))` in a nullable `key_verifier` column, and `GET /api/d/<slug>` must present it in `x-fd-key-verifier` (compared constant-time) before anything is counted or served. A missing or wrong verifier is a 401 with no side effects. Both download paths send the header, and shares without a stored verifier download as before.
+- Every auth gate is enforced on the server and in constant time. A full adversarial audit found no blocking issues.
+- Pinned the Go toolchain to `go1.26.5`, which carries the standard-library fix for GO-2026-5856 (an Encrypted Client Hello privacy leak in `crypto/tls`).
 
-## [3.3.0] — 2026-06-09
-
-### Changed
-
-- **~58% smaller image via Next `output: "standalone"`.** The runtime now ships
-  only the trace-pruned server and its ~24 MB of `node_modules` (down from
-  ~498 MB) instead of the full dependency tree; the published image drops from
-  ~203 MB to ~85 MB compressed. Same ports, `/data` volume and configuration —
-  nothing changes on upgrade. The custom server (which mounts a tus handler
-  alongside Next, so it can't use Next's generated `server.js`) now hands Next
-  the pre-resolved config via `__NEXT_PRIVATE_STANDALONE_CONFIG`, so the
-  standalone runtime starts without the webpack/config machinery that standalone
-  prunes from `node_modules`. The server is esbuild-bundled into the standalone
-  output; better-sqlite3's native addon (untraceable through `bindings()`) is
-  copied in explicitly.
-
-### Fixed
-
-- **Language flag and light/dark toggle now sit in the same place on every
-  page.** They were absolutely positioned inside each page's content container,
-  and the download page uses a narrower `Container` (`size="sm"`) than the
-  upload page (`size="lg"`), so on wide screens the controls landed at different
-  horizontal positions. Both are now pinned to the viewport's top-right corner
-  (`pos="fixed"`).
-
-### Internal
-
-- **Image push gated on a boot smoke test.** CI now builds the image, runs it,
-  and requires it to actually serve `/` — for both `amd64` and `arm64` (the
-  latter under QEMU) — before publishing `:latest`. A build that compiles but
-  cannot start can no longer reach the published tag.
-
-## [3.2.0] — 2026-06-08
-
-### Fixed
-
-- **Image/PDF preview reliability.** Three-layer fix for the preview never
-  appearing ("only the filename shown"):
-
-  1. **Null/empty MIME in the DB caused `canPreview = false`.** When the
-     uploader's browser sends no `filetype` in the tus metadata, the `@tus/utils`
-     `Metadata.parse` function stores `null` (not empty-string), and the old
-     finalize code wrote that `null` to the DB. On the download page the MIME
-     prop was `null`, so `previewable = false` and the preview box was never
-     rendered. Fix: client now resolves the effective MIME via
-     `revealedMime || mime || mimeFromName(revealedName)`, falling back to the
-     inferred type from the revealed filename (`||` catches both null and
-     empty-string, unlike `??`). Server's `wantInline` gate and inline
-     Content-Type also use `mimeFromName(rec.original_name)` as a fallback, so
-     old files without a DB MIME value can still be previewed. New uploads are
-     already covered by the finalize extension-fallback (`lib/mime.ts`).
-
-  2. **Inline GET failed behind a reverse proxy (cookie not received in time).**
-     The `fd_key` auth cookie set by the reveal POST was not reliably reaching
-     the `<img>`/`<embed>` GET in some reverse-proxy configurations. The
-     per-file link key (already in the URL fragment on the page) is now also
-     accepted as `?k=` on the `?inline=1` / unlimited-share path — never for
-     actual counted downloads.
-
-  3. **Preview frame could collapse to 0 height on load failure.** Added
-     `minHeight` and flexbox centering so the box is always visible.
-
-- **Lint CI is green again** — removed the obsolete `XML Template Lint` job. The
-  Unraid template now lives in the central
-  [templates repo](https://github.com/junkerderprovinz/unraid-docker-templates)
-  (validated there), so this repo no longer ships `templates/*.xml` or
-  `ca_profile.xml`; the job failed trying to lint the missing files. This matches
-  the other own-image repos (krusader/jdownloader/matrix), which carry no XML job.
-- **`BASE_URL` now applies to generated share links** (#1). The link was built
-  from the browser's address (`window.location.origin`) and ignored `BASE_URL`,
-  so behind a reverse proxy / custom domain the share link used the internal
-  address. `BASE_URL` is now resolved on the server and passed to the client
-  (via `ServerConfigProvider`), and the link uses it — falling back to the
-  browser origin only when `BASE_URL` is unset.
-
-### Changed
-
-- **Reworked upload options panel** (`components/SettingsPanel.tsx`). Expiry is
-  now behind an on/off toggle like the download limit — off shares the file with
-  no expiry — and the options are ordered expiry → download limit → password. The
-  divider above the upload button was removed for a cleaner stack.
-- **"Download options" heading** — `settings.title` renamed from "Share options"
-  across all 26 languages.
-- **German grammar** — the 7-/30-day expiry labels read "7 Tagen" / "30 Tagen"
-  (dative) so "Läuft ab nach 7 Tagen" is correct.
-- **"Feather-light" wording** in the short description — the GitHub repo
-  description, README intro, Unraid template `<Overview>` and the templates-repo
-  card now lead with a nod to the feather logo instead of the generic "clean /
-  modern" phrasing.
-- **Darker top on the gold feather mark** — the lightest gradient stop went from
-  `#F6D981` to `#E0B53A` so the top of the medallion stays visible on light/white
-  backgrounds. Applied to the in-app logo, the favicon and (re-rendered) the README
-  banner, the CA icon and the link-preview cards.
-- **README aligned to the canonical layout** — removed the Buy-me-a-coffee
-  shields badge from the badge row (License is now the last badge), added the
-  official BMAC button directly under the short description, and numbered the
-  bottom support section as `## 11. Support this project` (added to the Table of
-  Contents).
-- **Richer, "sleek & modern" copy** in the README, the Unraid template
-  `<Overview>` and `ca_profile.xml`, covering all key features (encryption,
-  expiry/burn, preview, QR, link previews, 26 languages, custom branding, one
-  container). Added a CA support-thread template — `.github/SUPPORT_THREAD.md`
-  and a styled `.github/SUPPORT_THREAD.html` laid out like the sister-app support
-  threads (title → subtitle → banner → Install/GitHub/Coffee buttons → What is
-  this? / Highlights / Requirements / Posting a bug report / Credits), ready to
-  paste into the Unraid forum source view. The support-thread call-to-action
-  buttons are the project's own polished SVGs (Arial-bold, uniform 709×151) in
-  `.github/assets/support-buttons/` (`install-on-unraid`, `view-on-github`,
-  `buy-me-a-coffee`) for a single uniform row. The README/repo **Buy me a coffee**
-  button (`.github/assets/button-buy-me-a-coffee.svg`) is the official branded
-  Buy-Me-a-Coffee button. The Highlights list dropped its emoji bullets.
-- **Added UI screenshots** to the README, in a single **`## Screenshots`**
-  section (stacked, `width="90%"`, `<em>` captions) per the style guide
-  (`.github/assets/screenshots/`) — home light/dark, upload options, share link +
-  QR, and the download page.
-
-## [3.1.0] — 2026-06-01
-
-### Fixed
-
-- **Light/dark toggle needed two clicks for the first switch.** It read the raw
-  color scheme (which starts as `auto`), so the first click set an explicit
-  scheme that often matched the system theme — a visual no-op. It now uses
-  Mantine's computed color scheme (`useComputedColorScheme`), so the first click
-  always flips what's shown (`app/page.tsx`, `components/DownloadView.tsx`).
-
-### Changed
-
-- **Sansation is the UI typeface** for all text, self-hosted via
-  `@fontsource/sansation` (no runtime call to Google), while the wordmark stays in
-  Bitter (`theme.ts`, `app/fonts.ts`, `app/layout.tsx`).
-- **Refreshed hero copy.** A lighter (less bold) tagline — "Share your files
-  securely and privately" — over a single line: "Encrypted · auto-deleted · no
-  tracking · no account · no bullshit"; translated across all 26 languages, and
-  the middle subtitle was dropped from the home page (`app/page.tsx`,
-  `lib/i18n/locales/*`).
-- **Download page now matches the home page.** The brand (logo + wordmark) sits
-  centered at the top and links home; the share card is crowned with just the
-  logo (no wordmark), like the drop zone (`components/DownloadView.tsx`).
-- **Larger home-page logo and more space below the header** for a calmer hero
-  (`app/page.tsx`).
-- **README: new "Security & Privacy" section** covering the self-hosting privacy
-  model (no accounts, no tracking, data stays on your server); the encryption
-  details are now a subsection.
-- **Unraid template: `BASE_URL` pre-fills** `https://featherdrop.yourdomain.tld`
-  as a placeholder default so the expected format is obvious (replace with your
-  domain; leaving it empty still uses the browser's address).
-- **Clarified `APP_LOGO`** (Unraid template + README): accepts a public image URL
-  **or a `data:` URI**, so a custom logo needs no external hosting and no file on
-  disk.
-
-## [3.0.1] — 2026-06-01
-
-### Fixed
-
-- **App failed to render — HTTP 500 on every page.** `theme.ts` was marked
-  `"use client"`, but `createAppTheme()` is called from the server component
-  `app/layout.tsx`; a client export invoked on the server is a non-callable
-  reference, so every render threw `TypeError: u is not a function` during RSC
-  serialization. The theme module is now isomorphic (no `"use client"`): the
-  server builds the Mantine theme and hands a serializable object to the client
-  `<MantineProvider>`. The bug shipped with custom branding (folded into v3.0.0)
-  and only surfaced at runtime — `next build` is green and the dev server can't
-  boot locally (native `better-sqlite3`), so it was caught by reproducing the
-  production server (`next start`) on the DB-free `/` route. Regression test
-  added (`test/theme.test.ts`).
-
-## [3.0.0] — 2026-06-01
-
-A milestone feature release bundling the branding, sharing, preview and visual
-work. **Fully backward-compatible — no migration needed**; the major bump marks
-the milestone, not a breaking change. (Supersedes the per-feature 2.6.0–2.10.0
-releases, which were folded into this one.)
+## [1.7.0] - 2026-06-29
 
 ### Added
 
-- **Custom branding for self-hosters** — `APP_NAME` (wordmark + tab title),
-  `APP_LOGO` (logo image URL replacing the feather), and `ACCENT_COLOR` (hex
-  driving buttons/ring/accents). Logic in `lib/branding.ts` (TDD), shared via
-  `components/BrandingProvider.tsx`, wired through `app/layout.tsx`, `theme.ts`,
-  `components/Logo.tsx`, `app/page.tsx`, `components/DownloadView.tsx`; exposed in
-  the Unraid template and README. Each value falls back to the default branding
-  when unset or invalid.
-- **Download limit / burn-after-download.** Cap how many times a share can be
-  downloaded; the file and its row are deleted atomically once the limit is
-  reached. Logic in `lib/downloads.ts` (TDD) + `server/db.ts` `registerDownload`
-  (atomic count/delete), schema column `max_downloads`, wired through
-  `app/api/finalize`, `app/api/d/[slug]`, `components/SettingsPanel.tsx`,
-  `app/page.tsx`, and `components/DownloadView.tsx`. Encrypted shares verify the
-  key before counting, so a bogus request can't exhaust the limit.
-- **Inline image/PDF preview** on the download page (`components/DownloadView.tsx`).
-  The download route serves `?inline=1` with `Content-Disposition: inline` and
-  **without** counting a download (`app/api/d/[slug]/route.ts`); the reveal POST
-  returns the MIME type. Shown only for unlimited, password-less shares, so it
-  can never bypass a download limit.
-- **Save the QR code as a PNG.** The share QR can be downloaded as a crisp 4×
-  PNG (`components/ResultPanel.tsx`) — handy for printing or pasting into a chat.
-  Pure client-side, no extra dependency or server round-trip.
-- **Link previews (Open Graph / Twitter cards).** A shared link renders a branded
-  1200×630 preview card (`app/opengraph-image.png` / `app/twitter-image.png`,
-  generated by `scripts/render-assets.mjs`) with matching `openGraph`/`twitter`
-  metadata (`app/layout.tsx`). Deliberately generic — a `/d/<slug>` link never
-  leaks the file's name (the download page sets no own metadata).
+- **Multi-file shares.** Several files upload as one end-to-end encrypted bundle under a single link, and the recipient gets them back individually (no zip), with Download all and, in Chromium over HTTPS, Save to folder.
+- **Preview before download** for images (including SVG rendered safely through `<img>`), video, audio, text and code, and PDF. Decryption happens in the browser and never costs a download. Large videos stream through the service worker, other kinds are size-capped, and only inert types render.
+- **Optional upload protection.** `UPLOAD_PASSWORD` restricts who can create shares, checked on the server in constant time before anything is stored. Download links stay open. Also in the Unraid template (advanced).
+- **Management link per share** (`/m/<slug>#t=…`) to delete a share before it expires. The server stores only a hash of the token.
+- **Key verifier for zero-knowledge downloads.** Limited or password-protected shares require a matching `x-fd-key-verifier` header (`base64url(SHA-256(key))`, compared constant-time) before a download is counted or the file is burned. Shares created before 1.7.0 have no verifier and behave as before.
+- **Insecure-context notice.** Over plain HTTP a banner explains that large uploads fall back to memory and streamed downloads are off.
 
 ### Changed
 
-- **New featherdrop logo** — a gold medallion with the feather carved out as
-  negative space, rendered as a crisp inline SVG with a single gold gradient
-  (`components/Logo.tsx`, `useId` keeps the gradient id unique). The favicon
-  (`app/icon.svg`), the README banner and the Unraid template icon
-  (`.github/assets/`) were re-rendered to match; `APP_LOGO` still overrides it.
-- **The ambient aurora now drifts** (`app/globals.css`) — a slow 34s motion that
-  holds still for visitors who prefer reduced motion.
-- **Download-limit strings** are phrased count-neutral (avoiding i18next CLDR
-  plural pitfalls where missing `_few`/`_many` forms fell back to English) and,
-  with the new "Save QR code" label, translated across all 26 languages.
+- New house banner with the feather and the wordmark. The README no longer has a separate top heading.
+- Single-file shares and links created by earlier versions keep working unchanged.
+
+### Fixed
+
+- **Large downloads failed in the published image.** The standalone image didn't ship `public/`, so `/sw-download.js` returned 404 and every download over 50 MB failed after it had already counted against a limited share. `public/` now ships.
+- **Drag and drop crashed Chrome and Edge** with `RESULT_CODE_KILLED_BAD_MESSAGE`, triggered by Chromium's `webkitGetAsEntry()` directory walk. Dropped files are now read straight from the drop event.
+- Chromium marked downloads as failed because the streamed response declared the ciphertext length as the plaintext `Content-Length`. No length is sent when it isn't known exactly.
+- Abandoned tus uploads that never finished are swept after 24 hours.
+- When deleting an expired blob fails, the database row is kept so the next sweep retries instead of leaving the blob behind.
+- The `fd_key` cookie is marked `Secure` when the request came in over HTTPS.
+
+## [1.6.0] - 2026-06-10
+
+### Added
+
+- **Zero-knowledge (end-to-end) encryption.** The browser encrypts every file with `XChaCha20-Poly1305` (libsodium `crypto_secretstream`, 64 KiB chunks) before upload. In link mode the key lives only in the URL `#fragment`. In password mode it is wrapped with an Argon2id-derived key. Filename and content type are encrypted inside the blob.
+- **Any file size.** Encryption streams through OPFS and uploads resume with tus. Downloads decrypt and stream to disk through a service worker. Without OPFS or streaming (including any plain-HTTP page, where `navigator.storage` is missing) the browser encrypts in memory for files up to 500 MB, and larger files get a clear message.
+- **Client-side inline preview.** Images and PDFs are decrypted in the browser and rendered from a `blob:` URL. The server serves no inline route, and only raster images and PDF are shown.
+- New client modules (`lib/e2e/crypto.ts`, `blob-layout.ts`, `opfs-scratch.ts`, `stream-download.ts` with `public/sw-download.js`, `pipeline.ts`), each unit-tested in Node with libsodium, and a CI end-to-end test that drives a real browser through the full encrypt, upload, decrypt, download round trip.
+
+### Changed
+
+- **Breaking change to the crypto model.** The server stores and serves opaque ciphertext, enforces expiry and the download limit, and does no cryptography. No key or password appears in any request.
+- Shares created before 1.6.0 keep working until they expire. The data model handles both formats and the migration is additive, so nothing needs to be done on upgrade. Ports, the `/data` volume and the configuration stay the same.
+- A zero-knowledge link only decrypts if the whole URL, including the part after `#`, is copied.
+- Privacy copy in the app, README and template now makes the zero-knowledge claim.
+
+### Removed
+
+- **Server master-key mode.** New shares use link mode or password mode.
+
+## [1.5.0] - 2026-06-09
+
+### Changed
+
+- **Sansation is the UI typeface**, self-hosted through `@fontsource/sansation` with no runtime call to Google. The wordmark stays in Bitter.
+- **Refreshed hero copy.** A lighter tagline, "Share your files securely and privately", over a single line, "Encrypted · auto-deleted · no tracking · no account · no bullshit", in all 26 languages.
+- The download page matches the home page: the brand sits centered at the top and links home, and the share card carries just the logo. The home page has a larger logo and more space below the header.
+- **Reworked upload options panel** (`components/SettingsPanel.tsx`): expiry has an on/off toggle like the download limit, the order is expiry, download limit, password, and the divider above the upload button is gone.
+- "Download options" (`settings.title`) replaces "Share options" in all 26 languages. German expiry labels read "7 Tagen" and "30 Tagen" (dative).
+- Darker top on the gold feather mark (lightest stop `#E0B53A` instead of `#F6D981`), so the medallion stays visible on light backgrounds. Applied to the in-app logo, the favicon, the README banner, the CA icon and the link-preview cards.
+- **About 58% smaller image** through Next `output: "standalone"`: only the trace-pruned server and about 24 MB of `node_modules` ship, and the image drops from about 203 MB to 85 MB compressed. The custom server hands Next the pre-resolved config through `__NEXT_PRIVATE_STANDALONE_CONFIG`, and better-sqlite3's native addon is copied in explicitly. Nothing changes on upgrade.
+- The image push is gated on a boot smoke test: CI runs the image and requires it to serve `/` on `amd64` and `arm64` before publishing `:latest`.
+- README: a new "Security & Privacy" section, the canonical badge row with the official Buy Me a Coffee button under the description, a numbered `## 11. Support this project` section, a `## Screenshots` section, and richer copy covering every key feature. A CA support-thread template ships as `.github/SUPPORT_THREAD.md` and `.github/SUPPORT_THREAD.html` with its own button SVGs.
+- "Feather-light" wording in the short description across the repo description, README, Unraid template and templates-repo card.
+- Unraid template: `BASE_URL` pre-fills `https://featherdrop.yourdomain.tld` as a placeholder, and `APP_LOGO` is documented as taking a public image URL or a `data:` URI.
+
+### Fixed
+
+- **Light/dark toggle needed two clicks** for the first switch. It now uses Mantine's computed color scheme, so the first click always flips what's shown.
+- **Image and PDF preview never appeared.** A missing MIME type in the database now falls back to the type inferred from the filename on client and server (`lib/mime.ts`). Behind some reverse proxies the cookie didn't reach the preview request, so the link key is also accepted as `?k=` on the `?inline=1` path for unlimited shares, never for counted downloads. The preview frame keeps a minimum height when loading fails.
+- **`BASE_URL` applies to generated share links** (#1). It is resolved on the server and passed to the client through `ServerConfigProvider`, falling back to the browser origin only when unset.
+- Lint CI is green again: the obsolete `XML Template Lint` job is gone, since the Unraid template lives in the central [templates repo](https://github.com/junkerderprovinz/unraid-docker-templates).
+- The language flag and light/dark toggle sit in the same place on every page, pinned to the top-right corner of the viewport.
+
+## [1.4.0] - 2026-06-02
+
+### Added
+
+- **`CONFIG_DIR` for a separate database volume** (`lib/config.ts`). Map `DATA_DIR` (`/data`) for files and `CONFIG_DIR` (`/config`) for the database. The Unraid template exposes both as Data Directory and Config Directory.
+- **Custom branding.** `APP_NAME` (wordmark and tab title), `APP_LOGO` (logo image URL replacing the feather) and `ACCENT_COLOR` (hex for buttons, ring and accents), each falling back to the default when unset or invalid (`lib/branding.ts`, `components/BrandingProvider.tsx`).
+- **Download limit and burn after download.** The file and its row are deleted atomically once the limit is reached (`lib/downloads.ts`, `registerDownload`, column `max_downloads`). Encrypted shares verify the key before counting, so a bogus request can't use up the limit.
+- **Inline image and PDF preview** on the download page through `?inline=1`, which never counts as a download. Shown only for unlimited, password-less shares.
+- **Save the QR code as a PNG** (4×, client-side, no extra dependency).
+- **Link previews (Open Graph and Twitter cards).** A branded 1200×630 card that never reveals the file's name.
+
+### Changed
+
+- **New logo**: a gold medallion with the feather carved out as negative space (`components/Logo.tsx`). The favicon, README banner and Unraid template icon match it, and `APP_LOGO` still overrides it.
+- The ambient aurora drifts slowly (34s) and holds still for reduced motion.
+- Centered header brand, with the light/dark and language controls floating top right (`app/page.tsx`).
+- The result and download windows glow along their gold border on hover, like the drop zone (`app/globals.css`).
+- The result heading reads "Your link is ready" / "Dein Link ist bereit".
+- Init-log banner subtitle reads "Encrypted at rest, auto-deleted when the link expires" (`docker-entrypoint.sh`). The stray separator above the ASCII banner is gone, with spacing before the title block (`print-banner.sh`).
+- Download-limit strings are phrased count-neutral and, with the new "Save QR code" label, translated into all 26 languages.
+- Backward compatible, no migration needed. `CONFIG_DIR` defaults to `DATA_DIR`. To move to two volumes, move `db.sqlite` into the config volume before starting, or a fresh empty database is created.
 
 ### Security
 
-- **Inline preview restricted to inert types.** The `?inline=1` preview echoed
-  the uploader-controlled content type with an `inline` disposition, which could
-  render attacker-supplied HTML/SVG on the app's origin. Inline is now allowlisted
-  server-side to PNG/JPEG/GIF/WebP/PDF (`lib/preview.ts`, enforced in
-  `app/api/d/[slug]/route.ts`) and sent with `X-Content-Type-Options: nosniff`;
-  everything else downloads as an attachment.
+- **Inline preview restricted to inert types.** The server allowlists PNG, JPEG, GIF, WebP and PDF (`lib/preview.ts`) and sends `X-Content-Type-Options: nosniff`. Everything else downloads as an attachment.
 
-## [2.5.3] — 2026-06-01
+## [1.3.0] - 2026-06-01
 
-### Changed
+### Added
 
-- **Centered header brand** (`app/page.tsx`): the logo + wordmark are centered;
-  the light/dark and language controls float top-right.
-
-## [2.5.2] — 2026-06-01
+- **Confetti on a finished upload.** A short gold and violet burst when the share link appears (`components/ResultPanel.tsx`, `canvas-confetti`, lazily loaded, off for reduced motion).
 
 ### Changed
 
-- **Reactive edge on the result & download windows** (`app/globals.css`): the
-  `.fd-glass` border lights up with a soft gold glow on hover, like the drop zone.
-- **Result heading wording**: now "Your link is ready" / "Dein Link ist bereit"
-  (`lib/i18n/locales/en.ts`, `lib/i18n/locales/de.ts`).
+- **One floating-glass design.** The result panel and the download page use the same frosted `.fd-glass` surface as the drop zone.
+- **The logo returns to the start.** Clicking it resets the upload on the home page and links home from a download page.
+- **Clearer copy.** Headline, subtitle, drop zone, result and download wording state plainly what featherdrop does (encrypted at rest, deleted on expiry, no account). English and German refreshed.
+- **Wordmark in Bitter.** Medium 500 Italic, self-hosted through `next/font/google` (`app/fonts.ts`), with no font file in the repo. The rest of the UI keeps its sans-serif.
+
+## [1.2.0] - 2026-06-01
+
+### Added
+
+- **Server encryption mode for short links.** A third at-rest mode beside password and link: with `MASTER_KEY` set, a password-less upload wraps its per-file age key with the master key and stores it, so the link is just `…/d/aB3xK` (`lib/encmode.ts`).
+- **`MASTER_KEY`.** Optional, masked in the Unraid template. Generate it with `openssl rand -base64 32`. It lives only in the container environment, never in `/data`. Keep it secret and back it up, because losing it makes password-less files unrecoverable. Empty keeps the long `#key` links.
+- **Template dropdowns** for `ENCRYPT_UPLOADS` (`true | false`) and `DEFAULT_EXPIRY` (`7d | 1h | 6h | 1d | 30d | never`).
+- **Browser-tab favicon** (`app/icon.svg`), centered to read cleanly at 16×16.
+
+### Changed
+
+- **Floating frosted-glass UI** over a soft gold and violet background, with the feather crowning the drop zone and a larger logo and wordmark in the header. The drop zone is a recessed glass well that lights up gold on hover.
+- **Accent colour matches the logo**: gold `#d4af37` instead of violet for buttons, the progress ring and the copy button.
+- The subtitle reads "Encrypted, and gone when it expires." in all 26 languages, and the redundant footer line is gone.
+- With `MASTER_KEY` unset, password-less shares keep their long `#fragment` links. The mode is recorded per file.
 
 ### Fixed
 
-- **Init-log banner** (`print-banner.sh`): removed the stray separator rule above
-  the ASCII banner and added spacing before the title block.
+- **Copy-link did nothing over plain HTTP.** Copying falls back to a method that works without a secure context (`lib/clipboard.ts`), shows a hint if even that is blocked, and the link input selects on focus.
+- **Init-log banner ran into the separator line.** `print-banner.sh` adds a newline after the banner, and the subtitle matches the UI wording ("encrypted, auto-expiring").
 
-## [2.5.1] — 2026-06-01
-
-### Changed
-
-- **Init-log banner subtitle realigned with the UI copy** (`docker-entrypoint.sh`):
-  now "Encrypted at rest, auto-deleted when the link expires".
-
-## [2.5.0] — 2026-06-01
+## [1.1.0] - 2026-06-01
 
 ### Added
 
-- **`CONFIG_DIR` — separate database volume.** The SQLite metadata database can
-  live on its own volume, apart from the bulk uploads (`lib/config.ts`). Map
-  `DATA_DIR` (`/data`) for files and `CONFIG_DIR` (`/config`) for the database;
-  the Unraid template now exposes both **Data Directory** and **Config
-  Directory** (`templates/featherdrop.xml`).
-
-### Compatibility
-
-- Backward-compatible: `CONFIG_DIR` defaults to `DATA_DIR`, so single-volume
-  installs keep working. To migrate to two volumes, move `db.sqlite` into the
-  config volume before starting (otherwise a fresh empty DB is created).
-
-## [2.4.1] — 2026-06-01
+- **At-rest encryption, on by default.** Every upload is encrypted on the server with [age](https://age-encryption.org) to a fresh per-file key, with the filename and type inside the file. Two modes, chosen automatically:
+  - **Password shares**: the per-file key is wrapped with your password (age scrypt). Without it the file is unreadable, even to the operator.
+  - **Link shares**: the key rides in the share link's `#fragment` (`…/d/<slug>#k=…`) and never reaches the server.
+- **26-language UI**, detected from the browser (cookie, then `Accept-Language`, then English) and resolved on the server, with a flag switcher in the header and on the download page and right-to-left support for Arabic and Hebrew.
+- **`ENCRYPT_UPLOADS`** (default `true`) to store new uploads as plaintext if needed.
+- A unit-test suite (`npm test`, 50+ assertions) and a CI test job.
 
 ### Changed
 
-- **Brand wordmark in Bitter.** The "featherdrop" wordmark in the header and on
-  the download page is now set in Bitter (a humanist slab serif, SIL OFL), Medium
-  500 Italic, self-hosted via `next/font/google` (`app/fonts.ts`, applied in
-  `app/page.tsx` and `components/DownloadView.tsx`). No font file is shipped in
-  the repo; the rest of the UI keeps its sans-serif.
-
-## [2.3.0] — 2026-06-01
-
-### Added
-
-- **Confetti on a finished upload.** When an upload reaches 100% and the share
-  link appears, a short gold/violet confetti burst celebrates it
-  (`components/ResultPanel.tsx`, `canvas-confetti`, lazily loaded; disabled for
-  reduced-motion users).
-
-### Changed
-
-- **One consistent floating-glass design.** The result panel and the download
-  page now use the same frosted `.fd-glass` surface as the drop zone
-  (`components/ResultPanel.tsx`, `components/DownloadView.tsx`).
-- **Logo returns to the start.** Clicking the logo resets the upload on the home
-  page and links home from a download page (`app/page.tsx`,
-  `components/DownloadView.tsx`).
-- **Clearer, more professional copy.** Headline, subtitle, drop zone, result and
-  download wording rewritten to state plainly what featherdrop does (encrypted
-  at rest, auto-deleted on expiry, no account). English + German refreshed
-  (`lib/i18n/locales/en.ts`, `lib/i18n/locales/de.ts`).
-
-## [2.2.0] — 2026-06-01
-
-### Added
-
-- **Server encryption mode → short links.** A third at-rest mode beside
-  *password* and *link*. When `MASTER_KEY` is set, a password-less upload wraps
-  its per-file age key with the master key and stores it, instead of returning
-  the key in the share URL — so the link is just `…/d/aB3xK`, no `#fragment`.
-  The recipient opens the short link and the server decrypts with its master
-  key; no credential needed (`lib/encmode.ts`, `app/api/finalize`, `app/api/d`).
-- **`MASTER_KEY` config.** New optional env var (masked Unraid template field).
-  Generate with `openssl rand -base64 32`. It lives only in the container
-  environment, never in `/data`, so a stolen data backup stays unreadable. Keep
-  it secret and back it up — losing it makes password-less files unrecoverable.
-  Empty = the existing long `#key` links.
-- **Template dropdowns.** `ENCRYPT_UPLOADS` (`true | false`) and
-  `DEFAULT_EXPIRY` (`7d | 1h | 6h | 1d | 30d | never`) are now pick-lists in the
-  Unraid template instead of free-text fields.
-
-### Compatibility
-
-- Fully backward-compatible. With `MASTER_KEY` unset, behaviour is identical to
-  v2.1.x (long `#fragment` links). The mode is recorded per file, so existing
-  files keep the mode they were created with.
-
-## [2.1.3] — 2026-06-01
-
-### Added
-
-- **Browser-tab favicon.** The gold feather now shows in the browser tab
-  (`app/icon.svg`, served automatically by Next.js), centered to read cleanly
-  at 16×16.
-
-## [2.1.2] — 2026-06-01
-
-### Fixed
-
-- **Copy-link button did nothing on plain-HTTP LAN access.** The browser's
-  Clipboard API is only available in a secure context (HTTPS / localhost), so on
-  `http://<lan-ip>:3000` it was unavailable and the copy silently failed. Copying
-  now falls back to a legacy method that works without HTTPS (`lib/clipboard.ts`),
-  and shows a hint if even that is blocked. The link input also selects on focus.
-
-### Changed
-
-- **Accent colour now matches the logo.** The primary colour is the feather's
-  gold (`#d4af37`) instead of violet — buttons, the upload progress ring and the
-  copy button all echo the brand.
-
-## [2.1.1] — 2026-06-01
-
-### Fixed
-
-- **Init-log banner ran into the separator line.** The shared ASCII banner file
-  has no trailing newline, so `print-banner.sh` printed the `─────` rule fused
-  onto the banner's last line. It now adds a newline after the banner. Also
-  aligned the banner subtitle with the UI wording ("encrypted, auto-expiring").
-
-## [2.1.0] — 2026-06-01
-
-### Changed
-
-- **Refined, modern UI.** The home page is now a **floating frosted-glass
-  window** over a soft gold/violet ambient background, with the feather mark
-  crowning the drop zone and a larger logo + wordmark in the header. The drop
-  zone is a recessed glass well that lights up gold on hover.
-- Reworked the hero copy: the subtitle now reads *"Encrypted, and gone when it
-  expires."* (localised in all 26 languages), and the redundant footer line was
-  removed.
-
-## [2.0.1] — 2026-06-01
-
-### Fixed
-
-- **Uploads failed with "finalize 409" / "Freigabe konnte nicht abgeschlossen
-  werden" for every non-empty file.** The completeness check trusted the tus
-  sidecar's `offset`, which `@tus/file-store` leaves frozen at `0` (it tracks
-  progress via the live file size, not the sidecar). Finalize now judges
-  completeness from the actual on-disk byte count against the declared upload
-  length (`lib/upload.ts`, covered by tests). Sharing works again.
-
-## [2.0.0] — 2026-06-01
-
-A major release: every uploaded file is now **encrypted at rest**, and the
-interface speaks **26 languages**.
-
-### Added
-
-- **At-rest encryption (default on).** Every upload is encrypted on the server
-  with [age](https://age-encryption.org) (Filippo Valsorda's audited,
-  streaming, authenticated format) to a fresh per-file key. The original
-  filename and type are encrypted **inside** the file, so a stolen disk or
-  backup reveals neither contents nor names. Two modes, chosen automatically:
-  - **Password shares** — the per-file key is wrapped with your password (age
-    scrypt) and only the wrapped blob is stored. Without the password the file
-    is unreadable, even to the server operator.
-  - **Link shares (no password)** — the key rides in the share-link
-    `#fragment` (`…/d/<slug>#k=…`) and **never reaches the server**. Anyone with
-    the full link can download; the database alone cannot decrypt the file.
-- **Multi-language UI (26 languages)** — English, German, French, Spanish,
-  Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Czech, Swedish,
-  Danish, Finnish, Norwegian, Turkish, Greek, Hungarian, Romanian, Japanese,
-  Korean, Chinese, Arabic, Hebrew, Thai and Vietnamese. The language is
-  **detected from the browser** on first visit (cookie → `Accept-Language` →
-  English fallback) and resolved **on the server**, so the page renders
-  translated even without JavaScript.
-- **Flag language switcher** beside the light/dark toggle, in the header and on
-  the download page, so both uploader and recipient can change language. The
-  choice persists in a cookie.
-- **Right-to-left support** for Arabic and Hebrew via Mantine's
-  `DirectionProvider` (the whole UI mirrors, not just text).
-- **`ENCRYPT_UPLOADS`** environment variable (default `true`) to opt out of
-  encryption for new uploads if ever needed.
-- A unit-test suite (`npm test`, 50+ assertions) and a CI test job covering the
-  encryption round-trip, tamper/wrong-key rejection, the download-token gate,
-  language detection, and the schema migration.
-
-### Changed
-
-- The download flow now authorizes (password or link key) and then streams the
-  **decrypted** file natively; the share page reveals the real filename only
-  after the key/password is supplied.
-- Translations live in typed per-language files (`lib/i18n/locales/<code>.ts`)
-  with English as the source of truth; a compile-time type plus a runtime parity
-  test guarantee no key is ever missing or empty. Native-speaker corrections are
-  a one-file edit.
+- The download flow authorizes with the password or link key, then streams the decrypted file. The real filename is revealed only after that.
+- Upload finalize judges completeness from the actual bytes on disk against the declared length (`lib/upload.ts`).
+- Translations live in typed per-language files (`lib/i18n/locales/<code>.ts`) with English as the source, and a parity test keeps every key present.
+- Backward compatible: the schema migrates in place, and files uploaded before 1.1.0 keep working as unencrypted blobs.
 
 ### Security
 
-- Fixed a password-gate bypass on the legacy plaintext download path: the
-  download cookie is now verified (constant-time) against an unforgeable,
-  password-hash-derived token rather than merely required to be present.
+- Fixed a password-gate bypass on the plaintext download path: the download cookie is verified in constant time against a token derived from the password hash.
 
-### Migration
-
-- **Backward compatible.** The schema migrates in place (additive columns) and
-  files uploaded before v2.0.0 keep working as unencrypted blobs. Only uploads
-  made **after** the update are encrypted — existing shares are not rewritten.
-
-## [1.0.3] — 2026-06-01
-
-### Changed
-
-- Banner now follows the house style guide exactly: a **white `#ffffff`
-  1600×500 card with the gold feather centered and no text**, replacing the
-  transparent emblem crop that shipped in 1.0.2.
-- README hero reordered to the canonical style-guide sequence: centered `<h1>`
-  → tagline (a featherdrop-specific exception) → banner → badge row →
-  description. The full description moved back **below** the badges.
-
-## [1.0.2] — 2026-06-01
-
-### Changed
-
-- New **featherdrop logo** — a redrawn, more flowing gold feather. It replaces
-  the previous mark everywhere it appears: the header, the download page, the
-  not-found page, and the `.github/assets/featherdrop-logo.svg` source art.
-- Regenerated `.github/assets/featherdrop-banner.png` and
-  `.github/assets/icon.png` (512×512) from the new logo.
+## [1.0.0] - 2026-06-01
 
 ### Added
 
-- `scripts/render-assets.mjs` — a manual asset renderer that produces the banner
-  and icon from `featherdrop-logo.svg`, centering the feather via its real
-  bounding box. Uses `@resvg/resvg-js` (installed on demand, not a dependency).
+- Initial release of **featherdrop**, a clean, login-free, self-hosted file sharer built as a single Next.js and Mantine container.
+- One-page upload: a central drop zone, a settings panel (expiry and optional password) on the right, and an upload-progress overlay on the drop zone. Light/dark toggle.
+- **Resumable uploads** through tus (`@tus/server`, `tus-js-client`).
+- Per-share **expiry** (1h / 6h / 1d / 7d / 30d / never) and an optional **password** (scrypt-hashed, never stored in plain text). The download cookie is derived from the server-only hash, so it can't be forged from the public link.
+- Share page with a copyable link and a QR code, plus a native streaming download.
+- Files on a local volume and metadata in a single SQLite file (`better-sqlite3`). No database server, no accounts.
+- Background cleanup of expired files and their metadata.
+- Gold **featherdrop logo**, a flowing feather with a light to metallic to deep gold gradient, as an inline SVG in the header, the download page and the not-found page (source art in `.github/assets/featherdrop-logo.svg`).
+- `.github/assets/icon.png` (512×512) as the Unraid template icon, and a white `#ffffff` 1600×500 README banner with the feather centered and no text. The README hero follows the canonical order: centered `<h1>`, tagline, banner, badge row, description.
+- `scripts/render-assets.mjs` renders the banner and icon from the logo SVG (with `@resvg/resvg-js` installed on demand).
+- Unraid Community Applications template, multi-arch image (`ghcr.io/junkerderprovinz/featherdrop`, amd64 and arm64), ASCII init-log banner, CI (ESLint, typecheck, XML template lint) and a release workflow. CI opts JavaScript actions into Node 24 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`).
 
-### Maintenance
-
-- CI workflows now opt JS-based actions into Node 24
-  (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`) ahead of GitHub's forced switch on
-  2026-06-16, clearing the Node 20 deprecation warning on the checkout and
-  Docker actions.
-
-## [1.0.1] — 2026-06-01
-
-### Added
-
-- Gold **featherdrop logo** (a feather with a light→metallic→deep gold gradient)
-  as an inline SVG component, replacing the placeholder feather icon in the
-  header, download page, and not-found page. Source art at
-  `.github/assets/featherdrop-logo.svg`.
-- `.github/assets/icon.png` (512×512) rendered from the logo, used as the Unraid
-  Community Applications template icon.
-
-## [1.0.0] — 2026-05-31
-
-### Added
-
-- Initial release of **featherdrop** — a clean, login-free, self-hosted file
-  sharer built as a single Next.js + Mantine container.
-- One-pager upload: a central drop zone; selecting a file reveals a settings
-  panel (expiry + optional password) on the right, with an upload-progress
-  overlay shown directly on the drop zone. Light/dark toggle.
-- **Resumable uploads** via tus (`@tus/server` + `tus-js-client`) — large files
-  survive connection drops.
-- Per-share **expiry** (1h / 6h / 1d / 7d / 30d / never) and optional
-  **password** protection (scrypt-hashed; never stored in plain text). The
-  download permission cookie is derived from the server-only password hash, so
-  it cannot be forged from the public link.
-- Share page with a copyable link and a QR code; native streaming download.
-- Local-volume storage for files; metadata in a single SQLite file
-  (`better-sqlite3`) — no separate database server, no accounts.
-- Background cleanup job that removes expired files and their metadata.
-- Unraid Community Applications template, multi-arch image
-  (`ghcr.io/junkerderprovinz/featherdrop`, amd64 + arm64), ASCII init-log
-  banner, CI (ESLint + typecheck + XML template lint) and release workflow.
+[1.9.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.8.0...v1.9.0
+[1.8.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/junkerderprovinz/featherdrop/releases/tag/v1.0.0
