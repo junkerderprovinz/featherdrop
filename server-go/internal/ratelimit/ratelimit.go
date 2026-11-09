@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
 )
 
 // sweepInterval bounds how often Allow drops idle buckets, which keeps the map

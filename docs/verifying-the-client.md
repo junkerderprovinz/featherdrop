@@ -73,7 +73,7 @@ node scripts/verify-client.mjs https://share.yourdomain.tld castleparcel-client.
 ```
 
 The second argument is a file or a URL, such as the release asset
-`https://github.com/junkerderprovinz/featherdrop/releases/download/vX.Y.Z/castleparcel-client.json`.
+`https://github.com/junkerderprovinz/castleparcel/releases/download/vX.Y.Z/castleparcel-client.json`.
 The script
 
 1. checks that the manifest's root matches its file list,
@@ -92,7 +92,7 @@ and at the instance's startup log tells you whether they match.
 To look inside an image without starting it:
 
 ```sh
-docker run --rm junkerderprovinz/featherdrop:latest -client-manifest
+docker run --rm junkerderprovinz/castleparcel:latest -client-manifest
 ```
 
 A running server also logs the root when it starts:

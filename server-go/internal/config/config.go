@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
 )
 
 // Config holds the resolved runtime configuration, read once by Load.

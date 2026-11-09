@@ -129,7 +129,7 @@ test("the verifier never equals the URL key (one-way, not an echo)", async () =>
 });
 
 test("the server-visible blob leaks neither the filename nor the content", async () => {
-  const marker = "TOPSECRET_FEATHERDROP_PAYLOAD";
+  const marker = "TOPSECRET_PLAINTEXT_PAYLOAD";
   const { blob } = await encryptForUpload(
     one(new TextEncoder().encode(marker)),
     { name: "my-secret-filename.txt", type: "text/plain" },

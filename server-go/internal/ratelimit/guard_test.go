@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
 )
 
 func statusHandler(status int, header map[string]string) http.Handler {

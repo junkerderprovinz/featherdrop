@@ -19,11 +19,11 @@ import (
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 	"golang.org/x/exp/slog"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/uploadcap"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/uploadcap"
 )
 
 // BasePath is where the tus handler is mounted; tusd requires the trailing

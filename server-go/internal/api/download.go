@@ -15,9 +15,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 // keyVerifierHeader carries the downloader's proof that it knows the key:

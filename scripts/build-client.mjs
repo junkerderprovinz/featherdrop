@@ -18,7 +18,6 @@ import { checkSodiumOnce, sodiumWasm } from "./sodium-once.mjs";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const clientDist = join(repoRoot, "client-dist");
 const webroot = join(repoRoot, "server-go", "webroot");
-const ogSrc = join(repoRoot, "app", "opengraph-image.png");
 
 if (!existsSync(clientDist)) {
   console.error(
@@ -26,15 +25,10 @@ if (!existsSync(clientDist)) {
   );
   process.exit(1);
 }
-if (!existsSync(ogSrc)) {
-  console.error(`build:webroot: ${ogSrc} not found.`);
-  process.exit(1);
-}
 
 rmSync(webroot, { recursive: true, force: true });
 mkdirSync(webroot, { recursive: true });
 cpSync(clientDist, webroot, { recursive: true });
-cpSync(ogSrc, join(webroot, "opengraph-image.png"));
 
 const files = readdirSync(webroot, { recursive: true })
   .map(String)

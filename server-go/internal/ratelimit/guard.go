@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
 )
 
 // Guard puts two budgets on routes that check a secret. Every request takes a

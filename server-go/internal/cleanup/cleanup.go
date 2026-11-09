@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 const (

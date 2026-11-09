@@ -1,6 +1,6 @@
 {
-  "name": "featherdrop",
-  "short_name": "featherdrop",
+  "name": "CastleParcel",
+  "short_name": "CastleParcel",
   "description": "Drop a file, share a link. Self-hosted, end-to-end encrypted.",
   "id": "/",
   "start_url": "/",

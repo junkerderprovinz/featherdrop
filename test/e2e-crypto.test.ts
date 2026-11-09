@@ -103,10 +103,10 @@ test("truncation (missing final frame) throws", async () => {
 
 test("ciphertext does not contain the plaintext", async () => {
   const key = generateKey();
-  const marker = sodium.from_string("FEATHERDROP_SECRET_MARKER");
+  const marker = sodium.from_string("SECRET_MARKER_IN_PLAINTEXT");
   const cipher = await collect(encryptChunks(one(marker), key));
   const hay = new TextDecoder("latin1").decode(cipher);
-  assert.ok(!hay.includes("FEATHERDROP_SECRET_MARKER"));
+  assert.ok(!hay.includes("SECRET_MARKER_IN_PLAINTEXT"));
 });
 
 test("wrapKey/unwrapKey round-trips with the right password", () => {

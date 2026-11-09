@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **featherdrop is now CastleParcel**, with a new logo: a castle tower with a sealed letter. The image is `junkerderprovinz/castleparcel` on Docker Hub and `ghcr.io/junkerderprovinz/castleparcel` on GHCR, and the featherdrop images get no more updates. Share formats, the database and every link stay as they were, and the Unraid template keeps the `appdata/featherdrop` folder, so an existing install only needs the new repository in its settings. The default `APP_NAME` is CastleParcel, and the threat model is a section of its own in the README.
 - The client is built as one script instead of loading libsodium and the confetti later, since a chunk loaded later could not be pinned with an integrity hash. The download size stays about the same.
 - The Node version that builds the client is pinned in `.nvmrc` and the Dockerfile, and the image builds the client once for both architectures.
 - **Format 4 shares are encrypted and decrypted in a Web Worker**, so a big file no longer stalls the page. The worker's code is part of the pinned main script and starts from a `blob:` URL, so the integrity hash covers it too. The Content-Security-Policy allows workers from `blob:` for this.
@@ -283,13 +284,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/render-assets.mjs` renders the banner and icon from the logo SVG (with `@resvg/resvg-js` installed on demand).
 - Unraid Community Applications template, multi-arch image (`ghcr.io/junkerderprovinz/featherdrop`, amd64 and arm64), ASCII init-log banner, CI (ESLint, typecheck, XML template lint) and a release workflow. CI opts JavaScript actions into Node 24 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`).
 
-[1.9.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.8.0...v1.9.0
-[1.8.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.7.0...v1.8.0
-[1.7.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.6.0...v1.7.0
-[1.6.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.5.0...v1.6.0
-[1.5.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.4.0...v1.5.0
-[1.4.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.3.0...v1.4.0
-[1.3.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/junkerderprovinz/featherdrop/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/junkerderprovinz/featherdrop/releases/tag/v1.0.0
+[1.9.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.8.0...v1.9.0
+[1.8.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.6.0...v1.7.0
+[1.6.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/junkerderprovinz/castleparcel/releases/tag/v1.0.0

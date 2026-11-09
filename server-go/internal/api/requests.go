@@ -17,10 +17,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/tus/tusd/v2/pkg/filestore"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/upload"
 )
 
 // collectTokenHeader carries the collect token, which the requester's browser

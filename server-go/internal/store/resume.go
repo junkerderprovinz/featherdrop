@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
 )
 
 // DownloadStart is the outcome of StartDownload.

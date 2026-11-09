@@ -15,7 +15,7 @@ type Branding struct {
 }
 
 const (
-	defaultAppName     = "featherdrop"
+	defaultAppName     = "CastleParcel"
 	defaultLogoURL     = ""
 	defaultAccentColor = "#d4af37"
 )

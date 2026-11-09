@@ -12,10 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientmanifest"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientmanifest"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/upload"
 )
 
 func webrootSub(t *testing.T) fs.FS {
@@ -38,7 +38,7 @@ func TestRenderShell_DefaultBranding(t *testing.T) {
 	if strings.Contains(html, "%%") {
 		t.Fatalf("served shell still contains a leftover token:\n%s", html)
 	}
-	if !strings.Contains(html, "<title>featherdrop</title>") {
+	if !strings.Contains(html, "<title>CastleParcel</title>") {
 		t.Fatalf("default appName not in <title>:\n%s", html)
 	}
 	if !strings.Contains(html, `<div id="root"></div>`) {

@@ -4,8 +4,8 @@ import "testing"
 
 func TestResolveBranding_Defaults(t *testing.T) {
 	b := ResolveBranding("", "  ", "")
-	if b.AppName != "featherdrop" {
-		t.Errorf("appName = %q, want featherdrop", b.AppName)
+	if b.AppName != "CastleParcel" {
+		t.Errorf("appName = %q, want CastleParcel", b.AppName)
 	}
 	if b.LogoURL != "" {
 		t.Errorf("logoUrl = %q, want empty (no logo)", b.LogoURL)
