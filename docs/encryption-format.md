@@ -92,13 +92,15 @@ a changed mode byte derives unrelated keys.
 
 ### Argon2id parameters
 
-`ops = 3`, `mem = 64 MiB`, one lane (libsodium's `crypto_pwhash` is single
-lane). This is the second recommended setting of RFC 9106. One derivation took
+`ops = 3`, `mem = 64 MiB`, one lane. These are the time and memory cost of
+RFC 9106's second recommended setting, which names four lanes; libsodium's
+`crypto_pwhash` always runs one, so the setting here is `p = 1`. One derivation took
 about 0.12 s in libsodium's WebAssembly build on a desktop CPU; a phone several
 times slower still finishes within about a second, and 64 MiB stays inside
 what mobile browsers grant a tab. The
 password is a second factor on top of a 256-bit secret, so the cost only has
-to slow down an attacker who already holds both the link and the stored blob;
+to slow down an attacker who already holds the link and either the stored blob
+or the stored verifier;
 higher memory settings (libsodium's MODERATE uses 256 MiB) fail on some phones.
 
 The parameters are fixed by the mode byte. A later parameter set gets a new
@@ -219,16 +221,16 @@ authenticated on its own.
 For a format 4 share the server stores the blob, its length, the format number,
 the key verifier, the expiry, the download limit and the download count. It
 rejects a finalize request whose blob does not start with `0x02`, whose header
-length is outside 40 bytes to 16 MiB, whose content is shorter than one tag,
-which has no verifier, or which carries a wrapped key or salt. It does no
-cryptography.
+length is outside 1064 bytes to 16 MiB, whose content is shorter than the
+smallest padded content (4096 bytes and one tag), which has no verifier, or
+which carries a wrapped key or salt. It does no cryptography.
 
 | | Formats 2 and 3 | Format 4 |
 | --- | --- | --- |
 | single file or bundle | yes, from the format number | no |
 | whether a password is set | yes (`hasPassword`) | no |
 | password material | wrapped key and salt, served to anyone with the slug | none |
-| offline password guessing | by anyone with the slug | only with both the link and the blob |
+| offline password guessing | by anyone with the slug | only with the link and either the blob or the stored verifier |
 | plaintext size | exact | Padmé bucket, at least 4 KiB |
 | metadata size (names, file count) | exact | Padmé bucket, at least 1 KiB |
 | key verifier | SHA-256 of the content key | an independent subkey |
@@ -237,15 +239,22 @@ Still visible in every format: the blob length within its bucket, the upload
 time, the client's IP address, expiry, download limit, and when and how often
 the share is downloaded.
 
+A seek fetches byte ranges through the uncounted `?preview=1` read of an
+unlimited share, so the server sees which chunks are read. A player that reads
+the end of a file fetches the chunk holding its last byte, which gives away
+the plaintext size to the chunk instead of to the Padmé bucket.
+
 The verifier is a pseudorandom function of R, so it gives the server nothing to
-guess against without S. Someone with the link but not the blob can only guess
-the password online, one request per guess. The server counts wrong verifiers
-per share: after ten in a row it locks the share for every client, for one
-second and then twice as long after each further wrong one, up to an hour, and
-answers `429` to every verifier, right or wrong, until the lock ends. A right
-verifier resets the count, which is stored with the share, so a restart does not
-clear it. With `RATE_LIMIT` on, each IPv4 address or IPv6 /64 also gets 20
-requests a minute across the share routes.
+guess against without S. With S it checks a password guess as well as the blob
+does, so the link together with a copy of the database is enough for offline
+guessing. Someone with the link but not the blob can only guess the password
+online, one request per guess. The server counts wrong verifiers per share:
+after ten in a row it locks the share for every client, for one second and
+then twice as long after each further wrong one, up to an hour, and answers
+`429` to every verifier, right or wrong, until the lock ends. A right verifier
+resets the count, which is stored with the share, so a restart does not clear
+it. With `RATE_LIMIT` on, each IPv4 address or IPv6 /64 also gets 20 requests
+a minute across the share routes.
 
 ## Password-only mode
 
@@ -296,9 +305,10 @@ Format 1 (age ciphertext written by older servers) is not served; its shares ans
 - `padme`: pairs of `[L, padme(L)]`.
 - `keys`: for a link token and a link-and-password token, the salt, R, the
   header and content keys and the verifier, all in hex except the verifier.
+  One password appears in NFC and in NFD and gives the same keys.
 - `blobs`: complete blobs with every input fixed (token, password, kind, chunk
   size, both nonces, files, plaintext), the exact header JSON, and the
-  resulting blob in hex.
+  resulting blob in hex. In one of them the final chunk holds only padding.
 
 `scripts/encryption-vectors.ts` wrote the file once; `test/encryption-vectors.test.ts`
 checks the reference implementation against it.

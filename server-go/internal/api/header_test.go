@@ -30,14 +30,27 @@ func getHeader(h http.Handler, slug, verifier string) *httptest.ResponseRecorder
 }
 
 func TestHeader_ServesOnlyTheEncryptedMetadata(t *testing.T) {
-	for _, format := range []int64{2, 3} {
-		t.Run("format "+strconv.FormatInt(format, 10), func(t *testing.T) {
+	meta := []byte("encrypted names and sizes")
+	v4 := v4Blob(1064, 4096+16)
+	for i := 5; i < len(v4); i++ {
+		v4[i] = byte(i)
+	}
+	tests := []struct {
+		name   string
+		format int64
+		blob   []byte
+		header int
+	}{
+		{"format 2", 2, blobWithHeader(meta, []byte("content that stays behind the counted download")), 1 + len(meta)},
+		{"format 3", 3, blobWithHeader(meta, []byte("content that stays behind the counted download")), 1 + len(meta)},
+		{"format 4", 4, v4, 5 + 1064},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			e := newTestEnv(t)
-			meta := []byte("encrypted names and sizes")
-			blob := blobWithHeader(meta, []byte("content that stays behind the counted download"))
 			v := goodVerifier
-			slug := e.seedV2(t, blob, func(r *store.FileRecord) {
-				r.Format = format
+			slug := e.seedV2(t, tt.blob, func(r *store.FileRecord) {
+				r.Format = tt.format
 				r.KeyVerifier = &v
 				one := int64(1)
 				r.MaxDownloads = &one
@@ -47,9 +60,9 @@ func TestHeader_ServesOnlyTheEncryptedMetadata(t *testing.T) {
 			if rec.Code != http.StatusOK {
 				t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
 			}
-			want := blob[:1+len(meta)]
+			want := tt.blob[:tt.header]
 			if !bytes.Equal(rec.Body.Bytes(), want) {
-				t.Fatalf("body = %q, want only the header %q", rec.Body.Bytes(), want)
+				t.Fatalf("body is %d bytes, want only the %d header bytes", rec.Body.Len(), len(want))
 			}
 			if cl := rec.Header().Get("Content-Length"); cl != strconv.Itoa(len(want)) {
 				t.Fatalf("Content-Length = %q, want %d", cl, len(want))
@@ -91,6 +104,14 @@ func TestHeader_KeyVerifierRequired(t *testing.T) {
 	}
 }
 
+func v4WithVersion(version byte) []byte {
+	b := v4Blob(1064, 4112)
+	b[0] = version
+	return b
+}
+
+func format4(r *store.FileRecord) { r.Format = 4 }
+
 func TestHeader_NotFound(t *testing.T) {
 	past := int64(1000)
 	tests := []struct {
@@ -103,6 +124,11 @@ func TestHeader_NotFound(t *testing.T) {
 		{"unknown format", blobWithHeader([]byte("m"), nil), func(r *store.FileRecord) { r.Format = 9 }},
 		{"length past the blob", []byte{40, 'm', 'e', 't', 'a'}, nil},
 		{"truncated length", []byte{0x80}, nil},
+		{"format 4 with another version", v4WithVersion(0x01), format4},
+		{"format 4 header too short", v4Blob(1063, 4112), format4},
+		{"format 4 header too long", v4Blob(16<<20+1, 0), format4},
+		{"format 4 header past the blob", v4Blob(1064, 4112)[:1000], format4},
+		{"format 4 content too short", v4Blob(1064, 4111), format4},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

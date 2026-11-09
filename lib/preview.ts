@@ -1,16 +1,7 @@
-// The content types the download page may preview inline. Two surfaces use
-// this module with different trust rules:
-//
-//   1. The client preview decrypts in the browser and renders a blob: URL in an
-//      inert element (<img>, <video controls>, <audio controls>, <embed>,
-//      <pre>). previewKind() and isPreviewableMime() describe it.
-//   2. A server inline response streams the file's bytes with the uploader's
-//      type as a top-level document, where a scriptable type such as SVG, HTML
-//      or XML is stored XSS on our origin. It has to use the stricter
-//      isServerInlineMime(), which excludes SVG.
-//
-// The type comes from the uploader, so a server response has to enforce its
-// own allowlist; the inline URL can be requested directly.
+// The content types the download page may preview inline. The preview
+// decrypts in the browser and renders a blob: URL in an inert element (<img>,
+// <video controls>, <audio controls>, <embed>, <pre>); the type comes from the
+// uploader, so anything scriptable stays off the list.
 
 export type PreviewKind = "image" | "video" | "pdf" | "audio" | "text";
 
@@ -89,16 +80,4 @@ export function previewKind(mime: string | null | undefined): PreviewKind | null
 /** Whether a content type may be previewed from a client-side blob. */
 export function isPreviewableMime(mime: string | null | undefined): boolean {
   return previewKind(mime) !== null;
-}
-
-/**
- * Whether the server may stream this type as an inline response. Unlike
- * isPreviewableMime it excludes SVG, because the response renders as a
- * top-level document and SVG can carry scripts.
- */
-export function isServerInlineMime(mime: string | null | undefined): boolean {
-  const base = baseMime(mime);
-  if (!base) return false;
-  if (base === "image/svg+xml") return false;
-  return PREVIEW_KINDS[base] !== undefined;
 }

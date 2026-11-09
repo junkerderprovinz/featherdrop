@@ -365,20 +365,15 @@ export async function openKeys(token: string, password?: string): Promise<ShareK
   return deriveKeys(decodeToken(token), password);
 }
 
-function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
-  if (a.length === 0) return b;
-  const out = new Uint8Array(a.length + b.length);
-  out.set(a, 0);
-  out.set(b, a.length);
-  return out;
-}
-
 /** Push-based decryption of a whole blob in order. */
 export class ShareDecryptor {
   header: Header | null = null;
   contentOffset = 0;
   private readonly keys: ShareKeys;
-  private pending: Uint8Array = new Uint8Array(0);
+  // Reads arrive in small pieces and a chunk can be 16 MiB, so the pieces are
+  // joined once per chunk instead of on every read.
+  private pending: Uint8Array[] = [];
+  private buffered = 0;
   private baseNonce: Uint8Array = new Uint8Array(0);
   private n = 0;
   private i = 0;
@@ -391,30 +386,54 @@ export class ShareDecryptor {
     return this.header !== null && this.i === this.n;
   }
 
+  /** Copies the first n buffered bytes. */
+  private peek(n: number): Uint8Array {
+    const out = new Uint8Array(n);
+    let off = 0;
+    for (const p of this.pending) {
+      const k = Math.min(p.length, n - off);
+      out.set(p.subarray(0, k), off);
+      off += k;
+      if (off === n) break;
+    }
+    return out;
+  }
+
+  /** Removes and returns the first n buffered bytes. */
+  private take(n: number): Uint8Array {
+    const out = this.pending[0].length >= n ? this.pending[0].subarray(0, n) : this.peek(n);
+    let skip = n;
+    while (skip > 0 && skip >= this.pending[0].length) skip -= this.pending.shift()!.length;
+    if (skip > 0) this.pending[0] = this.pending[0].subarray(skip);
+    this.buffered -= n;
+    return out;
+  }
+
   /** Takes blob bytes in any slicing and returns the plaintext they complete. */
   push(data: Uint8Array): Uint8Array[] {
-    this.pending = concat(this.pending, data);
+    if (data.length > 0) {
+      this.pending.push(data);
+      this.buffered += data.length;
+    }
     if (this.header === null) {
-      if (this.pending.length < PREFIX_BYTES) return [];
-      const len = headerLength(this.pending);
-      if (this.pending.length < len) return [];
-      const { header, contentOffset } = readHeader(this.keys, this.pending);
+      if (this.buffered < PREFIX_BYTES) return [];
+      const len = headerLength(this.peek(PREFIX_BYTES));
+      if (this.buffered < len) return [];
+      const { header, contentOffset } = readHeader(this.keys, this.take(len));
       this.header = header;
       this.contentOffset = contentOffset;
       this.baseNonce = fromBase64(header.nonce);
       this.n = chunkCount(paddedContentLength(header.size), header.chunk);
-      this.pending = this.pending.subarray(len);
     }
     const out: Uint8Array[] = [];
     while (this.i < this.n) {
       const len = cipherChunkLength(this.header, this.n, this.i);
-      if (this.pending.length < len) break;
-      const plain = openChunk(this.keys, this.header, this.baseNonce, this.n, this.i, this.pending.subarray(0, len));
-      this.pending = this.pending.subarray(len);
+      if (this.buffered < len) break;
+      const plain = openChunk(this.keys, this.header, this.baseNonce, this.n, this.i, this.take(len));
       this.i++;
       if (plain.length > 0) out.push(plain);
     }
-    if (this.done && this.pending.length > 0) throw new Error("v2: trailing bytes after the final chunk");
+    if (this.done && this.buffered > 0) throw new Error("v2: trailing bytes after the final chunk");
     return out;
   }
 

@@ -1,10 +1,13 @@
 // End-to-end test against the running app, built and started in CI: pick a
 // file, encrypt, upload with tus, finalize, open the link, decrypt, download,
-// compare the bytes.
+// compare the bytes. The run makes more share requests than one address may
+// send per minute, so the server needs RATE_LIMIT=false.
 import { chromium } from "playwright";
+import { build } from "esbuild";
 import { writeFileSync, readFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3000";
@@ -139,6 +142,7 @@ try {
   if (errors.length) fail("page/console errors occurred (preview)");
 
   await multiFileRoundTrip(ctx, errors, fail);
+  await format4RoundTrips(browser, ctx, errors, fail);
   // Last, because the limit switch is remembered for later uploads.
   await limitedShareListsBeforeDownload(ctx, errors, fail);
 
@@ -319,4 +323,164 @@ async function limitedShareListsBeforeDownload(ctx, errors, fail) {
   if (meta.downloadsLeft !== 1) fail("listing spent the share: downloadsLeft " + meta.downloadsLeft);
   if (errors.length) fail("page/console errors occurred (limited share)");
   console.log("limited share: name shown before the download, nothing spent ✓");
+}
+
+// The upload page does not write format 4 yet, so these shares are uploaded
+// through the client library, bundled and loaded into a page of the app whose
+// context skips the CSP that would block the injected module. Listing and
+// download then go through the real download page.
+async function format4RoundTrips(browser, ctx, errors, fail) {
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const bundle = await build({
+    stdin: {
+      contents: `
+        import * as tus from "tus-js-client";
+        import { uploadEncrypted } from "./lib/e2e/upload-flow.ts";
+        import { openLink, fetchLinkListing } from "./lib/e2e/share-listing.ts";
+        globalThis.__v2 = { tus, uploadEncrypted, openLink, fetchLinkListing };
+      `,
+      resolveDir: repoRoot,
+      loader: "ts",
+    },
+    bundle: true,
+    format: "esm",
+    platform: "browser",
+    write: false,
+  });
+
+  const libCtx = await browser.newContext({ bypassCSP: true });
+  const lib = await libCtx.newPage();
+  lib.on("pageerror", (e) => errors.push("format 4 lib: " + e));
+  await lib.goto(BASE, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await lib.addScriptTag({ content: bundle.outputFiles[0].text, type: "module" });
+  await lib.waitForFunction(() => globalThis.__v2 !== undefined, { timeout: 30_000 });
+
+  const cases = [
+    {
+      label: "format 4 link share",
+      files: [{ name: "v2-film.bin", data: randomBytes(300 * 1024) }],
+      maxDownloads: null,
+    },
+    {
+      label: "format 4 link-and-password share",
+      files: [
+        { name: "v2-a.bin", data: randomBytes(200 * 1024) },
+        { name: "v2-b.txt", data: randomBytes(9) },
+      ],
+      maxDownloads: 1,
+      password: "correct horse battery",
+    },
+  ];
+  for (const c of cases) {
+    const spec = {
+      files: c.files.map((f) => ({ name: f.name, b64: f.data.toString("base64") })),
+      maxDownloads: c.maxDownloads,
+      password: c.password,
+    };
+    const up = await lib.evaluate(uploadAndListV2, spec);
+    if (up.error) fail(c.label + ": " + up.error);
+    console.log(c.label + ": listed from the header", up.listed);
+
+    const dl = await ctx.newPage();
+    dl.on("pageerror", (e) => errors.push("format 4 dl: " + e));
+    dl.on("console", (m) => {
+      if (m.type() === "error") errors.push("format 4 dl console: " + m.text());
+    });
+    const downloads = [];
+    dl.on("download", (d) => downloads.push(d));
+    const sent = [];
+    dl.on("request", (r) => sent.push([r.method(), r.url(), r.postData() ?? "", JSON.stringify(r.headers())].join(" ")));
+    await dl.goto(up.shareUrl, { waitUntil: "domcontentloaded", timeout: 120_000 });
+    if (c.password) {
+      await dl.locator('input[type="password"]').fill(c.password);
+      await dl.getByRole("button", { name: /unlock|entsperren/i }).click();
+    } else {
+      await dl.getByText(c.files[0].name, { exact: true }).waitFor({ timeout: 120_000 });
+      await dl.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).click();
+    }
+    const deadline = Date.now() + 120_000;
+    while (downloads.length < c.files.length && Date.now() < deadline) await dl.waitForTimeout(100);
+    if (downloads.length !== c.files.length) fail(`${c.label}: ${downloads.length} downloads`);
+    for (const [i, d] of downloads.entries()) {
+      const got = readFileSync(await d.path());
+      const want = c.files[i];
+      if (d.suggestedFilename() !== want.name || !got.equals(want.data)) {
+        fail(`${c.label}: ${d.suggestedFilename()} does not match ${want.name}`);
+      }
+    }
+    for (const f of c.files) {
+      if (c.files.length > 1) await dl.getByText(f.name, { exact: true }).waitFor({ timeout: 10_000 });
+    }
+
+    if (c.password && sent.some((r) => r.includes(c.password) || r.startsWith("POST"))) {
+      fail(c.label + ": the page sent the password or posted something");
+    }
+
+    const slug = new URL(up.shareUrl).pathname.split("/").pop();
+    const meta = await dl.request.get(`${BASE}/api/d/${slug}/meta`);
+    if (c.maxDownloads === 1 && meta.status() !== 404) fail(c.label + ": once-only share survived");
+    console.log(c.label + ": downloaded through the page, bytes match ✓");
+  }
+  if (errors.length) fail("page/console errors occurred (format 4)");
+  await libCtx.close();
+}
+
+// Runs in the page: upload with format 4, check that a wrong password gets
+// no listing, list from the uncounted header and check nothing was spent.
+async function uploadAndListV2({ files: specs, maxDownloads, password }) {
+  const { tus, uploadEncrypted, openLink, fetchLinkListing } = globalThis.__v2;
+  const files = specs.map(
+    (f) => new File([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))], f.name),
+  );
+  const meta = async (slug) => (await fetch(`/api/d/${slug}/meta`)).json();
+
+  const { shareUrl } = await uploadEncrypted(
+    files,
+    { expiry: "1d", maxDownloads, password, format: 4 },
+    {
+      baseUrl: location.origin,
+      upload: (file) =>
+        new Promise((resolve, reject) => {
+          const up = new tus.Upload(file, {
+            endpoint: "/files",
+            onError: reject,
+            onSuccess: () => resolve(up.url.split("/").pop()),
+          });
+          up.start();
+        }),
+      finalize: async (body) => {
+        const res = await fetch("/api/finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(`finalize ${res.status}`);
+        return res.json();
+      },
+    },
+  );
+  const url = new URL(shareUrl);
+  const slug = url.pathname.split("/").pop();
+  const token = url.hash.replace(/^#k=/, "");
+  if (token.length !== 46) return { error: "not a v2 token: " + token };
+
+  const before = await meta(slug);
+  if (before.format !== 4) return { error: "meta format " + before.format };
+  if (password) {
+    const wrong = await openLink(token, 4, "wrong horse battery");
+    const refused = await fetchLinkListing(slug, wrong).then(
+      () => false,
+      (e) => /401/.test(String(e)),
+    );
+    if (!refused) return { error: "a wrong password listed the share" };
+  }
+  const listed = await fetchLinkListing(slug, await openLink(token, 4, password));
+  if (!listed.every((f, i) => f.name === files[i].name && f.size === files[i].size)) {
+    return { error: "listing " + JSON.stringify(listed) };
+  }
+  const after = await meta(slug);
+  if (after.downloadsLeft !== before.downloadsLeft) {
+    return { error: "the listing spent a download: " + after.downloadsLeft };
+  }
+  return { shareUrl, listed: listed.map((f) => `${f.name} ${f.size}`) };
 }

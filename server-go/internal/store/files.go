@@ -25,7 +25,7 @@ type FileRecord struct {
 	EncMode       *string // "link", "password" or nil
 	EncKeyWrapped *string
 
-	Format     int64  // 1 server-encrypted, 2 single file, 3 multi-file
+	Format     int64  // 1 server-encrypted, 2 single file, 3 multi-file, 4 v2 container
 	WrappedKey []byte // password mode: content key wrapped with the Argon2id KEK
 	KDFSalt    []byte // password mode: 16-byte Argon2id salt
 	// KeyVerifier is base64url(SHA-256(content key)); nil for uploads made

@@ -1,15 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  isPreviewableMime,
-  isServerInlineMime,
-  previewKind,
-} from "../lib/preview";
+import { isPreviewableMime, previewKind } from "../lib/preview";
 
 // The client renders previews in inert elements and can show SVG through an
-// <img>. A server inline response renders as a top-level document, so
-// isServerInlineMime also excludes SVG. HTML and unknown types preview on
-// neither.
+// <img>. HTML and unknown types never preview.
 
 test("inert raster images and PDF are previewable", () => {
   for (const m of [
@@ -193,39 +187,4 @@ test("previewKind is case-insensitive and parameter-tolerant", () => {
   assert.equal(previewKind("  Application/PDF  "), "pdf");
   assert.equal(previewKind("AUDIO/OPUS"), "audio");
   assert.equal(previewKind("Application/JSON; charset=utf-8"), "text");
-});
-
-test("isServerInlineMime excludes SVG even though it is client-previewable", () => {
-  // As a top-level document an SVG can run scripts, which is stored XSS.
-  assert.equal(isPreviewableMime("image/svg+xml"), true);
-  assert.equal(isServerInlineMime("image/svg+xml"), false);
-  assert.equal(isServerInlineMime("image/svg+xml; charset=utf-8"), false);
-});
-
-test("isServerInlineMime allows the inert non-SVG previewable types", () => {
-  for (const m of [
-    "image/png",
-    "image/bmp",
-    "image/apng",
-    "video/mp4",
-    "video/quicktime",
-    "audio/mpeg",
-    "text/plain",
-    "application/pdf",
-  ]) {
-    assert.equal(isServerInlineMime(m), true, m);
-  }
-});
-
-test("isServerInlineMime rejects HTML / unknown / null", () => {
-  for (const m of [
-    "text/html",
-    "application/xhtml+xml",
-    "application/octet-stream",
-    "",
-  ]) {
-    assert.equal(isServerInlineMime(m), false, m);
-  }
-  assert.equal(isServerInlineMime(null), false);
-  assert.equal(isServerInlineMime(undefined), false);
 });

@@ -28,12 +28,15 @@ async function collect(it: AsyncIterable<Uint8Array>): Promise<Uint8Array> {
 }
 
 const PASSWORD = "correct horse battery staple";
+// Typed on macOS this arrives decomposed (NFD); it must derive the same keys.
+const UMLAUT_PASSWORD = "Grüße aus Österreich";
 const LINK: LinkToken = { mode: "link", secret: counting(32, 1) };
 const BOTH: LinkToken = { mode: "link+password", secret: counting(32, 2) };
 
-async function keyVector(token: LinkToken, password?: string) {
+async function keyVector(name: string, token: LinkToken, password?: string) {
   const keys = await deriveKeys(token, password);
   return {
+    name,
     token: encodeToken(token),
     password: password ?? null,
     salt: password === undefined ? null : hex(await passwordSalt(token.secret)),
@@ -113,7 +116,12 @@ mkdirSync(new URL("../test/fixtures/", import.meta.url), { recursive: true });
 const v2 = {
   format: "CastleParcel encryption format v2, see docs/encryption-format.md",
   padme: [0, 1, 2, 3, 9, 100, 1000, 1025, 4096, 65537, 1_000_000, 2 ** 40 + 1, 2 ** 52 - 1].map((n) => [n, padme(n)]),
-  keys: [await keyVector(LINK), await keyVector(BOTH, PASSWORD)],
+  keys: [
+    await keyVector("link", LINK),
+    await keyVector("link and password", BOTH, PASSWORD),
+    await keyVector("link and password, NFC password", BOTH, UMLAUT_PASSWORD.normalize("NFC")),
+    await keyVector("link and password, the same password in NFD", BOTH, UMLAUT_PASSWORD.normalize("NFD")),
+  ],
   blobs: [
     await blobVector("single, link, empty", LINK, undefined, "single", [{ name: "empty.txt", type: "text/plain", size: 0 }], 65536, 10),
     await blobVector("single, link, three chunks", LINK, undefined, "single", [{ name: "Grüße.bin", type: "application/octet-stream", size: 9000 }], 4096, 20),
@@ -130,6 +138,8 @@ const v2 = {
       4096,
       30,
     ),
+    // Padmé rounds 262145 up to 270336, so the last chunk is padding only.
+    await blobVector("single, link, a whole chunk of padding", LINK, undefined, "single", [{ name: "pad.bin", type: "", size: 262145 }], 4096, 40),
   ],
 };
 

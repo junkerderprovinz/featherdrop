@@ -441,7 +441,7 @@ func (c *clock) advance(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
-func format4(r *store.FileRecord) {
+func format4WithVerifier(r *store.FileRecord) {
 	v := goodVerifier
 	r.Format = 4
 	r.KeyVerifier = &v
@@ -461,7 +461,7 @@ func (e *testEnv) guess(t *testing.T, now func() time.Time, path, verifier strin
 func TestDownload_WrongVerifiersLockAFormat4ShareWithGrowingBackoff(t *testing.T) {
 	e := newTestEnv(t)
 	c := newClock()
-	slug := e.seedV2(t, []byte("blob"), format4)
+	slug := e.seedV2(t, []byte("blob"), format4WithVerifier)
 	path := "/api/d/" + slug
 
 	for i := range share.FreeVerifierFailures {
@@ -498,7 +498,7 @@ func TestDownload_WrongVerifiersLockAFormat4ShareWithGrowingBackoff(t *testing.T
 func TestDownload_RightVerifierResetsTheBackoff(t *testing.T) {
 	e := newTestEnv(t)
 	c := newClock()
-	slug := e.seedV2(t, []byte("blob"), format4)
+	slug := e.seedV2(t, []byte("blob"), format4WithVerifier)
 	header := "/api/d/" + slug + "/header"
 
 	for range share.FreeVerifierFailures + 1 {
@@ -522,7 +522,7 @@ func TestDownload_RightVerifierResetsTheBackoff(t *testing.T) {
 func TestDownload_GuessesOnTheHeaderRouteCountTowardTheLock(t *testing.T) {
 	e := newTestEnv(t)
 	c := newClock()
-	slug := e.seedV2(t, []byte("blob"), format4)
+	slug := e.seedV2(t, []byte("blob"), format4WithVerifier)
 
 	for range share.FreeVerifierFailures + 1 {
 		e.guess(t, c.now, "/api/d/"+slug+"/header", wrongVerifier)
@@ -535,7 +535,7 @@ func TestDownload_GuessesOnTheHeaderRouteCountTowardTheLock(t *testing.T) {
 func TestDownload_ParallelWrongVerifiersGetNoExtraGuesses(t *testing.T) {
 	e := newTestEnv(t)
 	c := newClock()
-	slug := e.seedV2(t, []byte("blob"), format4)
+	slug := e.seedV2(t, []byte("blob"), format4WithVerifier)
 	h := e.router(c.now)
 
 	const clients = 40
@@ -570,8 +570,8 @@ func TestDownload_ParallelWrongVerifiersGetNoExtraGuesses(t *testing.T) {
 func TestDownload_LockStaysWithItsShare(t *testing.T) {
 	e := newTestEnv(t)
 	c := newClock()
-	attacked := e.seedV2(t, []byte("blob"), format4)
-	other := e.seedV2(t, []byte("other"), format4)
+	attacked := e.seedV2(t, []byte("blob"), format4WithVerifier)
+	other := e.seedV2(t, []byte("other"), format4WithVerifier)
 
 	for range share.FreeVerifierFailures + 1 {
 		e.guess(t, c.now, "/api/d/"+attacked, wrongVerifier)
@@ -584,7 +584,7 @@ func TestDownload_LockStaysWithItsShare(t *testing.T) {
 func TestDownload_MissingVerifierIsNoGuess(t *testing.T) {
 	e := newTestEnv(t)
 	c := newClock()
-	slug := e.seedV2(t, []byte("blob"), format4)
+	slug := e.seedV2(t, []byte("blob"), format4WithVerifier)
 
 	for range 3 * share.FreeVerifierFailures {
 		if rec := e.guess(t, c.now, "/api/d/"+slug, ""); rec.Code != http.StatusUnauthorized {

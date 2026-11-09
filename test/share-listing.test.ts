@@ -1,13 +1,17 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, computeKeyVerifier, decodeKey, generateKey } from "../lib/e2e/crypto";
+import { ready, computeKeyVerifier, decodeKey, encodeKey, generateKey } from "../lib/e2e/crypto";
 import { encryptForUpload } from "../lib/e2e/pipeline";
 import { encryptFilesForUpload } from "../lib/e2e/multi-pipeline";
 import { peekBlobHeader } from "../lib/e2e/blob-layout";
+import { createEncryptor, encryptStream, headerLength, openKeys } from "../lib/e2e/v2/share";
 import {
   listShareFiles,
+  listV2ShareFiles,
   fetchShareHeader,
   fetchShareListing,
+  fetchLinkListing,
+  openLink,
 } from "../lib/e2e/share-listing";
 
 before(async () => {
@@ -131,4 +135,88 @@ test("fetchShareListing lists the files without the counted download", async () 
 
   assert.deepEqual(urls, ["/api/d/slug/header"]);
   assert.deepEqual(files, [{ name: "notes.md", type: "text/markdown", size: 42 }]);
+});
+
+async function v2Share(files: { name: string; type: string; body: Uint8Array }[], password?: string) {
+  const enc = await createEncryptor(
+    files.map((f) => ({ name: f.name, type: f.type, size: f.body.length })),
+    { password },
+  );
+  async function* plaintext() {
+    for (const f of files) yield f.body;
+  }
+  const blob = await collect(encryptStream(enc, plaintext()));
+  return { token: enc.token, verifier: enc.verifier, header: blob.subarray(0, headerLength(blob)) };
+}
+
+const bundle = [
+  { name: "a.txt", type: "text/plain", body: new Uint8Array(10).fill(1) },
+  { name: "b.pdf", type: "application/pdf", body: new Uint8Array(300).fill(2) },
+];
+
+test("listV2ShareFiles reads every file of a v2 share from its sealed header", async () => {
+  const { token, header } = await v2Share(bundle);
+
+  assert.deepEqual(listV2ShareFiles(header, await openKeys(token)), [
+    { name: "a.txt", type: "text/plain", size: 10 },
+    { name: "b.pdf", type: "application/pdf", size: 300 },
+  ]);
+});
+
+test("listV2ShareFiles rejects a header under another link", async () => {
+  const { header } = await v2Share(bundle);
+  const other = await v2Share(bundle);
+
+  const keys = await openKeys(other.token);
+
+  assert.throws(() => listV2ShareFiles(header, keys), /does not open/);
+});
+
+test("openLink takes the v2 path for a v2 token", async () => {
+  const { token, verifier } = await v2Share(bundle);
+
+  const link = await openLink(token, 4);
+
+  assert.equal(link.format, 4);
+  assert.equal(link.format === 4 && link.keys.verifier, verifier);
+});
+
+test("openLink refuses a v2 token when the server reports an older format", async () => {
+  const { token } = await v2Share(bundle);
+
+  await assert.rejects(openLink(token, 2), /format 2/);
+  await assert.rejects(openLink(token, 3), /format 3/);
+});
+
+test("openLink refuses a bare key for a format 4 share", async () => {
+  await assert.rejects(openLink(encodeKey(generateKey()), 4), /format 4/);
+});
+
+test("openLink opens a bare key for the older formats", async () => {
+  const key = generateKey();
+
+  assert.deepEqual(await openLink(encodeKey(key), 3), { format: 3, key });
+});
+
+test("openLink needs the password of a link-and-password token", async () => {
+  const { token, verifier } = await v2Share(bundle, "correct horse battery");
+
+  await assert.rejects(openLink(token, 4), /needs a password/);
+  const link = await openLink(token, 4, "correct horse battery");
+  assert.equal(link.format === 4 && link.keys.verifier, verifier);
+});
+
+test("fetchLinkListing lists a v2 share from the header route with its verifier", async () => {
+  const { token, verifier, header } = await v2Share(bundle, "correct horse battery");
+  const seen: { url: string; verifier: string | null }[] = [];
+  const fakeFetch = (async (url: string, init?: RequestInit) => {
+    seen.push({ url, verifier: new Headers(init?.headers).get("x-fd-key-verifier") });
+    return new Response(new Uint8Array(header), { status: 200 });
+  }) as typeof fetch;
+
+  const link = await openLink(token, 4, "correct horse battery");
+  const files = await fetchLinkListing("slug", link, fakeFetch);
+
+  assert.deepEqual(seen, [{ url: "/api/d/slug/header", verifier }]);
+  assert.deepEqual(files.map((f) => f.name), ["a.txt", "b.pdf"]);
 });

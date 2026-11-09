@@ -727,14 +727,35 @@ func TestDownload_Preview_LimitedShare_404(t *testing.T) {
 }
 
 func TestDownload_Preview_RequiresVerifier_401(t *testing.T) {
-	e := newTestEnv(t)
-	v := goodVerifier
-	slug := e.seedV2(t, []byte("blob"), func(r *store.FileRecord) { r.KeyVerifier = &v })
-	req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"?preview=1", nil)
-	rec := httptest.NewRecorder()
-	e.router(nil).ServeHTTP(rec, req)
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401 (preview still requires the verifier)", rec.Code)
+	tests := []struct {
+		name     string
+		format   int64
+		blob     []byte
+		verifier string
+	}{
+		{"format 2 without a verifier", 2, []byte("blob"), ""},
+		{"format 4 without a verifier", 4, v4Blob(1064, 4112), ""},
+		{"format 4 with a wrong verifier", 4, v4Blob(1064, 4112), "wrongwrongwrongwrongwrongwrongwrongwrongwro"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newTestEnv(t)
+			v := goodVerifier
+			slug := e.seedV2(t, tt.blob, func(r *store.FileRecord) {
+				r.Format = tt.format
+				r.KeyVerifier = &v
+			})
+			req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"?preview=1", nil)
+			req.Header.Set("Range", "bytes=1069-2000")
+			if tt.verifier != "" {
+				req.Header.Set(keyVerifierHeader, tt.verifier)
+			}
+			rec := httptest.NewRecorder()
+			e.router(nil).ServeHTTP(rec, req)
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want 401 (preview still requires the verifier)", rec.Code)
+			}
+		})
 	}
 }
 
