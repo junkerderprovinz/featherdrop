@@ -11,6 +11,7 @@ import { useServerConfig } from "@/components/ServerConfigProvider";
 import { clampExpiry } from "@/lib/expiry";
 import { createRequest } from "@/lib/e2e/request-flow";
 import { storedUploadToken } from "@/lib/e2e/tus-upload";
+import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 
 export function RequestPage() {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export function RequestPage() {
       setLinks(
         await createRequest(
           { expiry, maxUploads: typeof maxUploads === "number" ? maxUploads : null, maxSize: null },
-          { baseUrl, uploadToken: storedUploadToken() },
+          { baseUrl, crypto: cryptoWorker, uploadToken: storedUploadToken() },
         ),
       );
     } catch (e) {

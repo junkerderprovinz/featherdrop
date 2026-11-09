@@ -1,18 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ready, wrapKey } from "../lib/e2e/crypto";
+import { createHash } from "node:crypto";
 import { type Client } from "../lib/e2e/v2/protocol";
 import { deriveKeys } from "../lib/e2e/v2/keys";
-import {
-  buildEncryptor,
-  encryptStream,
-  blobLength,
-  plainSpan,
-  cipherRange,
-  openKeys,
-  type BlobState,
-  type Header,
-} from "../lib/e2e/v2/share";
+import { buildEncryptor, encryptStream, openKeys } from "../lib/e2e/v2/share";
+import { blobLength, plainSpan, cipherRange, headerLength, type BlobState, type Header } from "../lib/e2e/v2/layout";
 import { cryptoWorker as pair } from "./crypto-worker";
 
 function bytes(n: number, seed = 0): Uint8Array {
@@ -202,12 +194,37 @@ test("an unknown session is an error", async () => {
   await assert.rejects(client.request({ op: "decrypt-write", session: 99, data: new Uint8Array(1) }), /session/);
 });
 
-test("an old password share unwraps in the worker", async () => {
-  await ready();
-  const key = new Uint8Array(32).fill(4);
-  const { wrapped, salt } = wrapKey(key, "old password");
+test("keys derived in the worker open a share made there", async () => {
   const client = pair();
-  const r = await client.request({ op: "unwrap", wrapped, salt, password: "old password" });
-  assert.deepEqual(r.key, key);
-  await assert.rejects(client.request({ op: "unwrap", wrapped, salt, password: "wrong" }));
+  const enc = await encryptVia(client, bytes(500), [{ name: "a", type: "", size: 500 }], "correct horse battery");
+  const { keys } = await client.request({ op: "keys", token: enc.token, password: "correct horse battery" });
+  assert.equal(keys.verifier, enc.verifier);
+  assert.deepEqual(keys, await openKeys(enc.token, "correct horse battery"));
+});
+
+test("a header opens in the worker without a decrypt session", async () => {
+  const client = pair();
+  const files = [{ name: "a.txt", type: "text/plain", size: 700 }];
+  const enc = await encryptVia(client, bytes(700), files);
+  const { keys } = await client.request({ op: "keys", token: enc.token });
+  const { header, contentOffset } = await client.request({ op: "header", keys, data: enc.blob.slice(0, 2000) });
+  assert.deepEqual(header.files, files);
+  assert.equal(contentOffset, headerLength(enc.blob));
+  const other = await client.request({ op: "keys", token: (await encryptVia(client, bytes(1), [{ name: "b", type: "", size: 1 }])).token });
+  await assert.rejects(client.request({ op: "header", keys: other.keys, data: enc.blob }), /does not open/);
+});
+
+test("a token hashes in the worker as the server hashes it", async () => {
+  const { hash } = await pair().request({ op: "hash-token", token: "tok_en-43" });
+  assert.equal(hash, createHash("sha256").update("tok_en-43").digest("base64url"));
+});
+
+test("a link token sealed in the worker opens there with the request's keys", async () => {
+  const client = pair();
+  const keys = await client.request({ op: "request-keys", secret: new Uint8Array(32).fill(9) });
+  const { token } = await client.request({ op: "create", files: [{ name: "a", type: "", size: 1 }] });
+  const { sealed } = await client.request({ op: "seal-token", token, publicKey: keys.publicKey });
+  assert.equal((await client.request({ op: "open-token", sealed, keys })).token, token);
+  const other = await client.request({ op: "request-keys", secret: new Uint8Array(32).fill(8) });
+  await assert.rejects(client.request({ op: "open-token", sealed, keys: other }), /does not open/);
 });

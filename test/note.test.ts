@@ -63,7 +63,7 @@ test("a note round trips in link mode", async () => {
 test("a note is sealed and opened in the crypto worker", async () => {
   const srv = fakeServer();
   const { shareUrl } = await uploadNote(NOTE, { expiry: "1d", maxDownloads: null }, srv.deps);
-  assert.deepEqual([...new Set(srv.ops)], ["create", "seal"]);
+  assert.deepEqual([...new Set(srv.ops)], ["create", "seal", "hash-token"]);
   srv.ops.length = 0;
   const { slug, token } = linkParts(shareUrl);
   assert.equal(await readNote(srv.crypto, fetchShareBlob(slug, srv.fetchImpl), { token }), NOTE);

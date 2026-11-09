@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { deriveKeys, ARGON2ID, type ShareKeys } from "../lib/e2e/v2/keys";
+import { deriveKeys, ARGON2ID } from "../lib/e2e/v2/keys";
+import type { ShareKeys } from "../lib/e2e/v2/token";
 import { aeadEncrypt, toBase64 } from "../lib/e2e/crypto";
 import { deriveNonce } from "../lib/e2e/seekable";
 import { paddedHeaderLength } from "../lib/e2e/v2/padding";
@@ -11,14 +12,12 @@ import {
   openKeys,
   decryptShare,
   ShareDecryptor,
-  headerLength,
   readHeader,
   decryptRange,
   decryptRangeStream,
-  cipherRange,
-  type FileEntry,
   type ShareEncryptor,
 } from "../lib/e2e/v2/share";
+import { headerLength, cipherRange, type FileEntry } from "../lib/e2e/v2/layout";
 
 async function* one(b: Uint8Array) {
   yield b;

@@ -22,20 +22,15 @@
 // i*(PT_CHUNK+CHUNK_TAG). The baseNonce lives in enc_meta, so there is no
 // stream header.
 
+import { aeadEncrypt, aeadDecrypt } from "./crypto";
 import {
   PT_CHUNK,
-  aeadEncrypt,
-  aeadDecrypt,
-  aeadTagBytes,
-} from "./crypto";
-
-/**
- * AEAD tag length per chunk. It is a constant so it is usable before ready();
- * a test checks it against aeadTagBytes().
- */
-export const CHUNK_TAG = 16;
-
-const FULL_CIPHER_CHUNK = PT_CHUNK + CHUNK_TAG;
+  FULL_CIPHER_CHUNK,
+  chunkByteRange,
+  chunkCount,
+  chunksForPlaintextRange,
+  cipherLengthForSize,
+} from "./chunks";
 
 const AAD_BYTES = 5;
 
@@ -73,31 +68,6 @@ function buildAad(i: number, isFinal: boolean): Uint8Array {
   aad[3] = i & 0xff;
   aad[4] = isFinal ? 1 : 0;
   return aad;
-}
-
-/**
- * The inclusive cipher byte range of a full chunk i within the content region.
- * The final chunk may be shorter, so callers clamp the end.
- */
-export function chunkByteRange(i: number): { start: number; end: number } {
-  const start = i * FULL_CIPHER_CHUNK;
-  return { start, end: start + FULL_CIPHER_CHUNK - 1 };
-}
-
-/** The chunk indices covering the inclusive plaintext range [start, end]. */
-export function chunksForPlaintextRange(
-  start: number,
-  end: number,
-): { first: number; last: number } {
-  return {
-    first: Math.floor(start / PT_CHUNK),
-    last: Math.floor(end / PT_CHUNK),
-  };
-}
-
-function chunkCount(size: number): number {
-  if (size <= 0) return 1;
-  return Math.ceil(size / PT_CHUNK);
 }
 
 function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
@@ -283,10 +253,4 @@ export async function* decryptSeekableRange(
     const to = Math.min(plain.length, end + 1 - chunkPlainStart);
     if (to > from) yield plain.subarray(from, to);
   }
-}
-
-/** Length of the cf=2 content region for size plaintext bytes. */
-export function cipherLengthForSize(size: number): number {
-  const n = chunkCount(size);
-  return size + n * CHUNK_TAG;
 }

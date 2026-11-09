@@ -12,59 +12,39 @@
 
 import { aeadEncrypt, aeadDecrypt, toBase64, fromBase64, loadSodium } from "../crypto";
 import { deriveNonce } from "../seekable";
-import { paddedContentLength, paddedHeaderLength, MIN_HEADER_PAD } from "./padding";
+import { paddedContentLength, paddedHeaderLength } from "./padding";
+import { newToken, deriveKeys } from "./keys";
 import {
   FORMAT_VERSION,
   MIN_PASSWORD_LENGTH,
-  newToken,
   encodeToken,
   decodeToken,
-  deriveKeys,
   isPasswordLongEnough,
   type KdfParams,
-  type Mode,
   type ShareKeys,
-} from "./keys";
-
-/** A text share holds a note: one unnamed entry of type TEXT_TYPE. */
-export type Kind = "single" | "bundle" | "text";
-
-export const TEXT_TYPE = "text/plain; charset=utf-8";
-
-export interface FileEntry {
-  name: string;
-  type: string;
-  size: number;
-}
-
-export interface Header {
-  v: 2;
-  kind: Kind;
-  mode: Mode;
-  kdf: KdfParams | null;
-  /** Plaintext bytes per chunk. */
-  chunk: number;
-  pad: "padme";
-  /** Base nonce of the content chunks, standard base64. */
-  nonce: string;
-  /** Total plaintext length, the sum of the file sizes. */
-  size: number;
-  files: FileEntry[];
-}
+} from "./token";
+import {
+  PREFIX_BYTES,
+  NONCE_BYTES,
+  TAG_BYTES,
+  MAX_SEALED,
+  TEXT_TYPE,
+  blobLayout,
+  chunkCount,
+  cipherChunkLength,
+  cipherRange,
+  getU32,
+  headerLength,
+  type BlobState,
+  type FileEntry,
+  type Header,
+  type Kind,
+} from "./layout";
 
 export const DEFAULT_CHUNK = 65536;
 const MIN_CHUNK = 4096;
 const MAX_CHUNK = 16 * 1024 * 1024;
-const PREFIX_BYTES = 5;
-const NONCE_BYTES = 24;
-const TAG_BYTES = 16;
-const MAX_SEALED = 16 * 1024 * 1024;
-
 const utf8 = new TextEncoder();
-
-function getU32(b: Uint8Array, at: number): number {
-  return new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(at);
-}
 
 function setU32(b: Uint8Array, at: number, v: number): void {
   new DataView(b.buffer, b.byteOffset, b.byteLength).setUint32(at, v);
@@ -76,10 +56,6 @@ function chunkAad(i: number, final: boolean): Uint8Array {
   setU32(aad, 4, i >>> 0);
   aad[8] = final ? 1 : 0;
   return aad;
-}
-
-function chunkCount(padded: number, chunk: number): number {
-  return Math.ceil(padded / chunk);
 }
 
 function isChunkSize(n: unknown): n is number {
@@ -145,20 +121,6 @@ function checkHeader(h: unknown, keys: ShareKeys): Header {
   return x;
 }
 
-/**
- * Length of version, length field and sealed header, read from the first five
- * bytes of a blob. The content starts right after.
- */
-export function headerLength(prefix: Uint8Array): number {
-  if (prefix.length < PREFIX_BYTES) throw new Error("v2: blob truncated in the header");
-  if (prefix[0] !== FORMAT_VERSION) throw new Error("v2: unknown version");
-  const sealed = getU32(prefix, 1);
-  if (sealed < NONCE_BYTES + MIN_HEADER_PAD + TAG_BYTES || sealed > MAX_SEALED) {
-    throw new Error("v2: header length out of range");
-  }
-  return PREFIX_BYTES + sealed;
-}
-
 /** Opens and checks the header. bytes must hold at least headerLength(bytes) bytes. */
 export function readHeader(keys: ShareKeys, bytes: Uint8Array): { header: Header; contentOffset: number } {
   const len = headerLength(bytes);
@@ -219,12 +181,6 @@ function openChunk(keys: ShareKeys, header: Header, baseNonce: Uint8Array, n: nu
 /** Seals chunk i of n, whose plaintext is already padded to its full length. */
 function sealChunk(key: Uint8Array, baseNonce: Uint8Array, n: number, i: number, plain: Uint8Array): Uint8Array {
   return aeadEncrypt(plain, chunkAad(i, i === n - 1), deriveNonce(baseNonce, i), key);
-}
-
-function cipherChunkLength(header: Header, n: number, i: number): number {
-  const padded = paddedContentLength(header.size);
-  const plain = i === n - 1 ? padded - i * header.chunk : header.chunk;
-  return plain + TAG_BYTES;
 }
 
 export class ShareEncryptor {
@@ -373,55 +329,13 @@ export async function* encryptStream(
   yield* enc.finish();
 }
 
-/** What reproduces any byte of a blob: the sealed prefix, the header it seals and the content key. */
-export interface BlobState {
-  prefix: Uint8Array;
-  header: Header;
-  contentKey: Uint8Array;
-}
-
-/** A blob of known length whose bytes are produced on demand. */
-export interface BlobSource {
-  readonly size: number;
-  /** The bytes [start, end), cut at the end of the blob. */
-  slice(start: number, end: number): Promise<Uint8Array>;
-}
-
-function layout(state: BlobState) {
-  const { prefix, header } = state;
-  const padded = paddedContentLength(header.size);
-  const n = chunkCount(padded, header.chunk);
-  return { padded, n, full: header.chunk + TAG_BYTES, size: prefix.length + padded + n * TAG_BYTES };
-}
-
-/** Exact length of the blob the state describes. */
-export function blobLength(state: BlobState): number {
-  return layout(state).size;
-}
-
-/**
- * The plaintext range [from, to) whose chunks seal into the blob bytes
- * [start, end), which lie within the blob. A range inside the prefix needs
- * no plaintext and gives to <= from.
- */
-export function plainSpan(state: BlobState, start: number, end: number): { from: number; to: number } {
-  const { prefix, header } = state;
-  const { full } = layout(state);
-  if (end <= prefix.length) return { from: 0, to: 0 };
-  const cs = Math.max(start, prefix.length) - prefix.length;
-  const ce = end - prefix.length;
-  const from = Math.floor(cs / full) * header.chunk;
-  const to = Math.min((Math.floor((ce - 1) / full) + 1) * header.chunk, header.size);
-  return { from, to };
-}
-
 /**
  * The blob bytes [start, end), which lie within the blob, sealed from plain,
  * the plaintext plainSpan names for them.
  */
 export function sealSpan(state: BlobState, start: number, end: number, plain: Uint8Array): Uint8Array {
   const { prefix, header, contentKey } = state;
-  const { padded, n, full } = layout(state);
+  const { padded, n, full } = blobLayout(state);
   const out = new Uint8Array(end - start);
   let at = 0;
   if (start < prefix.length) {
@@ -448,37 +362,6 @@ export function sealSpan(state: BlobState, start: number, end: number, plain: Ui
     at += b - a;
   }
   return out;
-}
-
-/**
- * The blob as random-access bytes. A slice seals only the chunks it covers,
- * from the plaintext range readPlain returns. Chunks depend on nothing but the
- * key, the base nonce and the index, so every slice equals the same bytes of
- * encryptStream's output and an upload can pick up at any offset. The page
- * passes a seal that hands the work to the crypto worker.
- */
-export function blobSource(
-  state: BlobState,
-  readPlain: (start: number, end: number) => Promise<Uint8Array>,
-  seal: (start: number, end: number, plain: Uint8Array) => Uint8Array | Promise<Uint8Array> = (s, e, p) =>
-    sealSpan(state, s, e, p),
-): BlobSource {
-  const size = blobLength(state);
-  return {
-    size,
-    async slice(start, end) {
-      const s = Math.max(0, start);
-      const e = Math.min(end, size);
-      if (e <= s) return new Uint8Array(0);
-      const { from, to } = plainSpan(state, s, e);
-      let plain: Uint8Array = new Uint8Array(0);
-      if (to > from) {
-        plain = await readPlain(from, to);
-        if (plain.length !== to - from) throw new Error("v2: the plaintext read came back short");
-      }
-      return seal(s, e, plain);
-    },
-  };
 }
 
 /** Derives the keys for a link token from the URL fragment. */
@@ -591,28 +474,6 @@ export async function decryptShare(
     dec.finish();
   }
   return { header: dec.header, plaintext: plaintext() };
-}
-
-/**
- * The inclusive blob byte range [from, to] holding the chunks that cover the
- * plaintext range [start, end], or null when the range is empty.
- */
-export function cipherRange(
-  header: Header,
-  contentOffset: number,
-  start: number,
-  end: number,
-): { from: number; to: number; first: number; last: number } | null {
-  const s = Math.max(0, start);
-  const e = Math.min(header.size - 1, end);
-  if (e < s) return null;
-  const n = chunkCount(paddedContentLength(header.size), header.chunk);
-  const full = header.chunk + TAG_BYTES;
-  const first = Math.floor(s / header.chunk);
-  const last = Math.floor(e / header.chunk);
-  const from = contentOffset + first * full;
-  const to = contentOffset + last * full + cipherChunkLength(header, n, last) - 1;
-  return { from, to, first, last };
 }
 
 /**

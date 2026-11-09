@@ -1,6 +1,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, PT_CHUNK, computeKeyVerifier, decodeKey } from "../lib/e2e/crypto";
+import { ready, computeKeyVerifier, decodeKey } from "../lib/e2e/crypto";
+import { PT_CHUNK } from "../lib/e2e/chunks";
 import {
   encryptForUpload,
   decryptFromDownload,

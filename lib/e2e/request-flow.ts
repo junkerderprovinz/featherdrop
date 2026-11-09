@@ -4,25 +4,21 @@
 // closes with the collect link. fetch, the tus upload and the crypto worker
 // are injected for tests.
 
-import { toBase64, fromBase64 } from "./crypto";
-import { hashManageToken } from "./manage-link";
+import { toBase64, fromBase64 } from "./base64";
 import { noteContent } from "./note";
 import { readFiles, type UploadSource } from "./upload-flow";
-import { openKeys, readHeader, type FileEntry, type Header } from "./v2/share";
+import type { FileEntry, Header } from "./v2/layout";
 import { workerBlobSource } from "./v2/remote";
 import type { Client } from "./v2/protocol";
-import type { ShareKeys } from "./v2/keys";
+import type { ShareKeys } from "./v2/token";
 import {
   newRequestSecret,
-  requestKeys,
   encodeCollectLink,
   decodeCollectLink,
   encodeRequestKey,
   decodeRequestKey,
   requestKeyProof,
-  sealToken,
-  openSealedToken,
-} from "./v2/request";
+} from "./v2/request-link";
 
 const REQUEST_HEADER = "x-fd-request";
 const REQUEST_KEY_HEADER = "x-fd-request-key";
@@ -95,8 +91,8 @@ export function parseCollectUrl(url: string): CollectLink {
 }
 
 /** The request link of a request, rebuilt from its collect link. */
-export async function requestUrl(baseUrl: string, collect: CollectLink): Promise<string> {
-  const { publicKey } = await requestKeys(collect.secret);
+export async function requestUrl(crypto: Client, baseUrl: string, collect: CollectLink): Promise<string> {
+  const { publicKey } = await crypto.request({ op: "request-keys", secret: collect.secret });
   return `${baseUrl}/r/${encodeURIComponent(collect.slug)}#p=${encodeRequestKey(publicKey)}`;
 }
 
@@ -111,11 +107,12 @@ function collectUrl(baseUrl: string, collect: CollectLink): string {
  */
 export async function createRequest(
   opts: { expiry: string; maxUploads: number | null; maxSize: number | null },
-  deps: { baseUrl: string; fetchImpl?: typeof fetch; uploadToken?: string },
+  deps: { baseUrl: string; crypto: Client; fetchImpl?: typeof fetch; uploadToken?: string },
 ): Promise<{ requestUrl: string; collectUrl: string }> {
   const fetchImpl = deps.fetchImpl ?? fetch;
-  const secret = await newRequestSecret();
-  const keys = await requestKeys(secret);
+  const secret = newRequestSecret();
+  const keys = await deps.crypto.request({ op: "request-keys", secret });
+  const { hash: collectTokenHash } = await deps.crypto.request({ op: "hash-token", token: keys.collectToken });
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (deps.uploadToken) headers[UPLOAD_TOKEN_HEADER] = deps.uploadToken;
   const res = await fetchImpl("/api/requests", {
@@ -123,7 +120,7 @@ export async function createRequest(
     headers,
     body: JSON.stringify({
       publicKey: requestKeyProof(keys.publicKey),
-      collectTokenHash: await hashManageToken(keys.collectToken),
+      collectTokenHash,
       expiry: opts.expiry,
       maxUploads: opts.maxUploads,
       maxSize: opts.maxSize,
@@ -132,7 +129,7 @@ export async function createRequest(
   if (!res.ok) throw new Error(`create request ${res.status}`);
   const { slug } = (await res.json()) as { slug: string };
   const collect = { slug, secret };
-  return { requestUrl: await requestUrl(deps.baseUrl, collect), collectUrl: collectUrl(deps.baseUrl, collect) };
+  return { requestUrl: await requestUrl(deps.crypto, deps.baseUrl, collect), collectUrl: collectUrl(deps.baseUrl, collect) };
 }
 
 function uploaderHeaders(link: RequestLink): Record<string, string> {
@@ -206,7 +203,7 @@ export async function sendToRequest(
     headers: { [REQUEST_HEADER]: link.slug, ...uploaderHeaders(link) },
     onProgress: (sent, total) => onProgress?.(total > 0 ? sent / total : 0),
   });
-  const sealed = await sealToken(token, link.publicKey);
+  const { sealed } = await deps.crypto.request({ op: "seal-token", token, publicKey: link.publicKey });
   const res = await fetchImpl(`/api/r/${encodeURIComponent(link.slug)}/uploads`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...uploaderHeaders(link) },
@@ -219,8 +216,9 @@ export async function sendToRequest(
   onProgress?.(1);
 }
 
-async function collectHeaders(collect: CollectLink): Promise<Record<string, string>> {
-  return { [COLLECT_TOKEN_HEADER]: (await requestKeys(collect.secret)).collectToken };
+async function collectHeaders(crypto: Client, collect: CollectLink): Promise<Record<string, string>> {
+  const { collectToken } = await crypto.request({ op: "request-keys", secret: collect.secret });
+  return { [COLLECT_TOKEN_HEADER]: collectToken };
 }
 
 function uploadPath(collect: CollectLink, id: string): string {
@@ -252,9 +250,13 @@ export interface Collection {
  * downloading the content. An upload whose token or header does not open is
  * listed as unreadable, so one bad upload cannot hide the others.
  */
-export async function listRequestUploads(collect: CollectLink, fetchImpl: typeof fetch = fetch): Promise<Collection> {
-  const keys = await requestKeys(collect.secret);
-  const headers = await collectHeaders(collect);
+export async function listRequestUploads(
+  crypto: Client,
+  collect: CollectLink,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Collection> {
+  const keys = await crypto.request({ op: "request-keys", secret: collect.secret });
+  const headers = { [COLLECT_TOKEN_HEADER]: keys.collectToken };
   const res = await fetchImpl(`/api/r/${encodeURIComponent(collect.slug)}/uploads`, { headers });
   if (res.status === 404) throw new RequestNotFoundError();
   if (!res.ok) throw new Error(`collect ${res.status}`);
@@ -265,11 +267,11 @@ export async function listRequestUploads(collect: CollectLink, fetchImpl: typeof
   for (const up of listing.uploads) {
     const base = { id: up.id, size: up.size, createdAt: up.createdAt };
     try {
-      const token = await openSealedToken(fromBase64(up.sealedKey), keys);
-      const shareKeys = await openKeys(token);
+      const { token } = await crypto.request({ op: "open-token", sealed: fromBase64(up.sealedKey), keys });
+      const { keys: shareKeys } = await crypto.request({ op: "keys", token });
       const head = await fetchImpl(`${uploadPath(collect, up.id)}/header`, { headers });
       if (!head.ok) throw new Error(`upload header ${head.status}`);
-      const { header } = readHeader(shareKeys, new Uint8Array(await head.arrayBuffer()));
+      const { header } = await crypto.request({ op: "header", keys: shareKeys, data: new Uint8Array(await head.arrayBuffer()) });
       uploads.push({ ...base, readable: true, keys: shareKeys, header });
     } catch {
       uploads.push({ ...base, readable: false });
@@ -280,12 +282,13 @@ export async function listRequestUploads(collect: CollectLink, fetchImpl: typeof
 
 /** A fetchBlob for downloadDecryptedV2 and readNote that reads one upload of a request. */
 export function fetchUploadBlob(
+  crypto: Client,
   collect: CollectLink,
   id: string,
   fetchImpl: typeof fetch = fetch,
 ): (keyVerifier: string) => Promise<ReadableStream<Uint8Array>> {
   return async () => {
-    const res = await fetchImpl(uploadPath(collect, id), { headers: await collectHeaders(collect) });
+    const res = await fetchImpl(uploadPath(collect, id), { headers: await collectHeaders(crypto, collect) });
     if (!res.ok || !res.body) throw new Error(`upload ${res.status}`);
     return res.body;
   };
@@ -293,21 +296,26 @@ export function fetchUploadBlob(
 
 /** Deletes one upload of a request. "notfound" covers an upload already gone. */
 export async function deleteRequestUpload(
+  crypto: Client,
   collect: CollectLink,
   id: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<"deleted" | "notfound"> {
-  const res = await fetchImpl(uploadPath(collect, id), { method: "DELETE", headers: await collectHeaders(collect) });
+  const res = await fetchImpl(uploadPath(collect, id), { method: "DELETE", headers: await collectHeaders(crypto, collect) });
   if (res.status === 404) return "notfound";
   if (!res.ok) throw new Error(`delete upload ${res.status}`);
   return "deleted";
 }
 
 /** Deletes a request and its uploads. "notfound" covers a request already gone. */
-export async function closeRequest(collect: CollectLink, fetchImpl: typeof fetch = fetch): Promise<"closed" | "notfound"> {
+export async function closeRequest(
+  crypto: Client,
+  collect: CollectLink,
+  fetchImpl: typeof fetch = fetch,
+): Promise<"closed" | "notfound"> {
   const res = await fetchImpl(`/api/r/${encodeURIComponent(collect.slug)}`, {
     method: "DELETE",
-    headers: await collectHeaders(collect),
+    headers: await collectHeaders(crypto, collect),
   });
   if (res.status === 404) return "notfound";
   if (!res.ok) throw new Error(`close request ${res.status}`);

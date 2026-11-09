@@ -1,18 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { requestKeys, sealToken, openSealedToken } from "../lib/e2e/v2/request";
 import {
   newRequestSecret,
-  requestKeys,
   encodeCollectLink,
   decodeCollectLink,
   encodeRequestKey,
   decodeRequestKey,
-  sealToken,
-  openSealedToken,
   SEALED_TOKEN_BYTES,
-} from "../lib/e2e/v2/request";
+} from "../lib/e2e/v2/request-link";
 import { createEncryptor, encryptStream, openKeys, decryptShare } from "../lib/e2e/v2/share";
-import { decodeToken, encodeToken, newToken } from "../lib/e2e/v2/keys";
+import { newToken } from "../lib/e2e/v2/keys";
+import { decodeToken, encodeToken } from "../lib/e2e/v2/token";
 
 async function* one(b: Uint8Array) {
   yield b;

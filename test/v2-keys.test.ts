@@ -1,15 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { newToken, deriveKeys, passwordSalt, ARGON2ID } from "../lib/e2e/v2/keys";
 import {
-  newToken,
   encodeToken,
   decodeToken,
-  deriveKeys,
-  passwordSalt,
   isPasswordLongEnough,
   MIN_PASSWORD_LENGTH,
-  ARGON2ID,
-} from "../lib/e2e/v2/keys";
+} from "../lib/e2e/v2/token";
 
 const SECRET = new Uint8Array(32).map((_, i) => i);
 

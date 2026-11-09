@@ -11,8 +11,8 @@
 // finalized, when the user discards it, and once it is older than the server
 // keeps an unfinished upload.
 
-import { ready, toBase64, fromBase64 } from "./crypto";
-import type { BlobState, Header } from "./v2/share";
+import { toBase64, fromBase64 } from "./base64";
+import type { BlobState, Header } from "./v2/layout";
 
 /** One pending upload as stored. Only id, touchedAt and uploadUrl are readable. */
 export interface ResumeRecord {
@@ -85,7 +85,6 @@ async function sampleFile(file: Blob): Promise<string> {
 }
 
 export async function fingerprintFiles(files: File[]): Promise<FileFingerprint[]> {
-  await ready();
   return Promise.all(
     files.map(async (f) => ({ name: f.name, size: f.size, lastModified: f.lastModified, sample: await sampleFile(f) })),
   );
@@ -128,7 +127,6 @@ function decodeState(bytes: Uint8Array): ResumeState {
 
 /** Stores the state of a new upload and returns its record id. */
 export async function rememberUpload(store: ResumeStore, state: ResumeState): Promise<string> {
-  await ready();
   const id = crypto.randomUUID();
   const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -158,7 +156,6 @@ export async function recallUpload(
   store: ResumeStore,
   id: string,
 ): Promise<{ state: ResumeState; uploadUrl: string | null }> {
-  await ready();
   const rec = await store.get(id);
   if (!rec) throw new Error("upload resume: no such pending upload");
   return { state: await openRecord(rec), uploadUrl: rec.uploadUrl };
@@ -200,7 +197,6 @@ export function trackUpload(store: ResumeStore, id: string) {
  * already given up on, and records that no longer open, are deleted.
  */
 export async function listPendingUploads(store: ResumeStore, now = Date.now()): Promise<PendingUpload[]> {
-  await ready();
   const out: PendingUpload[] = [];
   for (const rec of await store.all()) {
     let state: ResumeState | null = null;

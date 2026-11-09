@@ -1,3 +1,5 @@
+import { PT_CHUNK } from "./chunks";
+
 // libsodium's ESM build uses top-level await, so a static import would turn
 // this module and every importer into an async module. The dynamic import in
 // ready() avoids that and defers the WASM load until crypto is first needed.
@@ -12,9 +14,6 @@ type StateAddress =
 // Assigned by ready() before any synchronous function below runs.
 let sodium!: Sodium;
 let readyPromise: Promise<void> | null = null;
-
-/** Plaintext chunk size for streaming content encryption. */
-export const PT_CHUNK = 65536;
 
 /** Await once before calling any synchronous function in this module. */
 export async function ready(): Promise<void> {
@@ -119,6 +118,14 @@ export function computeKeyVerifier(key: Uint8Array): string {
     sodium.crypto_hash_sha256(key),
     sodium.base64_variants.URLSAFE_NO_PADDING,
   );
+}
+
+/**
+ * base64url(SHA-256(token)), the hash the server keeps of a manage or collect
+ * token, as its share.HashManageToken computes it.
+ */
+export function hashToken(token: string): string {
+  return sodium.to_base64(sodium.crypto_hash_sha256(token), sodium.base64_variants.URLSAFE_NO_PADDING);
 }
 
 /** The file metadata, encrypted into enc_meta so the server never sees it. */

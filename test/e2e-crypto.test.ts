@@ -2,7 +2,8 @@ import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import sodium from "libsodium-wrappers-sumo";
-import { ready, generateKey, encodeKey, decodeKey, encryptMeta, decryptMeta, encryptChunks, decryptChunks, PT_CHUNK, wrapKey, unwrapKey, computeKeyVerifier } from "../lib/e2e/crypto";
+import { ready, generateKey, encodeKey, decodeKey, encryptMeta, decryptMeta, encryptChunks, decryptChunks, wrapKey, unwrapKey, computeKeyVerifier } from "../lib/e2e/crypto";
+import { PT_CHUNK } from "../lib/e2e/chunks";
 
 before(async () => {
   await ready();

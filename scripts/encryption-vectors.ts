@@ -6,12 +6,16 @@
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { ready, PT_CHUNK } from "../lib/e2e/crypto";
+import { ready } from "../lib/e2e/crypto";
+import { PT_CHUNK } from "../lib/e2e/chunks";
 import { encryptForUpload, decryptFromDownload } from "../lib/e2e/pipeline";
 import { encryptFilesForUpload, decryptFilesFromDownload } from "../lib/e2e/multi-pipeline";
+import { concatFiles } from "../lib/e2e/multi-file";
 import { padme } from "../lib/e2e/v2/padding";
-import { encodeToken, deriveKeys, passwordSalt, rootKey, type LinkToken } from "../lib/e2e/v2/keys";
-import { buildEncryptor, encryptStream, type FileEntry, type Kind } from "../lib/e2e/v2/share";
+import { deriveKeys, passwordSalt, rootKey } from "../lib/e2e/v2/keys";
+import { encodeToken, type LinkToken } from "../lib/e2e/v2/token";
+import { buildEncryptor, encryptStream } from "../lib/e2e/v2/share";
+import type { FileEntry, Kind } from "../lib/e2e/v2/layout";
 
 const hex = (b: Uint8Array) => Buffer.from(b).toString("hex");
 const b64 = (b: Uint8Array) => Buffer.from(b).toString("base64");
@@ -99,7 +103,7 @@ async function legacyBundle(name: string, lastSize: number, password?: string) {
     size,
     stream: () => one(datas[i]),
   }));
-  const r = await encryptFilesForUpload(files, password ? { password } : undefined);
+  const r = await encryptFilesForUpload(files, concatFiles(files), password ? { password } : undefined);
   const blob = await collect(r.blob);
   const secret = r.wrapped
     ? { password: password as string, wrapped: b64(r.wrapped.wrapped), salt: b64(r.wrapped.salt) }

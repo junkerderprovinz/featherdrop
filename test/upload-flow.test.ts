@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { uploadEncrypted, type FinalizeRequest } from "../lib/e2e/upload-flow";
-import { hashManageToken, manageTokenFromFragment } from "../lib/e2e/manage-link";
+import { manageTokenFromFragment } from "../lib/e2e/manage-link";
 import { cryptoWorker } from "./crypto-worker";
 
 test("uploadEncrypted sends only the manage token's hash and returns the management link", async () => {
@@ -25,6 +26,6 @@ test("uploadEncrypted sends only the manage token's hash and returns the managem
   assert.ok(manageUrl.startsWith(prefix), manageUrl);
   const token = manageTokenFromFragment(manageUrl.slice(manageUrl.indexOf("#")));
   assert.ok(sent);
-  assert.equal(sent.manageTokenHash, await hashManageToken(token));
+  assert.equal(sent.manageTokenHash, createHash("sha256").update(token).digest("base64url"));
   assert.ok(!JSON.stringify(sent).includes(token), "the raw token must not reach the server");
 });

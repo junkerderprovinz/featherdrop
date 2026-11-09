@@ -13,17 +13,12 @@
 // Every fetch uses ?preview=1, which the server serves uncounted and only for
 // unlimited shares, so playback never uses up a limited share. Memory stays
 // bounded: the chunks flow to the worker under backpressure and the whole video
-// is never collected.
+// is never collected. The crypto worker decrypts every range.
 
-import { decryptWithKey, deriveContentKey, type DownloadSecret } from "./pipeline";
-import { computeKeyVerifier, PT_CHUNK } from "./crypto";
 import { streamToAsyncIterable, asyncIterableToStream } from "./stream-adapters";
-import {
-  chunkByteRange,
-  chunksForPlaintextRange,
-  cipherLengthForSize,
-  decryptSeekableRange,
-} from "./seekable";
+import { PT_CHUNK, chunkByteRange, chunksForPlaintextRange, cipherLengthForSize } from "./chunks";
+import { decryptFileInWorker } from "./v2/remote";
+import { transferables, type Client, type LegacyKey } from "./v2/protocol";
 
 // Per-frame secretstream overhead: the auth tag plus the tag byte.
 const ABYTES = 17;
@@ -106,8 +101,9 @@ export function cipherPrefixEnd(
  * derived once by the caller, so a far seek never reruns Argon2id.
  */
 function makeFormat2RangeFactory(
+  crypto: Client,
   downloadUrl: string,
-  key: Uint8Array,
+  key: LegacyKey,
   plaintextSize: number,
   ciphertextSize: number,
 ): RangeStreamFactory {
@@ -115,68 +111,60 @@ function makeFormat2RangeFactory(
   return async (start, end) => {
     const cEnd = cipherPrefixEnd(end, plaintextSize, ciphertextSize);
     const headers: Record<string, string> = {
-      "x-fd-key-verifier": computeKeyVerifier(key),
+      "x-fd-key-verifier": key.verifier,
     };
     if (cEnd !== null) headers["Range"] = `bytes=0-${cEnd}`;
     const res = await fetch(previewUrl, { headers });
     // A ranged 206 and a whole-file 200 both work.
     if (!res.ok || !res.body) throw new Error(`preview fetch ${res.status}`);
-    const { plaintext } = await decryptWithKey(
+    const { plaintext } = await decryptFileInWorker(
+      crypto,
+      key.key,
       streamToAsyncIterable(res.body as ReadableStream<Uint8Array>),
-      key,
     );
     return asyncIterableToStream(sliceRange(plaintext, start, end));
   };
 }
 
 /**
- * Range factory for a cf=2 video: fetch only the chunks covering the range and
- * decrypt them independently. decryptSeekableRange works in content-relative
- * offsets; this fetch adds contentOffset, where the content starts after
- * enc_meta, to build the absolute Range request.
+ * Range factory for a cf=2 video: fetch only the chunks covering the range,
+ * which the crypto worker opens one by one.
  */
 function makeFormat2SeekRangeFactory(
+  crypto: Client,
   downloadUrl: string,
-  key: Uint8Array,
+  key: LegacyKey,
   baseNonce: Uint8Array,
   plaintextSize: number,
   contentOffset: number,
 ): RangeStreamFactory {
   const previewUrl = `${downloadUrl}?preview=1`;
-  const verifier = computeKeyVerifier(key);
-  const fetchCipherRange = async (
-    cStart: number,
-    cEnd: number,
-  ): Promise<Uint8Array> => {
-    const absStart = contentOffset + cStart;
-    const absEnd = contentOffset + cEnd;
+  return async (start, end) => {
+    const range = seekCipherByteRange(start, end, plaintextSize, contentOffset);
+    if (range === null) return new Blob([]).stream();
     const res = await fetch(previewUrl, {
       headers: {
-        "x-fd-key-verifier": verifier,
-        Range: `bytes=${absStart}-${absEnd}`,
+        "x-fd-key-verifier": key.verifier,
+        Range: `bytes=${range.start}-${range.end}`,
       },
     });
     if (!res.ok || !res.body) throw new Error(`preview fetch ${res.status}`);
-    const buf = new Uint8Array(await res.arrayBuffer());
-    return buf;
-  };
-  return async (start, end) =>
-    asyncIterableToStream(
-      decryptSeekableRange(
-        fetchCipherRange,
-        key,
-        baseNonce,
-        plaintextSize,
-        start,
-        end,
-      ),
+    const data = new Uint8Array(await res.arrayBuffer());
+    const { chunks } = await crypto.request(
+      { op: "legacy-range", key: key.key, baseNonce, size: plaintextSize, start, end, data },
+      transferables(data),
     );
+    return asyncIterableToStream(
+      (async function* () {
+        yield* chunks;
+      })(),
+    );
+  };
 }
 
 /**
  * The absolute inclusive blob range a cf=2 preview fetches for the plaintext
- * range, or null when the range is empty. It is the same math the seek factory
- * uses, exported for tests.
+ * range, or null when the range is empty.
  */
 export function seekCipherByteRange(
   plaintextStart: number,
@@ -260,8 +248,10 @@ function waitForController(timeoutMs: number): Promise<void> {
  * share.
  */
 export async function registerVideoPreview(opts: {
+  crypto: Client;
   downloadUrl: string;
-  secret: DownloadSecret;
+  /** The content key, derived once for every range the video asks for. */
+  key: LegacyKey;
   mime: string;
   /**
    * Plaintext length from the encrypted meta. All Range math uses it, so it
@@ -290,19 +280,20 @@ export async function registerVideoPreview(opts: {
     await waitForController(4000);
   }
 
-  const key = await deriveContentKey(opts.secret);
   const factory =
     opts.cf === 2 && opts.baseNonce && typeof opts.contentOffset === "number"
       ? makeFormat2SeekRangeFactory(
+          opts.crypto,
           opts.downloadUrl,
-          key,
+          opts.key,
           opts.baseNonce,
           opts.size,
           opts.contentOffset,
         )
       : makeFormat2RangeFactory(
+          opts.crypto,
           opts.downloadUrl,
-          key,
+          opts.key,
           opts.size,
           opts.ciphertextSize,
         );

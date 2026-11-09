@@ -3,11 +3,6 @@
 // names, types and sizes. The server stores one opaque blob and never learns it
 // holds several files; the download splits the stream back by the sizes.
 
-import {
-  encryptManifest as encryptManifestRaw,
-  decryptManifest as decryptManifestRaw,
-} from "./crypto";
-
 export interface ManifestEntry {
   name: string;
   type: string;
@@ -35,19 +30,10 @@ export interface PackFile {
 }
 
 /** Builds the manifest; its order is both the concatenation and the split order. */
-export function buildManifest(files: PackFile[]): Manifest {
+export function buildManifest(files: ManifestEntry[]): Manifest {
   return {
     files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
   };
-}
-
-export function encryptManifest(manifest: Manifest, key: Uint8Array): Uint8Array {
-  return encryptManifestRaw(manifest, key);
-}
-
-/** Reverse of encryptManifest. Throws on a wrong key or a tampered blob. */
-export function decryptManifest(blob: Uint8Array, key: Uint8Array): Manifest {
-  return decryptManifestRaw<Manifest>(blob, key);
 }
 
 /**

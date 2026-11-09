@@ -1,20 +1,11 @@
 // The management link lets the uploader delete a share before it expires. Its
 // token is made here and rides in the link's fragment like the content key;
 // the server stores only base64url(SHA-256(token)), so neither it nor a copy
-// of its database can delete a share. Hashing uses libsodium because
+// of its database can delete a share. The crypto worker hashes it, because
 // crypto.subtle is missing on plain HTTP.
 
-type Sodium = typeof import("libsodium-wrappers-sumo");
-
-async function loadSodium(): Promise<Sodium> {
-  const mod = await import("libsodium-wrappers-sumo");
-  // With bundler interop the CJS module arrives as { default }, without it as
-  // the object itself.
-  const lib =
-    (mod as unknown as { default?: Sodium }).default ?? (mod as unknown as Sodium);
-  await lib.ready;
-  return lib;
-}
+import { toBase64url } from "./base64";
+import type { Client } from "./v2/protocol";
 
 /** The secret of a management link and the hash finalize stores. */
 export interface ManageToken {
@@ -23,22 +14,10 @@ export interface ManageToken {
 }
 
 /** Returns a new token of 32 random bytes as unpadded base64url, and its hash. */
-export async function createManageToken(): Promise<ManageToken> {
-  const sodium = await loadSodium();
-  const token = sodium.to_base64(
-    sodium.randombytes_buf(32),
-    sodium.base64_variants.URLSAFE_NO_PADDING,
-  );
-  return { token, hash: await hashManageToken(token) };
-}
-
-/** Returns base64url(SHA-256(token)), as the server's share.HashManageToken. */
-export async function hashManageToken(token: string): Promise<string> {
-  const sodium = await loadSodium();
-  return sodium.to_base64(
-    sodium.crypto_hash_sha256(token),
-    sodium.base64_variants.URLSAFE_NO_PADDING,
-  );
+export async function createManageToken(worker: Client): Promise<ManageToken> {
+  const token = toBase64url(crypto.getRandomValues(new Uint8Array(32)));
+  const { hash } = await worker.request({ op: "hash-token", token });
+  return { token, hash };
 }
 
 /** Builds the link the uploader keeps: https://host/m/<slug>#t=<token>. */

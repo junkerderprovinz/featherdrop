@@ -1,6 +1,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { ready, PT_CHUNK, decodeKey } from "../lib/e2e/crypto";
+import { ready, decodeKey } from "../lib/e2e/crypto";
+import { PT_CHUNK } from "../lib/e2e/chunks";
 import { fromBase64 } from "../lib/e2e/crypto";
 import { peekBlobHeader } from "../lib/e2e/blob-layout";
 import { decryptSeekableRange } from "../lib/e2e/seekable";
@@ -168,7 +169,7 @@ test("crypto: encrypt 3 files (link mode) -> decrypt -> byte-identical", async (
   const { files, data } = sampleFiles();
   const expectedManifest = buildManifest(files);
 
-  const { blob, keyForUrl, wrapped, keyVerifier } = await encryptFilesForUpload(files);
+  const { blob, keyForUrl, wrapped, keyVerifier } = await encryptFilesForUpload(files, concatFiles(files));
   assert.equal(wrapped, undefined);
   assert.match(keyForUrl, /^[A-Za-z0-9_-]+$/);
   assert.match(keyVerifier, /^[A-Za-z0-9_-]{43}$/);
@@ -201,7 +202,7 @@ test("crypto: password mode -> decrypt with {password,wrapped,salt}", async () =
   const expectedManifest = buildManifest(files);
   const password = "correct horse battery staple";
 
-  const { blob, keyForUrl, wrapped } = await encryptFilesForUpload(files, { password });
+  const { blob, keyForUrl, wrapped } = await encryptFilesForUpload(files, concatFiles(files), { password });
   assert.equal(keyForUrl, "");
   assert.ok(wrapped);
 
@@ -224,9 +225,9 @@ test("crypto: password mode -> decrypt with {password,wrapped,salt}", async () =
 
 test("crypto: a wrong URL key fails to decrypt the manifest", async () => {
   const { files } = sampleFiles();
-  const { blob } = await encryptFilesForUpload(files);
+  const { blob } = await encryptFilesForUpload(files, concatFiles(files));
   const cipher = await collect(blob);
-  const wrong = await encryptFilesForUpload(files);
+  const wrong = await encryptFilesForUpload(files, concatFiles(files));
   await assert.rejects(() =>
     decryptFilesFromDownload(one(cipher), { keyFromUrl: wrong.keyForUrl }),
   );
@@ -238,7 +239,7 @@ test("crypto: the server-visible blob leaks neither a filename nor content", asy
     packFile("secret-name-a.txt", "text/plain", new TextEncoder().encode(marker)),
     packFile("secret-name-b.txt", "text/plain", new TextEncoder().encode("more")),
   ];
-  const { blob } = await encryptFilesForUpload(files);
+  const { blob } = await encryptFilesForUpload(files, concatFiles(files));
   const hay = new TextDecoder("latin1").decode(await collect(blob));
   assert.ok(!hay.includes(marker), "content leaked");
   assert.ok(!hay.includes("secret-name"), "filename leaked");
@@ -246,7 +247,7 @@ test("crypto: the server-visible blob leaks neither a filename nor content", asy
 
 test("crypto cf=2: baseNonce/size stay inside enc_meta (zero-knowledge)", async () => {
   const { files, data } = sampleFiles();
-  const { blob } = await encryptFilesForUpload(files);
+  const { blob } = await encryptFilesForUpload(files, concatFiles(files));
   const total = data.reduce((a, d) => a + d.length, 0);
   const hay = new TextDecoder("latin1").decode(await collect(blob));
   assert.ok(!hay.includes(String(total)), "total size leaked into blob");
@@ -256,7 +257,7 @@ test("crypto cf=2: a chunk-range seek over the concat content is byte-exact", as
   // The streaming preview's path without the network.
   const big = bytes(PT_CHUNK * 3 + 4096, 9);
   const files: PackFile[] = [packFile("movie.bin", "application/octet-stream", big)];
-  const { blob, keyForUrl } = await encryptFilesForUpload(files);
+  const { blob, keyForUrl } = await encryptFilesForUpload(files, concatFiles(files));
   const cipher = await collect(blob);
   const key = decodeKey(keyForUrl);
 

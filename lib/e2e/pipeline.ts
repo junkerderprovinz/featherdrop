@@ -21,9 +21,9 @@ import {
   generateAeadBaseNonce,
   toBase64,
   fromBase64,
-  PT_CHUNK,
   type FileMeta,
 } from "./crypto";
+import { PT_CHUNK } from "./chunks";
 import { assembleBlob, readBlobMeta } from "./blob-layout";
 import { encryptSeekable, decryptSeekable } from "./seekable";
 

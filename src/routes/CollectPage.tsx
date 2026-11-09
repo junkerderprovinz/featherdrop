@@ -51,7 +51,7 @@ function UnreadableUpload({ collect, upload, onDeleted }: { collect: CollectLink
   const remove = async () => {
     setBusy(true);
     try {
-      await deleteRequestUpload(collect, upload.id);
+      await deleteRequestUpload(cryptoWorker, collect, upload.id);
       onDeleted();
     } catch {
       notifications.show({ color: "red", message: t("manage.deleteFailed") });
@@ -81,7 +81,7 @@ function Upload({ collect, upload }: { collect: CollectLink; upload: Readable })
   const open = async () => {
     setBusy(true);
     try {
-      const fetchBlob = fetchUploadBlob(collect, upload.id);
+      const fetchBlob = fetchUploadBlob(cryptoWorker, collect, upload.id);
       if (isNote) setNote(await readNote(cryptoWorker, fetchBlob, { keys: upload.keys }));
       else await downloadDecryptedV2(cryptoWorker, fetchBlob, { keys: upload.keys }, save);
     } catch {
@@ -139,8 +139,8 @@ export function CollectPage() {
 
   useEffect(() => {
     if (!collect) return;
-    void requestUrl(baseUrl || window.location.origin, collect).then(setShareLink);
-    listRequestUploads(collect).then(
+    void requestUrl(cryptoWorker, baseUrl || window.location.origin, collect).then(setShareLink);
+    listRequestUploads(cryptoWorker, collect).then(
       (c) => {
         setUploads(c.uploads);
         setPhase("ready");
@@ -157,7 +157,7 @@ export function CollectPage() {
     }
     setPhase("closing");
     try {
-      await closeRequest(collect);
+      await closeRequest(cryptoWorker, collect);
       setPhase("closed");
     } catch {
       setPhase("ready");

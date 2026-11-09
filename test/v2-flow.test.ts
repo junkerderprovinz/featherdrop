@@ -7,7 +7,8 @@ import {
   fetchShareBlob,
   DownloadInProgressError,
 } from "../lib/e2e/download-flow";
-import { openKeys, decryptShare, headerLength, readHeader, cipherRange } from "../lib/e2e/v2/share";
+import { openKeys, decryptShare, readHeader } from "../lib/e2e/v2/share";
+import { headerLength, cipherRange } from "../lib/e2e/v2/layout";
 import { readZip } from "./zip-reader";
 import { cryptoWorker, recordingWorker } from "./crypto-worker";
 
@@ -149,7 +150,7 @@ test("a format 4 upload is sealed and its download opened in the crypto worker",
     { expiry: "1d", maxDownloads: null, password: "correct horse battery", format: 4 },
     server.deps,
   );
-  assert.deepEqual([...new Set(server.ops)], ["create", "seal"]);
+  assert.deepEqual([...new Set(server.ops)], ["create", "seal", "hash-token"]);
 
   server.ops.length = 0;
   const { saved } = await download(server, shareUrl, "correct horse battery");
@@ -497,7 +498,10 @@ test("one file of a bundle is decrypted in the crypto worker", async () => {
   }, rangeFetch(server).fetchImpl);
 
   assert.deepEqual(data, files[1].data);
-  assert.deepEqual([...new Set(server.ops)], ["decrypt-open", "read-header", "range-open", "range-write", "range-close", "close"]);
+  assert.deepEqual(
+    [...new Set(server.ops)],
+    ["header", "decrypt-open", "read-header", "range-open", "range-write", "range-close", "close"],
+  );
 });
 
 test("an empty file of a bundle downloads without reading any content", async () => {

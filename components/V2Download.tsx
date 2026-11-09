@@ -8,11 +8,11 @@ import { notifications } from "@mantine/notifications";
 import { IconDownload, IconFile, IconFiles, IconLock, IconNote } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@/lib/format";
-import { decodeToken, type ShareKeys } from "@/lib/e2e/v2/keys";
+import { decodeToken, type ShareKeys } from "@/lib/e2e/v2/token";
 import { openLink, fetchShareHeader, type ListedFile } from "@/lib/e2e/share-listing";
 import { downloadDecryptedV2, downloadFileV2, fetchShareBlob } from "@/lib/e2e/download-flow";
 import { canStreamDownload, streamToDownload, blobDownload } from "@/lib/e2e/stream-download";
-import { readHeader, type Kind } from "@/lib/e2e/v2/share";
+import type { Kind } from "@/lib/e2e/v2/layout";
 import { readNote } from "@/lib/e2e/note";
 import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 import { NoteView } from "@/components/NoteView";
@@ -26,9 +26,10 @@ function tokenMode(token: string) {
 }
 
 async function openShare(slug: string, token: string, format: number, password?: string) {
-  const link = await openLink(token, format, password);
+  const link = await openLink(cryptoWorker, token, format, password);
   if (link.format !== 4) throw new Error("v2: not a v2 link");
-  const { header } = readHeader(link.keys, await fetchShareHeader(slug, link.keys.verifier));
+  const data = await fetchShareHeader(slug, link.keys.verifier);
+  const { header } = await cryptoWorker.request({ op: "header", keys: link.keys, data });
   return { keys: link.keys, files: header.files, kind: header.kind };
 }
 

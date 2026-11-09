@@ -3,8 +3,8 @@
 // any file, so the server cannot tell a note from a small file. A note is
 // decoded as text and never interpreted as markup.
 
-import { TEXT_TYPE, type Header } from "./v2/share";
-import type { ShareKeys } from "./v2/keys";
+import { TEXT_TYPE, type Header } from "./v2/layout";
+import type { ShareKeys } from "./v2/token";
 import type { Client } from "./v2/protocol";
 import { decryptInWorker } from "./v2/remote";
 import { sendV2, type UploadDeps } from "./upload-flow";

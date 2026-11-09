@@ -1,20 +1,18 @@
 // Fetches an encrypted blob, decrypts it and saves it. fetchBlob and save are
 // injected so this runs in tests without a server or a browser download API.
 
-import { computeKeyVerifier } from "./crypto";
-import { deriveContentKey, decryptWithKey } from "./pipeline";
 import { streamToAsyncIterable, asyncIterableToStream, watchConsumed } from "./stream-adapters";
 
 import { splitByManifest } from "./multi-file";
 import { fetchResumable } from "./resumable-fetch";
-import { readHeader, cipherRange, type Header } from "./v2/share";
-import { decryptInWorker, decryptRangeInWorker } from "./v2/remote";
+import { cipherRange, type Header } from "./v2/layout";
+import { decryptInWorker, decryptRangeInWorker, decryptFileInWorker } from "./v2/remote";
 import type { Client } from "./v2/protocol";
 import { fetchShareHeader } from "./share-listing";
 
 import { zipStream, zipLength, type ZipEntry } from "./zip";
 
-import type { ShareKeys } from "./v2/keys";
+import type { ShareKeys } from "./v2/token";
 
 /**
  * The server's 409: a limited share has started all its downloads, and one of
@@ -57,22 +55,21 @@ export type DownloadSecret =
   | { password: string; wrapped: Uint8Array; salt: Uint8Array };
 
 /**
- * Downloads, decrypts and saves a file. The key is derived before any request,
- * so a wrong password fails without the download being counted. fetchBlob gets
- * the key verifier for the `x-fd-key-verifier` header the server requires, and
- * a tampered blob makes the decrypt reject.
+ * Downloads a format 2 share, decrypts it in the crypto worker and saves it.
+ * The key is derived before any request, so a wrong password fails without
+ * the download being counted. fetchBlob gets the key verifier for the
+ * `x-fd-key-verifier` header the server requires, and a tampered blob makes
+ * the decrypt reject.
  */
 export async function downloadDecrypted(
+  crypto: Client,
   fetchBlob: (keyVerifier: string) => Promise<ReadableStream<Uint8Array>>,
   secret: DownloadSecret,
   save: (plaintext: ReadableStream<Uint8Array>, filename: string) => Promise<void>,
 ): Promise<{ meta: { name: string; type: string } }> {
-  const key = await deriveContentKey(secret);
-  const stream = await fetchBlob(computeKeyVerifier(key));
-  const { meta, plaintext } = await decryptWithKey(
-    streamToAsyncIterable(stream),
-    key,
-  );
+  const { key, verifier } = await crypto.request({ op: "legacy-key", secret });
+  const stream = await fetchBlob(verifier);
+  const { meta, plaintext } = await decryptFileInWorker(crypto, key, streamToAsyncIterable(stream));
   await save(asyncIterableToStream(plaintext), meta.name);
   return { meta };
 }
@@ -135,7 +132,7 @@ export async function downloadFileV2(
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
   const head = await fetchShareHeader(slug, keys.verifier, fetchImpl);
-  const { header, contentOffset } = readHeader(keys, head);
+  const { header, contentOffset } = await crypto.request({ op: "header", keys, data: head });
   const file = header.files[index];
   if (!file) throw new Error(`v2: the share has no file ${index}`);
   const start = header.files.slice(0, index).reduce((sum, f) => sum + f.size, 0);

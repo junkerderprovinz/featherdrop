@@ -7,36 +7,35 @@ import {
   ready,
   generateKey,
   encodeKey,
-  encryptChunks,
   decryptChunks,
   computeKeyVerifier,
   wrapKey,
   generateAeadBaseNonce,
   toBase64,
   fromBase64,
-  PT_CHUNK,
+  encryptManifest,
+  decryptManifest,
 } from "./crypto";
+import { PT_CHUNK } from "./chunks";
 import { assembleBlob, readBlobMeta } from "./blob-layout";
 import { encryptSeekable, decryptSeekable } from "./seekable";
 import {
   buildManifest,
-  concatFiles,
   splitByManifest,
-  encryptManifest,
-  decryptManifest,
   type Manifest,
   type ManifestEntry,
-  type PackFile,
 } from "./multi-file";
 import { deriveContentKey, type EncryptResult, type DownloadSecret } from "./pipeline";
 
 /**
- * Encrypts several files into one upload blob, like encryptForUpload. New
- * uploads use the seekable cf=2 format, so the manifest also carries the base
- * nonce, chunk size and total plaintext size.
+ * Encrypts several files into one upload blob, like encryptForUpload. content
+ * is their bytes in order, as concatFiles gives them. New uploads use the
+ * seekable cf=2 format, so the manifest also carries the base nonce, chunk
+ * size and total plaintext size.
  */
 export async function encryptFilesForUpload(
-  files: PackFile[],
+  files: ManifestEntry[],
+  content: AsyncIterable<Uint8Array>,
   opts?: { password?: string },
 ): Promise<EncryptResult> {
   await ready();
@@ -53,10 +52,7 @@ export async function encryptFilesForUpload(
     size: totalSize,
   };
   const encMeta = encryptManifest(seekableManifest, key);
-  const blob = assembleBlob(
-    encMeta,
-    encryptSeekable(concatFiles(files), key, baseNonce),
-  );
+  const blob = assembleBlob(encMeta, encryptSeekable(content, key, baseNonce));
   if (opts?.password) {
     return { blob, keyForUrl: "", wrapped: wrapKey(key, opts.password), keyVerifier };
   }
@@ -75,6 +71,28 @@ export interface MultiDownload {
 }
 
 /**
+ * Decrypts a format 3 blob with a derived content key into its manifest and
+ * the files' bytes laid end to end.
+ */
+export async function decryptBundle(
+  ciphertext: AsyncIterable<Uint8Array>,
+  key: Uint8Array,
+): Promise<{ manifest: Manifest; plaintext: AsyncIterable<Uint8Array> }> {
+  await ready();
+  const { encMeta, content } = await readBlobMeta(ciphertext);
+  const manifest = decryptManifest<Manifest>(encMeta, key);
+  // Blobs written before cf=2 existed have no cf and use the secretstream.
+  if (manifest.cf === 2) {
+    if (manifest.baseNonce === undefined || manifest.size === undefined) {
+      throw new Error("seekable multi-file blob missing baseNonce/size in enc_meta");
+    }
+    const plaintext = decryptSeekable(content, key, fromBase64(manifest.baseNonce), manifest.size);
+    return { manifest, plaintext };
+  }
+  return { manifest, plaintext: decryptChunks(content, key) };
+}
+
+/**
  * Decrypts a format 3 blob with a derived content key. The files come in
  * order and share one stream, so each file's bytes must be drained before the
  * next is requested.
@@ -83,26 +101,8 @@ export async function decryptFilesWithKey(
   ciphertext: AsyncIterable<Uint8Array>,
   key: Uint8Array,
 ): Promise<MultiDownload> {
-  await ready();
-  const { encMeta, content } = await readBlobMeta(ciphertext);
-  const manifest = decryptManifest(encMeta, key);
-  // Blobs written before cf=2 existed have no cf and use the secretstream.
-  let plaintext: AsyncIterable<Uint8Array>;
-  if (manifest.cf === 2) {
-    if (manifest.baseNonce === undefined || manifest.size === undefined) {
-      throw new Error("seekable multi-file blob missing baseNonce/size in enc_meta");
-    }
-    plaintext = decryptSeekable(
-      content,
-      key,
-      fromBase64(manifest.baseNonce),
-      manifest.size,
-    );
-  } else {
-    plaintext = decryptChunks(content, key);
-  }
-  const files = splitByManifest(plaintext, manifest);
-  return { manifest, files };
+  const { manifest, plaintext } = await decryptBundle(ciphertext, key);
+  return { manifest, files: splitByManifest(plaintext, manifest) };
 }
 
 /** Decrypts a format 3 blob from the share secret, URL key or password. */

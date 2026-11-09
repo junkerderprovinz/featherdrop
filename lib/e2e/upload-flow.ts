@@ -2,10 +2,9 @@
 // encrypt into scratch storage first; format 4 encrypts each tus request's
 // bytes as it is sent. Network access is injected through UploadDeps for tests.
 
-import { encryptForUpload, type EncryptResult } from "./pipeline";
-import { encryptFilesForUpload } from "./multi-pipeline";
-import { type PackFile } from "./multi-file";
-import { workerBlobSource } from "./v2/remote";
+import type { EncryptResult } from "./pipeline";
+import { concatFiles, type PackFile } from "./multi-file";
+import { workerBlobSource, encryptLegacyInWorker } from "./v2/remote";
 import type { Client } from "./v2/protocol";
 import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
@@ -74,7 +73,7 @@ export interface UploadDeps {
   baseUrl: string;
   /** Where a format 4 upload keeps what it needs to resume after a reload; without it nothing is kept. */
   resume?: ResumeStore;
-  /** The crypto worker that derives the keys of a format 4 upload and seals its chunks. */
+  /** The crypto worker, which encrypts the upload and hashes its manage token. */
   crypto: Client;
 }
 
@@ -134,22 +133,25 @@ export async function uploadEncrypted(
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
   onPhase?.("encrypting", 0);
-  const password = opts.password ? { password: opts.password } : undefined;
+  const password = opts.password || undefined;
   let result: EncryptResult;
   let format: 2 | 3;
   if (files.length === 1) {
     const file = files[0];
-    result = await encryptForUpload(
-      streamToAsyncIterable(file.stream()),
+    result = await encryptLegacyInWorker(
+      deps.crypto,
+      2,
       // The encrypted size lets the video preview do exact Range math without
       // relying on the ciphertext size the server sees.
-      { name: file.name, type: file.type, size: file.size },
-      // New shares are seekable so large videos can seek in the preview.
-      { ...password, seekable: true },
+      [{ name: file.name, type: file.type, size: file.size }],
+      streamToAsyncIterable(file.stream()),
+      password,
     );
     format = 2;
   } else {
-    result = await encryptFilesForUpload(packFiles(files), password);
+    const packed = packFiles(files);
+    const entries = packed.map(({ name, type, size }) => ({ name, type, size }));
+    result = await encryptLegacyInWorker(deps.crypto, 3, entries, concatFiles(packed), password);
     format = 3;
   }
   const { blob, keyForUrl, wrapped, keyVerifier } = result;
@@ -265,7 +267,7 @@ async function finish(
   keyForUrl: string,
   deps: UploadDeps,
 ): Promise<{ shareUrl: string; manageUrl: string }> {
-  const manage = await createManageToken();
+  const manage = await createManageToken(deps.crypto);
   const { slug } = await deps.finalize({ uploadId, ...fields, manageTokenHash: manage.hash });
 
   // In link mode the key rides in the fragment, which never reaches the
