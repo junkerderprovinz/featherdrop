@@ -40,6 +40,12 @@ func checkFormat(format int64, body finalizeBody, keyVerifier *string, path stri
 	if body.WrappedKey != "" || body.KDFSalt != "" {
 		return errors.New("format 4 takes no wrapped key")
 	}
+	return checkFormat4Blob(path, size)
+}
+
+// checkFormat4Blob reads the prefix of the format 4 blob of size bytes at
+// path and fails unless it is well-formed.
+func checkFormat4Blob(path string, size int64) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return errors.New("malformed format 4 blob")

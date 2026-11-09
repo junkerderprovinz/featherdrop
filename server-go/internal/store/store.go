@@ -102,7 +102,7 @@ func ApplySchema(db *sql.DB) error {
 	`); err != nil {
 		return fmt.Errorf("create resumes table: %w", err)
 	}
-	return nil
+	return applyRequestSchema(db)
 }
 
 func fileColumns(db *sql.DB) (map[string]struct{}, error) {

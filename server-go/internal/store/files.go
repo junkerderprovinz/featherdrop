@@ -146,12 +146,14 @@ func ListExpired(db *sql.DB, nowMs int64) ([]FileRecord, error) {
 	return out, nil
 }
 
-// TotalStoredSize returns the sum of all share sizes in bytes, for
-// STORAGE_QUOTA. It is not cached: the table has one row per live share, and a
-// cache would need invalidating on every finalize, burn and expiry.
+// TotalStoredSize returns the sum of all share and request upload sizes in
+// bytes, for STORAGE_QUOTA. It is not cached: the tables have one row per live
+// blob, and a cache would need invalidating on every finalize, burn and expiry.
 func TotalStoredSize(db *sql.DB) (int64, error) {
 	var total int64
-	if err := db.QueryRow(`SELECT COALESCE(SUM(size), 0) FROM files`).Scan(&total); err != nil {
+	if err := db.QueryRow(
+		`SELECT (SELECT COALESCE(SUM(size), 0) FROM files) + (SELECT COALESCE(SUM(size), 0) FROM request_uploads)`,
+	).Scan(&total); err != nil {
 		return 0, fmt.Errorf("total stored size: %w", err)
 	}
 	return total, nil

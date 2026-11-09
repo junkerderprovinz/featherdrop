@@ -261,6 +261,58 @@ func TestSweepDeletesAnExpiredShareWithAPendingResume(t *testing.T) {
 	}
 }
 
+// addRequest stores a request with one upload and its blob. A nil expiresAt
+// never expires.
+func addRequest(t *testing.T, cfg config.Config, db *sql.DB, slug string, size int64, expiresAt *int64) string {
+	t.Helper()
+	if err := store.CreateRequest(db, store.RequestRecord{
+		Slug:             slug,
+		PublicKey:        "cHVibGljcHVibGljcHVibGljcHVibGljcHVibGljcHU",
+		CollectTokenHash: "aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g",
+		ExpiresAt:        expiresAt,
+		CreatedAt:        1,
+	}); err != nil {
+		t.Fatalf("create request %s: %v", slug, err)
+	}
+	fileID := slug + "-upload"
+	if err := os.WriteFile(filepath.Join(cfg.UploadsDir, fileID), make([]byte, size), 0o600); err != nil {
+		t.Fatalf("write blob: %v", err)
+	}
+	if _, err := store.AddRequestUpload(db, slug, store.RequestUpload{
+		ID: "u1", FileID: fileID, Size: size, SealedKey: []byte{1}, CreatedAt: 1,
+	}, 1); err != nil {
+		t.Fatalf("add upload: %v", err)
+	}
+	return fileID
+}
+
+func TestSweepDeletesExpiredRequestsAndTheirUploads(t *testing.T) {
+	cfg, db := newTestEnv(t)
+	gone := addRequest(t, cfg, db, "expired", 100, i64p(9_000))
+	kept := addRequest(t, cfg, db, "future", 400, i64p(20_000))
+	never := addRequest(t, cfg, db, "never", 800, nil)
+
+	res, err := Sweep(cfg, db, time.UnixMilli(10_000))
+	if err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	if res.Requests != 1 {
+		t.Errorf("Requests = %d, want 1", res.Requests)
+	}
+	if rec, _ := store.GetRequest(db, "expired"); rec != nil {
+		t.Error("the expired request kept its row")
+	}
+	if _, err := os.Stat(filepath.Join(cfg.UploadsDir, gone)); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the expired request kept its upload (stat err %v)", err)
+	}
+	for _, id := range []string{kept, never} {
+		if _, err := os.Stat(filepath.Join(cfg.UploadsDir, id)); err != nil {
+			t.Errorf("upload %s of a live request removed: %v", id, err)
+		}
+	}
+	assertStoredSize(t, db, 400+800)
+}
+
 func TestSweepRemovesUploadsUntouchedForADay(t *testing.T) {
 	cfg, db := newTestEnv(t)
 	now := time.Now()
@@ -370,7 +422,7 @@ func TestRunSweepsAtStartAndOnEveryTickUntilCancelled(t *testing.T) {
 		synctest.Wait()
 		assertShareGone(t, cfg, db, "atstart")
 		assertShareKept(t, cfg, db, "later")
-		if got := logs.take(); got != "cleanup: removed 1 shares, 0 stale uploads\n" {
+		if got := logs.take(); got != "cleanup: removed 1 shares, 0 requests, 0 stale uploads\n" {
 			t.Errorf("startup log = %q", got)
 		}
 

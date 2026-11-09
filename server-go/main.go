@@ -159,6 +159,8 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	meta := api.MetaHandler(db, nil)
 	header := api.HeaderHandler(cfg, db, nil)
 	revoke := api.RevokeHandler(cfg, db)
+	createRequest := api.CreateRequestHandler(cfg, db, nil)
+	requests := api.RequestRoutes(cfg, db, nil)
 
 	// Only the tus create POST is limited; PATCH and HEAD resumes stay free.
 	// The share routes share one guard, so a slug or verifier guesser cannot
@@ -168,6 +170,7 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	// download, only spend the wide read budget.
 	if cfg.RateLimit {
 		createLimiter := ratelimit.NewLimiter(30, 10, nil)
+		requestLimiter := ratelimit.NewLimiter(30, 10, nil)
 		finalizeLimiter := ratelimit.NewLimiter(60, 10, nil)
 		shares := ratelimit.Guard{
 			Reads:   ratelimit.NewLimiter(600, 200, nil),
@@ -180,6 +183,8 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 		meta = shares.Middleware(cfg.TrustedProxies, meta)
 		header = shares.Middleware(cfg.TrustedProxies, header)
 		revoke = shares.Middleware(cfg.TrustedProxies, revoke)
+		createRequest = ratelimit.Middleware(requestLimiter, cfg.TrustedProxies, "", createRequest)
+		requests = shares.Middleware(cfg.TrustedProxies, requests)
 	}
 
 	// chi keeps the full request path, which tusd matches against its
@@ -192,6 +197,8 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	r.Get("/api/d/{slug}/meta", meta)
 	r.Get("/api/d/{slug}/header", header)
 	r.Delete("/api/m/{slug}", revoke)
+	r.Post("/api/requests", createRequest)
+	r.Mount("/api/r", requests)
 	r.Get("/api/config", api.ConfigHandler(cfg))
 
 	r.Get(clientmanifest.Path, client.ManifestHandler())
@@ -271,9 +278,10 @@ func renderShell(assets fs.FS, cfg config.Config) ([]byte, error) {
 func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
 	fileServer := http.FileServer(http.FS(assets))
 	return func(w http.ResponseWriter, r *http.Request) {
-		// A crawled share or management link would expose the share to
-		// anyone searching.
-		if strings.HasPrefix(r.URL.Path, "/d/") || strings.HasPrefix(r.URL.Path, "/m/") {
+		// A crawled share, management, request or collect link would expose
+		// it to anyone searching.
+		if strings.HasPrefix(r.URL.Path, "/d/") || strings.HasPrefix(r.URL.Path, "/m/") ||
+			strings.HasPrefix(r.URL.Path, "/r/") || strings.HasPrefix(r.URL.Path, "/c/") {
 			w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		}
 		upath := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")

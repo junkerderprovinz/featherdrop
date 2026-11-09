@@ -5,13 +5,16 @@
 import { useEffect, useState } from "react";
 import { ActionIcon, Box, Button, Group, PasswordInput, Stack, Text, Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconDownload, IconFile, IconFiles, IconLock } from "@tabler/icons-react";
+import { IconDownload, IconFile, IconFiles, IconLock, IconNote } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@/lib/format";
 import { decodeToken, type ShareKeys } from "@/lib/e2e/v2/keys";
-import { openLink, fetchLinkListing, type ListedFile } from "@/lib/e2e/share-listing";
+import { openLink, fetchShareHeader, type ListedFile } from "@/lib/e2e/share-listing";
 import { downloadDecryptedV2, downloadFileV2, fetchShareBlob } from "@/lib/e2e/download-flow";
 import { canStreamDownload, streamToDownload, blobDownload } from "@/lib/e2e/stream-download";
+import { readHeader, type Kind } from "@/lib/e2e/v2/share";
+import { readNote } from "@/lib/e2e/note";
+import { NoteView } from "@/components/NoteView";
 
 function tokenMode(token: string) {
   try {
@@ -24,8 +27,8 @@ function tokenMode(token: string) {
 async function openShare(slug: string, token: string, format: number, password?: string) {
   const link = await openLink(token, format, password);
   if (link.format !== 4) throw new Error("v2: not a v2 link");
-  const files = await fetchLinkListing(slug, link);
-  return { keys: link.keys, files };
+  const { header } = readHeader(link.keys, await fetchShareHeader(slug, link.keys.verifier));
+  return { keys: link.keys, files: header.files, kind: header.kind };
 }
 
 async function save(plaintext: ReadableStream<Uint8Array>, name: string, size: number): Promise<void> {
@@ -52,6 +55,8 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
   const [password, setPassword] = useState("");
   const [keys, setKeys] = useState<ShareKeys | null>(null);
   const [files, setFiles] = useState<ListedFile[] | null>(null);
+  const [kind, setKind] = useState<Kind | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [savingFile, setSavingFile] = useState<number | null>(null);
 
@@ -65,6 +70,7 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
         if (cancelled) return;
         setKeys(opened.keys);
         setFiles(opened.files);
+        setKind(opened.kind);
         onFiles(opened.files);
       } catch {
         // The download button tries again and reports the error.
@@ -79,12 +85,15 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
     if (busy) return;
     setBusy(true);
     let current = keys;
+    let currentKind = kind;
     try {
       if (!current) {
         const opened = await openShare(slug, token, format, mode === "link+password" ? password : undefined);
         current = opened.keys;
+        currentKind = opened.kind;
         setKeys(current);
         setFiles(opened.files);
+        setKind(opened.kind);
         onFiles(opened.files);
       }
     } catch {
@@ -97,7 +106,9 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
       return;
     }
     try {
-      await downloadDecryptedV2(fetchShareBlob(slug), { keys: current }, save, `${slug}.zip`);
+      // Reading a note counts as its download, like saving a file.
+      if (currentKind === "text") setNote(await readNote(fetchShareBlob(slug), { keys: current }));
+      else await downloadDecryptedV2(fetchShareBlob(slug), { keys: current }, save, `${slug}.zip`);
     } catch {
       notifications.show({ color: "red", message: t("download.failed") });
     } finally {
@@ -124,6 +135,8 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
       </Text>
     );
   }
+
+  if (note !== null) return <NoteView text={note} />;
 
   const locked = mode === "link+password" && !keys;
   const several = files !== null && files.length > 1;
@@ -175,13 +188,21 @@ export function V2Download({ slug, format, token, limited, onFiles }: V2Download
       <Button
         fullWidth
         size="md"
-        leftSection={several ? <IconFiles size={18} /> : <IconDownload size={18} />}
+        leftSection={
+          kind === "text" ? <IconNote size={18} /> : several ? <IconFiles size={18} /> : <IconDownload size={18} />
+        }
         loading={busy}
         disabled={savingFile !== null}
         onClick={() => void download()}
 
       >
-        {locked ? t("download.unlock") : several ? t("download.downloadAll") : t("download.download")}
+        {locked
+          ? t("download.unlock")
+          : kind === "text"
+            ? t("note.show")
+            : several
+              ? t("download.downloadAll")
+              : t("download.download")}
       </Button>
     </Stack>
   );
