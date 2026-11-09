@@ -62,18 +62,12 @@ export function DownloadPage() {
   }
 
   const { meta } = state;
-  // Name and type are inside the encrypted blob, and link and server mode
-  // belong to format 1.
   return (
     <DownloadView
       slug={slug}
-      name={null}
       size={meta.size}
-      mime={null}
       expiresAt={meta.expiresAt}
       hasPassword={meta.hasPassword}
-      linkMode={false}
-      serverMode={false}
       downloadsLeft={meta.downloadsLeft}
       format={meta.format}
       wrappedKey={meta.wrappedKey}

@@ -38,7 +38,6 @@ import { useTranslation } from "react-i18next";
 import { formatBytes, describeExpiry } from "@/lib/format";
 import {
   isPreviewableMime,
-  isServerInlineMime,
   previewKind,
   type PreviewKind,
 } from "@/lib/preview";
@@ -51,7 +50,9 @@ import { decryptFilesWithKey, type MultiDownload } from "@/lib/e2e/multi-pipelin
 import { deriveContentKey, decryptWithKey } from "@/lib/e2e/pipeline";
 import { computeKeyVerifier, fromBase64 } from "@/lib/e2e/crypto";
 import { peekBlobHeader } from "@/lib/e2e/blob-layout";
-import { fetchShareListing } from "@/lib/e2e/share-listing";
+import { fetchShareListing, type ListedFile } from "@/lib/e2e/share-listing";
+import { isV2Link } from "@/lib/e2e/v2/keys";
+import { V2Download } from "@/components/V2Download";
 import { streamToAsyncIterable } from "@/lib/e2e/stream-adapters";
 import type { Manifest } from "@/lib/e2e/multi-file";
 import {
@@ -109,28 +110,20 @@ type ShowDirectoryPicker = () => Promise<FsDirHandle>;
 
 interface DownloadViewProps {
   slug: string;
-  name: string | null; // null when encrypted
   size: number;
-  mime: string | null;
   expiresAt: number | null;
   hasPassword: boolean;
-  linkMode: boolean; // format 1: key in the URL fragment
-  serverMode: boolean; // format 1: key wrapped with the server master key
   downloadsLeft: number | null; // null when unlimited
-  format?: number; // absent for format 1
+  format: number;
   wrappedKey?: string | null; // password mode, base64
   kdfSalt?: string | null; // password mode, base64
 }
 
 export function DownloadView({
   slug,
-  name,
   size,
-  mime,
   expiresAt,
   hasPassword,
-  linkMode,
-  serverMode,
   downloadsLeft,
   format,
   wrappedKey,
@@ -147,9 +140,8 @@ export function DownloadView({
   const [busy, setBusy] = useState(false);
   // Encrypted shares reveal the name once the header is decrypted: on mount in
   // link mode, on unlock in password mode.
-  const [revealedName, setRevealedName] = useState<string | null>(name);
-  // Starts from the stored type and switches to the decrypted one.
-  const [revealedMime, setRevealedMime] = useState<string | null>(mime);
+  const [revealedName, setRevealedName] = useState<string | null>(null);
+  const [revealedMime, setRevealedMime] = useState<string | null>(null);
   // Small format 2 shares are decrypted on mount; the download button reuses
   // the cached blob, and previewUrl is its blob: URL.
   const [decrypted, setDecrypted] = useState<{
@@ -187,8 +179,12 @@ export function DownloadView({
       ? new URLSearchParams(window.location.hash.slice(1)).get("k") ?? ""
       : "";
 
-  const isV2 = format === 2;
-  const isV3 = format === 3;
+  // A v2 link token picks the v2 panel whatever format the server reports,
+  // and keeps the format 2 and 3 code below away from it.
+  const v2Link = isV2Link(linkKey);
+  const [v2Files, setV2Files] = useState<ListedFile[] | null>(null);
+  const isV2 = !v2Link && format === 2;
+  const isV3 = !v2Link && format === 3;
 
   const v2Download = async () => {
     if (busy) return;
@@ -703,104 +699,14 @@ export function DownloadView({
     };
   }, [isV2, hasPassword, downloadsLeft, size, linkKey, downloadUrl]);
 
-  // Format 1: authorize with a POST, then start the browser's own download.
-  const authorizeThenDownload = async (cred: {
-    password?: string;
-    key?: string;
-  }) => {
-    setBusy(true);
-    try {
-      const res = await fetch(downloadUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cred),
-      });
-      if (res.status === 401) {
-        // A wrong password or a corrupt link key.
-        const message = cred.password
-          ? t("download.wrongPassword")
-          : t("download.failed");
-        notifications.show({ color: "red", message });
-        return false;
-      }
-      if (!res.ok) throw new Error(`verify ${res.status}`);
-      const data = (await res.json()) as { name?: string };
-      if (data.name) setRevealedName(data.name);
-      // The POST response set the download cookie.
-      window.location.href = downloadUrl;
-      return true;
-    } catch (e) {
-      notifications.show({
-        color: "red",
-        message: e instanceof Error ? e.message : t("download.failed"),
-      });
-      return false;
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Format 1 shares without a password reveal the name on mount with a POST
-  // that decrypts only the header: link mode sends the fragment key, server
-  // mode an empty credential.
-  useEffect(() => {
-    if (isV2) return;
-    const cred = linkMode && linkKey ? { key: linkKey } : serverMode ? {} : null;
-    if (!cred) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(downloadUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cred),
-        });
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          name?: string;
-          mime?: string | null;
-        };
-        if (cancelled) return;
-        if (data.name) setRevealedName(data.name);
-        if (data.mime) setRevealedMime(data.mime);
-      } catch {
-        // The download button still works.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isV2, linkMode, linkKey, serverMode, downloadUrl]);
-
-  const missingKey = linkMode && !linkKey;
-
-  // The key goes along as ?k= because a reverse proxy can delay or strip the
-  // fd_key cookie before the image or embed GET. It is already in this page's
-  // fragment, so nothing new is exposed.
-  const inlineSrc = `${downloadUrl}?inline=1${linkKey ? `&k=${encodeURIComponent(linkKey)}` : ""}`;
-
-  // Previews are only for unlimited, password-less shares, since they would
-  // otherwise use up or require a counted download. `||` treats an empty type
-  // like a missing one. Older files stored no type, because tus writes an empty
-  // file.type as null, so the name's extension fills in.
-  const effectiveMime =
-    revealedMime || mime || mimeFromName(revealedName ?? name ?? "");
-  const v1PreviewKind = previewKind(effectiveMime);
-  // Format 1 previews load from the server's ?inline URL, so they use the
-  // server allowlist without SVG, and no text, which needs decoded bytes.
-  const v1Previewable =
-    isServerInlineMime(effectiveMime) && v1PreviewKind !== "text";
-  const canPreview =
-    v1Previewable &&
-    downloadsLeft === null &&
-    !hasPassword &&
-    !missingKey &&
-    revealedName !== null;
-
-  const previewSrc = isV2 ? previewUrl : canPreview ? inlineSrc : null;
-  const renderKind = isV2 ? previewKind(effectiveMime) : v1PreviewKind;
+  // `||` treats an empty type like a missing one. Older files stored no type,
+  // because tus writes an empty file.type as null, so the name's extension
+  // fills in.
+  const effectiveMime = revealedMime || mimeFromName(revealedName ?? "");
+  const renderKind = previewKind(effectiveMime);
   // A null previewText with the text kind means over the cap.
   const isV2TextPreview = isV2 && renderKind === "text";
+  const v2Total = v2Files?.reduce((sum, f) => sum + (f.size ?? 0), 0);
 
   return (
     <Container
@@ -862,14 +768,20 @@ export function DownloadView({
         <Stack align="center" gap="lg">
           <Stack align="center" gap={2}>
             <Text fw={700} size="xl" ta="center" lineClamp={2}>
-              {isV3
-                ? manifest
-                  ? t("download.fileCount", { count: manifest.files.length })
-                  : t("download.multiFile")
-                : (revealedName ?? t("download.encryptedFile"))}
+              {v2Files
+                ? v2Files.length === 1
+                  ? v2Files[0].name
+                  : t("download.fileCount", { count: v2Files.length })
+                : isV3
+                  ? manifest
+                    ? t("download.fileCount", { count: manifest.files.length })
+                    : t("download.multiFile")
+                  : (revealedName ?? t("download.encryptedFile"))}
             </Text>
             <Text c="dimmed" size="sm">
-              {isV3 && manifest
+              {v2Total !== undefined
+                ? `${formatBytes(v2Total)} · ${expiryText}`
+                : isV3 && manifest
                 ? `${t("download.total", {
                     size: formatBytes(
                       manifest.files.reduce((s, f) => s + f.size, 0),
@@ -894,12 +806,14 @@ export function DownloadView({
                 {t("preview.tooLarge")}
               </Text>
             ) : null
-          ) : previewSrc ? (
-            <PreviewArea src={previewSrc} kind={renderKind} name={revealedName} />
+          ) : previewUrl ? (
+            <PreviewArea src={previewUrl} kind={renderKind} name={revealedName} />
           ) : null}
 
           {/* Password shares show the list after a successful unlock. */}
-          {isV3 ? (
+          {v2Link ? (
+            <V2Download slug={slug} format={format} token={linkKey} onFiles={setV2Files} />
+          ) : isV3 ? (
             <Stack w="100%" gap="md">
               {hasPassword && !buffered && (
                 <Stack w="100%" gap="sm">
@@ -1055,10 +969,6 @@ export function DownloadView({
               )}
             </Stack>
           ) : isV2 ? (
-            /* The branch is on hasPassword, never on the fragment key: the
-               server cannot see the fragment, so branching on it would render
-               different markup on server and client and trip a hydration
-               mismatch. */
             hasPassword ? (
               <Stack w="100%" gap="sm">
                 <PasswordInput
@@ -1090,44 +1000,10 @@ export function DownloadView({
                 {t("download.download")}
               </Button>
             )
-          ) : missingKey ? (
+          ) : (
             <Text c="red" ta="center" size="sm">
               {t("download.missingKey")}
             </Text>
-          ) : hasPassword ? (
-            <Stack w="100%" gap="sm">
-              <PasswordInput
-                label={t("download.protected")}
-                placeholder={t("download.passwordPlaceholder")}
-                leftSection={<IconLock size={16} />}
-                value={password}
-                onChange={(e) => setPassword(e.currentTarget.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && authorizeThenDownload({ password })
-                }
-              />
-              <Button
-                fullWidth
-                size="md"
-                leftSection={<IconDownload size={18} />}
-                loading={busy}
-                onClick={() => authorizeThenDownload({ password })}
-              >
-                {t("download.unlock")}
-              </Button>
-            </Stack>
-          ) : (
-            <Button
-              fullWidth
-              size="md"
-              leftSection={<IconDownload size={18} />}
-              loading={busy}
-              onClick={() =>
-                authorizeThenDownload(linkMode ? { key: linkKey } : {})
-              }
-            >
-              {t("download.download")}
-            </Button>
           )}
         </Stack>
       </Paper>
