@@ -36,6 +36,9 @@ type Config struct {
 	MaxExpiry string
 	// StorageQuota caps the total stored bytes; 0 means unlimited.
 	StorageQuota int64
+	// UploadLimitPerIP caps the bytes one client may upload per 24 hours; 0
+	// means unlimited.
+	UploadLimitPerIP int64
 	// RateLimit turns on the per-client-IP token buckets.
 	RateLimit bool
 	// TrustedProxies are the proxies whose X-Forwarded-For names the client.
@@ -43,9 +46,10 @@ type Config struct {
 
 	// Load keeps these verbatim and Validate parses them, because an invalid
 	// value has to stop the boot and Load returns no error.
-	rawStorageQuota string
-	rawRateLimit    string
-	rawTrustProxy   string
+	rawStorageQuota     string
+	rawRateLimit        string
+	rawTrustProxy       string
+	rawUploadLimitPerIP string
 
 	UploadPassword  string
 	UploadProtected bool
@@ -90,11 +94,12 @@ func Load() Config {
 		DefaultExpiry: getenv("DEFAULT_EXPIRY", "7d"),
 		BaseURL:       getenv("BASE_URL", ""),
 
-		MaxExpiry:       getenv("MAX_EXPIRY", ""),
-		RateLimit:       true,
-		rawStorageQuota: getenv("STORAGE_QUOTA", ""),
-		rawRateLimit:    getenv("RATE_LIMIT", ""),
-		rawTrustProxy:   getenv("TRUST_PROXY", ""),
+		MaxExpiry:           getenv("MAX_EXPIRY", ""),
+		RateLimit:           true,
+		rawStorageQuota:     getenv("STORAGE_QUOTA", ""),
+		rawRateLimit:        getenv("RATE_LIMIT", ""),
+		rawTrustProxy:       getenv("TRUST_PROXY", ""),
+		rawUploadLimitPerIP: getenv("UPLOAD_LIMIT_PER_IP", ""),
 
 		UploadPassword:  uploadPassword,
 		UploadProtected: len(uploadPassword) > 0,
@@ -127,6 +132,16 @@ func (c *Config) Validate() (warnings []string, err error) {
 				c.rawStorageQuota)
 		}
 		c.StorageQuota = n
+	}
+
+	if c.rawUploadLimitPerIP != "" {
+		n, perr := strconv.ParseInt(c.rawUploadLimitPerIP, 10, 64)
+		if perr != nil || n < 0 {
+			return warnings, fmt.Errorf(
+				"UPLOAD_LIMIT_PER_IP=%q is invalid: accepted values are a non-negative integer byte count (empty or 0 = unlimited)",
+				c.rawUploadLimitPerIP)
+		}
+		c.UploadLimitPerIP = n
 	}
 
 	if c.rawRateLimit != "" {

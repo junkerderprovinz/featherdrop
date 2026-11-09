@@ -3,6 +3,7 @@ package upload
 import (
 	"database/sql"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,8 +12,10 @@ import (
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 	"golang.org/x/exp/slog"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/uploadcap"
 )
 
 // BasePath is where the tus handler is mounted; tusd requires the trailing
@@ -56,9 +59,13 @@ func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, er
 		return nil, err
 	}
 
+	var next http.Handler = stripBasePath(h)
+	if cfg.UploadLimitPerIP > 0 {
+		next = limitGate(uploadcap.New(cfg.UploadLimitPerIP, nil), cfg.TrustedProxies, next)
+	}
 	// The auth gate goes outermost so an unauthorized request learns nothing
 	// about the quota.
-	return uploadGate(cfg, quotaGate(cfg, db, stripBasePath(h))), nil
+	return uploadGate(cfg, quotaGate(cfg, db, next)), nil
 }
 
 // stripBasePath removes the "/files" or "/files/" prefix before tusd sees the
@@ -113,13 +120,66 @@ func quotaGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 			if err == nil && length > 0 {
 				used, err := store.TotalStoredSize(db)
 				if err == nil && used+length > cfg.StorageQuota {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusInsufficientStorage)
-					_, _ = w.Write([]byte(`{"error":"storage quota exceeded"}`))
+					writeJSONError(w, http.StatusInsufficientStorage, "storage quota exceeded")
 					return
 				}
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// limitGate charges a tus create's declared Upload-Length to its client under
+// UPLOAD_LIMIT_PER_IP. Resumes pass, since tusd caps them at the declared
+// length. A deferred length would slip past the count, so a create has to
+// declare one. A create tusd refuses gives its bytes back.
+func limitGate(limit *uploadcap.Cap, proxies clientip.Proxies, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			next.ServeHTTP(w, r)
+			return
+		}
+		length, err := strconv.ParseInt(r.Header.Get("Upload-Length"), 10, 64)
+		if err != nil || length < 0 {
+			writeJSONError(w, http.StatusBadRequest, "upload length required")
+			return
+		}
+		release, retryAfter, ok := limit.Take(proxies.ClientIP(r), length)
+		if !ok {
+			if retryAfter == 0 {
+				writeJSONError(w, http.StatusRequestEntityTooLarge, "upload larger than the limit")
+				return
+			}
+			w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(retryAfter.Seconds()))))
+			writeJSONError(w, http.StatusTooManyRequests, "upload limit reached")
+			return
+		}
+		rec := &statusRecorder{ResponseWriter: w}
+		next.ServeHTTP(rec, r)
+		if rec.status != http.StatusCreated {
+			release()
+		}
+	})
+}
+
+func writeJSONError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(`{"error":"` + msg + `"}`))
+}
+
+// statusRecorder remembers the status a handler wrote. Unwrap lets tusd's
+// http.ResponseController still reach the connection for its deadlines.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
 }

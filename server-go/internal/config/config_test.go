@@ -12,7 +12,7 @@ import (
 var configEnvVars = []string{
 	"DATA_DIR", "CONFIG_DIR", "MAX_FILE_SIZE", "DEFAULT_EXPIRY", "BASE_URL",
 	"UPLOAD_PASSWORD", "APP_NAME", "APP_LOGO", "ACCENT_COLOR", "PORT",
-	"MAX_EXPIRY", "STORAGE_QUOTA", "RATE_LIMIT", "TRUST_PROXY",
+	"MAX_EXPIRY", "STORAGE_QUOTA", "RATE_LIMIT", "TRUST_PROXY", "UPLOAD_LIMIT_PER_IP",
 }
 
 // clearConfigEnv unsets every config variable for the test, so Load sees its
@@ -195,6 +195,42 @@ func TestValidate_StorageQuota(t *testing.T) {
 			}
 			if cfg.StorageQuota != tt.want {
 				t.Errorf("StorageQuota = %d, want %d", cfg.StorageQuota, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidate_UploadLimitPerIP(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		want    int64
+		wantErr bool
+	}{
+		{"empty = off", "", 0, false},
+		{"zero = off", "0", 0, false},
+		{"bytes", "10737418240", 10737418240, false},
+		{"negative", "-1", 0, true},
+		{"unit suffix", "10GB", 0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clearConfigEnv(t)
+			if tt.value != "" {
+				t.Setenv("UPLOAD_LIMIT_PER_IP", tt.value)
+			}
+			cfg, _, err := loadAndValidate(t)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Validate err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				if !strings.Contains(err.Error(), "UPLOAD_LIMIT_PER_IP") {
+					t.Errorf("error %q must name UPLOAD_LIMIT_PER_IP", err)
+				}
+				return
+			}
+			if cfg.UploadLimitPerIP != tt.want {
+				t.Errorf("UploadLimitPerIP = %d, want %d", cfg.UploadLimitPerIP, tt.want)
 			}
 		})
 	}
