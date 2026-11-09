@@ -3,7 +3,7 @@
 // here, and the way to close the request. The collect link's secret never
 // leaves this browser, only a token derived from it does.
 import { Button, Card, CopyField, EmptyState, FieldRow, ListRow } from '@glimstone/vue';
-import { reactive, ref } from 'vue';
+import { reactive, ref, shallowRef } from 'vue';
 import { downloadDecryptedV2 } from '@/lib/e2e/download-flow';
 import { readNote } from '@/lib/e2e/note';
 import {
@@ -38,7 +38,8 @@ function linkFromLocation(): CollectLink | null {
 
 const collect = linkFromLocation();
 const phase = ref<'loading' | 'ready' | 'closed' | 'notfound'>(collect ? 'loading' : 'notfound');
-const uploads = ref<CollectedUpload[]>([]);
+// Shallow, since the keys go to the crypto worker, which cannot take a reactive proxy.
+const uploads = shallowRef<CollectedUpload[]>([]);
 const shareLink = ref('');
 const notes = reactive<Record<string, string>>({});
 const busy = ref<string | null>(null);
