@@ -111,8 +111,7 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		// The sidecar's Offset stays at 0 (see lib/upload.ts), so the size on
-		// disk is what counts.
+		// The size on disk counts, not the offset in the sidecar.
 		tmpPath := filepath.Join(cfg.TmpDir, body.UploadID)
 		st, err := os.Stat(tmpPath)
 		if err != nil {
@@ -121,8 +120,7 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 		}
 		size := st.Size()
 
-		declaredKnown := !info.SizeIsDeferred
-		if !share.IsUploadComplete(size, info.Size, declaredKnown) {
+		if !share.IsUploadComplete(size, info.Size, !info.SizeIsDeferred) {
 			writeJSONError(w, http.StatusConflict, "upload not complete")
 			return
 		}
@@ -136,9 +134,9 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			return
 		}
 
-		// The tus create only checked the declared length, and a deferred length
-		// declares none, so this check on the real bytes is the one that counts.
-		// It runs before the rename so a 507 leaves the upload for a later retry.
+		// The tus create checked the quota before other uploads finished, so
+		// this check on the stored total is the one that counts. It runs before
+		// the rename so a 507 leaves the upload for a later retry.
 		if cfg.StorageQuota > 0 {
 			used, err := store.TotalStoredSize(db)
 			if err != nil {

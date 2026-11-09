@@ -323,8 +323,8 @@ func TestIsUploadComplete(t *testing.T) {
 		declaredKnown bool
 		want          bool
 	}{
-		{"unknown declared -> accept", 0, 0, false, true},
-		{"unknown declared with bytes -> accept", 123, 0, false, true},
+		{"no declared length -> incomplete", 0, 0, false, false},
+		{"no declared length with bytes -> incomplete", 123, 0, false, false},
 		{"exact match", 100, 100, true, true},
 		{"over (more on disk) -> complete", 101, 100, true, true},
 		{"under -> incomplete", 99, 100, true, false},

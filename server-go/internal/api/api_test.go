@@ -307,6 +307,19 @@ func TestFinalize_Incomplete_409(t *testing.T) {
 	}
 }
 
+func TestFinalize_RefusesAnUploadWithoutADeclaredLength(t *testing.T) {
+	e := newTestEnv(t)
+	id := e.makeDeferredTusUpload(t, v4Blob(1064, 4112))
+
+	rec := e.finalize(t, nil, map[string]any{"uploadId": id, "format": 4, "keyVerifier": goodVerifier}, nil)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409 (body %s)", rec.Code, rec.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(e.cfg.UploadsDir, id)); err == nil {
+		t.Fatal("the upload was stored")
+	}
+}
+
 func TestFinalize_Format2Happy(t *testing.T) {
 	e := newTestEnv(t)
 	content := []byte("fake encrypted content for link mode")

@@ -265,9 +265,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	size := st.Size()
-	// An upload without a declared length could still be growing after the
-	// rename below, past the size cap and the quota.
-	if info.SizeIsDeferred || !share.IsUploadComplete(size, info.Size, true) {
+	if !share.IsUploadComplete(size, info.Size, !info.SizeIsDeferred) {
 		writeJSONError(w, http.StatusConflict, "upload not complete")
 		return
 	}

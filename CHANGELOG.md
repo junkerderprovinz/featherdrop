@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Online password guessing is slowed per share.** A v2 share takes ten wrong passwords in a row, then locks for everyone for one second, doubling after each further miss up to an hour, and answers `429` with `Retry-After` while locked. The right password resets the count. The count is kept with the share, so a restart doesn't clear it, and it no longer matters how many addresses a guesser has.
 - `RATE_LIMIT` counts IPv6 visitors per /64, like the upload cap, so one host can no longer multiply its budget by rotating through the addresses of its prefix.
 - **`RATE_LIMIT` on the share routes counts misses, not reads.** A visitor gets 10 failed lookups, wrong keys and new downloads at once and 20 a minute after that. Reads that pass, like a video seeking through a large file or a download picking up after a break, only count toward a wide limit of 600 a minute, so recipients no longer run into `429` while they watch.
+- An upload that never declared its length can't become a share. It could otherwise keep growing after it was stored, past the storage quota.
 
 ## [1.9.0] - 2026-07-15
 
