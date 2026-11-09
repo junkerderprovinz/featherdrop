@@ -1,0 +1,492 @@
+// The v2 container (server format 4), byte for byte in docs/encryption-format.md:
+//
+//   blob    = version(1) || u32be(sealedLen) || sealed || chunk_0 || ... || chunk_{n-1}
+//   sealed  = nonce(24) || XChaCha20-Poly1305(headerKey, nonce, padded header, aad = first 5 bytes)
+//   chunk_i = XChaCha20-Poly1305(contentKey, baseNonce ^ i, padded plaintext slice, aad = u64be(i) || final)
+//
+// The header names the kind, mode, KDF parameters, chunk size and padding
+// scheme, so the server can neither see nor swap them. Both the header and the
+// content are Padmé-padded; the server learns two padded lengths and nothing
+// else. Encryption and decryption are push-based so they run unchanged in a
+// Web Worker and can feed an upload as the bytes are produced.
+
+import { aeadEncrypt, aeadDecrypt, toBase64, fromBase64, loadSodium } from "../crypto";
+import { deriveNonce } from "../seekable";
+import { paddedContentLength, paddedHeaderLength, MIN_HEADER_PAD } from "./padding";
+import {
+  FORMAT_VERSION,
+  MIN_PASSWORD_LENGTH,
+  newToken,
+  encodeToken,
+  decodeToken,
+  deriveKeys,
+  isPasswordLongEnough,
+  type KdfParams,
+  type Mode,
+  type ShareKeys,
+} from "./keys";
+
+export type Kind = "single" | "bundle";
+
+export interface FileEntry {
+  name: string;
+  type: string;
+  size: number;
+}
+
+export interface Header {
+  v: 2;
+  kind: Kind;
+  mode: Mode;
+  kdf: KdfParams | null;
+  /** Plaintext bytes per chunk. */
+  chunk: number;
+  pad: "padme";
+  /** Base nonce of the content chunks, standard base64. */
+  nonce: string;
+  /** Total plaintext length, the sum of the file sizes. */
+  size: number;
+  files: FileEntry[];
+}
+
+export const DEFAULT_CHUNK = 65536;
+const MIN_CHUNK = 4096;
+const MAX_CHUNK = 16 * 1024 * 1024;
+const PREFIX_BYTES = 5;
+const NONCE_BYTES = 24;
+const TAG_BYTES = 16;
+const MAX_SEALED = 16 * 1024 * 1024;
+
+const utf8 = new TextEncoder();
+
+function getU32(b: Uint8Array, at: number): number {
+  return new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(at);
+}
+
+function setU32(b: Uint8Array, at: number, v: number): void {
+  new DataView(b.buffer, b.byteOffset, b.byteLength).setUint32(at, v);
+}
+
+function chunkAad(i: number, final: boolean): Uint8Array {
+  const aad = new Uint8Array(9);
+  setU32(aad, 0, Math.floor(i / 0x1_0000_0000));
+  setU32(aad, 4, i >>> 0);
+  aad[8] = final ? 1 : 0;
+  return aad;
+}
+
+function chunkCount(padded: number, chunk: number): number {
+  return Math.ceil(padded / chunk);
+}
+
+function isChunkSize(n: unknown): n is number {
+  return (
+    typeof n === "number" &&
+    Number.isInteger(n) &&
+    n >= MIN_CHUNK &&
+    n <= MAX_CHUNK &&
+    (n & (n - 1)) === 0
+  );
+}
+
+function isSize(n: unknown): n is number {
+  return typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
+}
+
+function hasExactKeys(o: object, keys: string[]): boolean {
+  const own = Object.keys(o);
+  return own.length === keys.length && keys.every((k) => Object.hasOwn(o, k));
+}
+
+const HEADER_KEYS = ["v", "kind", "mode", "kdf", "chunk", "pad", "nonce", "size", "files"];
+
+function sameKdf(a: KdfParams | null, b: KdfParams | null): boolean {
+  if (a === null || b === null) return a === b;
+  return hasExactKeys(a, ["alg", "ops", "mem"]) && a.alg === b.alg && a.ops === b.ops && a.mem === b.mem;
+}
+
+/** Throws unless h is a well-formed header for the mode and KDF of keys. */
+function checkHeader(h: unknown, keys: ShareKeys): Header {
+  const bad = (why: string) => new Error(`v2: invalid header (${why})`);
+  if (typeof h !== "object" || h === null || !hasExactKeys(h, HEADER_KEYS)) throw bad("fields");
+  const x = h as Header;
+  if (x.v !== 2) throw bad("v");
+  if (x.kind !== "single" && x.kind !== "bundle") throw bad("kind");
+  if (x.mode !== keys.mode) throw bad("mode");
+  if (typeof x.kdf !== "object" || !sameKdf(x.kdf, keys.kdf)) throw bad("kdf");
+  if (!isChunkSize(x.chunk)) throw bad("chunk");
+  if (x.pad !== "padme") throw bad("pad");
+  if (typeof x.nonce !== "string" || fromBase64(x.nonce).length !== NONCE_BYTES) throw bad("nonce");
+  if (!Array.isArray(x.files) || x.files.length === 0) throw bad("files");
+  if (x.kind === "single" && x.files.length !== 1) throw bad("single with several files");
+  let total = 0;
+  for (const f of x.files) {
+    if (
+      typeof f !== "object" ||
+      f === null ||
+      !hasExactKeys(f, ["name", "type", "size"]) ||
+      typeof f.name !== "string" ||
+      typeof f.type !== "string" ||
+      !isSize(f.size)
+    ) {
+      throw bad("file entry");
+    }
+    total += f.size;
+  }
+  if (!isSize(x.size) || x.size !== total) throw bad("size");
+  return x;
+}
+
+/**
+ * Length of version, length field and sealed header, read from the first five
+ * bytes of a blob. The content starts right after.
+ */
+export function headerLength(prefix: Uint8Array): number {
+  if (prefix.length < PREFIX_BYTES) throw new Error("v2: blob truncated in the header");
+  if (prefix[0] !== FORMAT_VERSION) throw new Error("v2: unknown version");
+  const sealed = getU32(prefix, 1);
+  if (sealed < NONCE_BYTES + MIN_HEADER_PAD + TAG_BYTES || sealed > MAX_SEALED) {
+    throw new Error("v2: header length out of range");
+  }
+  return PREFIX_BYTES + sealed;
+}
+
+/** Opens and checks the header. bytes must hold at least headerLength(bytes) bytes. */
+export function readHeader(keys: ShareKeys, bytes: Uint8Array): { header: Header; contentOffset: number } {
+  const len = headerLength(bytes);
+  if (bytes.length < len) throw new Error("v2: blob truncated in the header");
+  let plain: Uint8Array;
+  try {
+    plain = aeadDecrypt(
+      bytes.subarray(PREFIX_BYTES + NONCE_BYTES, len),
+      bytes.subarray(0, PREFIX_BYTES),
+      bytes.subarray(PREFIX_BYTES, PREFIX_BYTES + NONCE_BYTES),
+      keys.header,
+    );
+  } catch {
+    throw new Error("v2: header does not open (wrong link, wrong password or tampered)");
+  }
+  const jsonLen = getU32(plain, 0);
+  if (4 + jsonLen > plain.length || paddedHeaderLength(4 + jsonLen) !== plain.length) {
+    throw new Error("v2: invalid header (padding)");
+  }
+  if (plain.subarray(4 + jsonLen).some((b) => b !== 0)) throw new Error("v2: invalid header (padding)");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plain.subarray(4, 4 + jsonLen)));
+  } catch {
+    throw new Error("v2: invalid header (json)");
+  }
+  return { header: checkHeader(parsed, keys), contentOffset: len };
+}
+
+function sealHeader(keys: ShareKeys, header: Header, nonce: Uint8Array): Uint8Array {
+  const json = utf8.encode(JSON.stringify(header));
+  const plain = new Uint8Array(paddedHeaderLength(4 + json.length));
+  setU32(plain, 0, json.length);
+  plain.set(json, 4);
+  const sealedLen = NONCE_BYTES + plain.length + TAG_BYTES;
+  if (sealedLen > MAX_SEALED) throw new Error("v2: too many files for one share");
+  const out = new Uint8Array(PREFIX_BYTES + sealedLen);
+  out[0] = FORMAT_VERSION;
+  setU32(out, 1, sealedLen);
+  out.set(nonce, PREFIX_BYTES);
+  out.set(aeadEncrypt(plain, out.subarray(0, PREFIX_BYTES), nonce, keys.header), PREFIX_BYTES + NONCE_BYTES);
+  return out;
+}
+
+/** Decrypts chunk i of n and returns its plaintext with the padding cut off. */
+function openChunk(keys: ShareKeys, header: Header, baseNonce: Uint8Array, n: number, i: number, frame: Uint8Array): Uint8Array {
+  let plain: Uint8Array;
+  try {
+    plain = aeadDecrypt(frame, chunkAad(i, i === n - 1), deriveNonce(baseNonce, i), keys.content);
+  } catch {
+    throw new Error(`v2: chunk ${i} does not open (tampered, reordered or from another share)`);
+  }
+  const real = Math.min(plain.length, Math.max(0, header.size - i * header.chunk));
+  if (plain.subarray(real).some((b) => b !== 0)) throw new Error(`v2: chunk ${i} has nonzero padding`);
+  return plain.subarray(0, real);
+}
+
+function cipherChunkLength(header: Header, n: number, i: number): number {
+  const padded = paddedContentLength(header.size);
+  const plain = i === n - 1 ? padded - i * header.chunk : header.chunk;
+  return plain + TAG_BYTES;
+}
+
+export class ShareEncryptor {
+  readonly header: Header;
+  /** Version, length field and sealed header: the first bytes of the blob. */
+  readonly prefix: Uint8Array;
+  /** Exact length of the finished blob, known before any content is read. */
+  readonly blobLength: number;
+  readonly verifier: string;
+  private readonly key: Uint8Array;
+  private readonly baseNonce: Uint8Array;
+  private readonly padded: number;
+  private readonly n: number;
+  private readonly buf: Uint8Array;
+  private fill = 0;
+  private i = 0;
+  private received = 0;
+
+  constructor(keys: ShareKeys, header: Header, headerNonce: Uint8Array, baseNonce: Uint8Array) {
+    this.header = header;
+    this.prefix = sealHeader(keys, header, headerNonce);
+    this.verifier = keys.verifier;
+    this.key = keys.content;
+    this.baseNonce = baseNonce;
+    this.padded = paddedContentLength(header.size);
+    this.n = chunkCount(this.padded, header.chunk);
+    this.blobLength = this.prefix.length + this.padded + this.n * TAG_BYTES;
+    this.buf = new Uint8Array(header.chunk);
+  }
+
+  private seal(): Uint8Array {
+    const final = this.i === this.n - 1;
+    const out = aeadEncrypt(
+      this.buf.subarray(0, this.fill),
+      chunkAad(this.i, final),
+      deriveNonce(this.baseNonce, this.i),
+      this.key,
+    );
+    this.i++;
+    this.fill = 0;
+    return out;
+  }
+
+  /** Takes plaintext in any slicing and returns the chunks it completes. */
+  push(data: Uint8Array): Uint8Array[] {
+    if (this.received + data.length > this.header.size) {
+      throw new Error("v2: more bytes than the declared size");
+    }
+    this.received += data.length;
+    const out: Uint8Array[] = [];
+    let off = 0;
+    while (off < data.length) {
+      const take = Math.min(this.header.chunk - this.fill, data.length - off);
+      this.buf.set(data.subarray(off, off + take), this.fill);
+      this.fill += take;
+      off += take;
+      // The final chunk waits for finish(), which knows it is final.
+      if (this.fill === this.header.chunk && this.i < this.n - 1) out.push(this.seal());
+    }
+    return out;
+  }
+
+  /** Pads, seals and yields the remaining chunks, the final one last. */
+  *finish(): Generator<Uint8Array> {
+    if (this.received !== this.header.size) throw new Error("v2: fewer bytes than the declared size");
+    while (this.i < this.n) {
+      const end = this.i === this.n - 1 ? this.padded - this.i * this.header.chunk : this.header.chunk;
+      this.buf.fill(0, this.fill, end);
+      this.fill = end;
+      yield this.seal();
+    }
+  }
+}
+
+/**
+ * Builds an encryptor from explicit key material. Callers outside tests and
+ * test vectors use createEncryptor, which draws fresh nonces.
+ */
+export function buildEncryptor(opts: {
+  keys: ShareKeys;
+  kind: Kind;
+  files: FileEntry[];
+  chunk: number;
+  headerNonce: Uint8Array;
+  baseNonce: Uint8Array;
+}): ShareEncryptor {
+  const { keys, kind, files, chunk, headerNonce, baseNonce } = opts;
+  if (files.length === 0) throw new Error("v2: no files");
+  if (kind === "single" && files.length !== 1) throw new Error("v2: a single share holds one file");
+  if (!isChunkSize(chunk)) throw new Error("v2: invalid chunk size");
+  if (headerNonce.length !== NONCE_BYTES || baseNonce.length !== NONCE_BYTES) throw new Error("v2: invalid nonce");
+  let size = 0;
+  for (const f of files) {
+    if (!isSize(f.size)) throw new Error("v2: invalid file size");
+    size += f.size;
+  }
+  if (!isSize(size)) throw new Error("v2: total size too large");
+  const header: Header = {
+    v: 2,
+    kind,
+    mode: keys.mode,
+    kdf: keys.kdf,
+    chunk,
+    pad: "padme",
+    nonce: toBase64(baseNonce),
+    size,
+    files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
+  };
+  return new ShareEncryptor(keys, header, headerNonce, baseNonce);
+}
+
+/**
+ * Starts a new share: a fresh link token, its keys and an encryptor. One file
+ * becomes a single share, several a bundle. With a password the share needs
+ * both the link and the password.
+ */
+export async function createEncryptor(
+  files: FileEntry[],
+  opts: { password?: string } = {},
+): Promise<ShareEncryptor & { token: string }> {
+  const { password } = opts;
+  if (password !== undefined && !isPasswordLongEnough(password)) {
+    throw new Error(`v2: the password needs at least ${MIN_PASSWORD_LENGTH} characters`);
+  }
+  const sodium = await loadSodium();
+  const token = await newToken(password === undefined ? "link" : "link+password");
+  const keys = await deriveKeys(token, password);
+  const enc = buildEncryptor({
+    keys,
+    kind: files.length === 1 ? "single" : "bundle",
+    files,
+    chunk: DEFAULT_CHUNK,
+    headerNonce: sodium.randombytes_buf(NONCE_BYTES),
+    baseNonce: sodium.randombytes_buf(NONCE_BYTES),
+  });
+  return Object.assign(enc, { token: encodeToken(token) });
+}
+
+/** The whole blob as a stream: prefix, then the chunks as plaintext arrives. */
+export async function* encryptStream(
+  enc: ShareEncryptor,
+  plaintext: AsyncIterable<Uint8Array>,
+): AsyncGenerator<Uint8Array> {
+  yield enc.prefix;
+  for await (const part of plaintext) yield* enc.push(part);
+  yield* enc.finish();
+}
+
+/** Derives the keys for a link token from the URL fragment. */
+export async function openKeys(token: string, password?: string): Promise<ShareKeys> {
+  return deriveKeys(decodeToken(token), password);
+}
+
+function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
+  if (a.length === 0) return b;
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
+}
+
+/** Push-based decryption of a whole blob in order. */
+export class ShareDecryptor {
+  header: Header | null = null;
+  contentOffset = 0;
+  private readonly keys: ShareKeys;
+  private pending: Uint8Array = new Uint8Array(0);
+  private baseNonce: Uint8Array = new Uint8Array(0);
+  private n = 0;
+  private i = 0;
+
+  constructor(keys: ShareKeys) {
+    this.keys = keys;
+  }
+
+  get done(): boolean {
+    return this.header !== null && this.i === this.n;
+  }
+
+  /** Takes blob bytes in any slicing and returns the plaintext they complete. */
+  push(data: Uint8Array): Uint8Array[] {
+    this.pending = concat(this.pending, data);
+    if (this.header === null) {
+      if (this.pending.length < PREFIX_BYTES) return [];
+      const len = headerLength(this.pending);
+      if (this.pending.length < len) return [];
+      const { header, contentOffset } = readHeader(this.keys, this.pending);
+      this.header = header;
+      this.contentOffset = contentOffset;
+      this.baseNonce = fromBase64(header.nonce);
+      this.n = chunkCount(paddedContentLength(header.size), header.chunk);
+      this.pending = this.pending.subarray(len);
+    }
+    const out: Uint8Array[] = [];
+    while (this.i < this.n) {
+      const len = cipherChunkLength(this.header, this.n, this.i);
+      if (this.pending.length < len) break;
+      const plain = openChunk(this.keys, this.header, this.baseNonce, this.n, this.i, this.pending.subarray(0, len));
+      this.pending = this.pending.subarray(len);
+      this.i++;
+      if (plain.length > 0) out.push(plain);
+    }
+    if (this.done && this.pending.length > 0) throw new Error("v2: trailing bytes after the final chunk");
+    return out;
+  }
+
+  /** Throws unless the final chunk has arrived. */
+  finish(): void {
+    if (this.header === null) throw new Error("v2: blob truncated in the header");
+    if (!this.done) throw new Error("v2: blob truncated");
+  }
+}
+
+/**
+ * Decrypts a blob stream. The header is read and checked before this
+ * resolves; the plaintext stream throws on any later tampering or truncation.
+ */
+export async function decryptShare(
+  cipher: AsyncIterable<Uint8Array>,
+  keys: ShareKeys,
+): Promise<{ header: Header; plaintext: AsyncGenerator<Uint8Array> }> {
+  const iter = cipher[Symbol.asyncIterator]();
+  const dec = new ShareDecryptor(keys);
+  const first: Uint8Array[] = [];
+  while (dec.header === null) {
+    const r = await iter.next();
+    if (r.done) throw new Error("v2: blob truncated in the header");
+    first.push(...dec.push(r.value));
+  }
+  async function* plaintext(): AsyncGenerator<Uint8Array> {
+    yield* first;
+    for (;;) {
+      const r = await iter.next();
+      if (r.done) break;
+      yield* dec.push(r.value);
+    }
+    dec.finish();
+  }
+  return { header: dec.header, plaintext: plaintext() };
+}
+
+/**
+ * Yields the plaintext of the inclusive range [start, end], fetching only the
+ * chunks that cover it. fetchRange returns an inclusive byte range of the
+ * blob, in the browser an HTTP Range request.
+ */
+export async function* decryptRange(
+  keys: ShareKeys,
+  header: Header,
+  contentOffset: number,
+  fetchRange: (start: number, end: number) => Promise<Uint8Array>,
+  start: number,
+  end: number,
+): AsyncGenerator<Uint8Array> {
+  const s = Math.max(0, start);
+  const e = Math.min(header.size - 1, end);
+  if (e < s) return;
+  const n = chunkCount(paddedContentLength(header.size), header.chunk);
+  const full = header.chunk + TAG_BYTES;
+  const first = Math.floor(s / header.chunk);
+  const last = Math.floor(e / header.chunk);
+  const from = contentOffset + first * full;
+  const to = contentOffset + last * full + cipherChunkLength(header, n, last) - 1;
+  const fetched = await fetchRange(from, to);
+  if (fetched.length !== to - from + 1) throw new Error("v2: range fetch returned the wrong length");
+
+  const baseNonce = fromBase64(header.nonce);
+  let off = 0;
+  for (let i = first; i <= last; i++) {
+    const len = cipherChunkLength(header, n, i);
+    const plain = openChunk(keys, header, baseNonce, n, i, fetched.subarray(off, off + len));
+    off += len;
+    const chunkStart = i * header.chunk;
+    const a = Math.max(0, s - chunkStart);
+    const b = Math.min(plain.length, e + 1 - chunkStart);
+    if (b > a) yield plain.subarray(a, b);
+  }
+}
