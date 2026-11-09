@@ -118,4 +118,5 @@ export const he: Translation = {
   "collect.empty": "עדיין לא הגיע כלום.",
   "collect.close": "סגירת הבקשה ומחיקת הכול",
   "collect.closed": "הבקשה נסגרה. כל מה שנשלח אליה נמחק.",
+  "collect.unreadable": "ההעלאה הזו לא נפתחת. ייתכן שנשלחה עם מפתח פגום.",
 };

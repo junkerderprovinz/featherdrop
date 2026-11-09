@@ -118,4 +118,5 @@ export const no: Translation = {
   "collect.empty": "Ingenting har kommet ennå.",
   "collect.close": "Lukk forespørselen og slett alt",
   "collect.closed": "Forespørselen er lukket. Alt som ble sendt, er slettet.",
+  "collect.unreadable": "Denne opplastingen kan ikke åpnes. Den kan ha blitt sendt med en ødelagt nøkkel.",
 };

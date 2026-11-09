@@ -118,4 +118,5 @@ export const th: Translation = {
   "collect.empty": "ยังไม่มีอะไรส่งมา",
   "collect.close": "ปิดคำขอและลบทั้งหมด",
   "collect.closed": "ปิดคำขอแล้ว ทุกอย่างที่ส่งมาถูกลบแล้ว",
+  "collect.unreadable": "เปิดไฟล์ที่อัปโหลดนี้ไม่ได้ อาจถูกส่งมาด้วยกุญแจที่เสียหาย",
 };

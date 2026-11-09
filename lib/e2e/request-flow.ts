@@ -246,15 +246,17 @@ function uploadPath(collect: CollectLink, id: string): string {
   return `/api/r/${encodeURIComponent(collect.slug)}/uploads/${encodeURIComponent(id)}`;
 }
 
-/** One upload as the requester sees it, with its header open. */
-export interface CollectedUpload {
+/**
+ * One upload as the requester sees it. A readable one has its header open;
+ * an unreadable one carries a sealed key or header that does not open, which
+ * anyone with the request link can send, and can only be deleted.
+ */
+export type CollectedUpload = {
   id: string;
   /** Encrypted size in bytes. */
   size: number;
   createdAt: number;
-  keys: ShareKeys;
-  header: Header;
-}
+} & ({ readable: true; keys: ShareKeys; header: Header } | { readable: false });
 
 export interface Collection {
   expiresAt: number | null;
@@ -266,8 +268,8 @@ export interface Collection {
 /**
  * Lists a request's uploads for the holder of its collect link: unseals each
  * upload's link token and opens its header, so names and sizes show without
- * downloading the content. An upload whose token or header does not open
- * fails the listing.
+ * downloading the content. An upload whose token or header does not open is
+ * listed as unreadable, so one bad upload cannot hide the others.
  */
 export async function listRequestUploads(collect: CollectLink, fetchImpl: typeof fetch = fetch): Promise<Collection> {
   const keys = await requestKeys(collect.secret);
@@ -280,12 +282,17 @@ export async function listRequestUploads(collect: CollectLink, fetchImpl: typeof
   };
   const uploads: CollectedUpload[] = [];
   for (const up of listing.uploads) {
-    const token = await openSealedToken(fromBase64(up.sealedKey), keys);
-    const shareKeys = await openKeys(token);
-    const head = await fetchImpl(`${uploadPath(collect, up.id)}/header`, { headers });
-    if (!head.ok) throw new Error(`upload header ${head.status}`);
-    const { header } = readHeader(shareKeys, new Uint8Array(await head.arrayBuffer()));
-    uploads.push({ id: up.id, size: up.size, createdAt: up.createdAt, keys: shareKeys, header });
+    const base = { id: up.id, size: up.size, createdAt: up.createdAt };
+    try {
+      const token = await openSealedToken(fromBase64(up.sealedKey), keys);
+      const shareKeys = await openKeys(token);
+      const head = await fetchImpl(`${uploadPath(collect, up.id)}/header`, { headers });
+      if (!head.ok) throw new Error(`upload header ${head.status}`);
+      const { header } = readHeader(shareKeys, new Uint8Array(await head.arrayBuffer()));
+      uploads.push({ ...base, readable: true, keys: shareKeys, header });
+    } catch {
+      uploads.push({ ...base, readable: false });
+    }
   }
   return { expiresAt: listing.expiresAt, maxUploads: listing.maxUploads, maxSize: listing.maxSize, uploads };
 }
@@ -301,6 +308,18 @@ export function fetchUploadBlob(
     if (!res.ok || !res.body) throw new Error(`upload ${res.status}`);
     return res.body;
   };
+}
+
+/** Deletes one upload of a request. "notfound" covers an upload already gone. */
+export async function deleteRequestUpload(
+  collect: CollectLink,
+  id: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<"deleted" | "notfound"> {
+  const res = await fetchImpl(uploadPath(collect, id), { method: "DELETE", headers: await collectHeaders(collect) });
+  if (res.status === 404) return "notfound";
+  if (!res.ok) throw new Error(`delete upload ${res.status}`);
+  return "deleted";
 }
 
 /** Deletes a request and its uploads. "notfound" covers a request already gone. */

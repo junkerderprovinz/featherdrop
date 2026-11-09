@@ -11,8 +11,10 @@ import {
   listRequestUploads,
   fetchUploadBlob,
   closeRequest,
+  deleteRequestUpload,
   RequestClosedError,
   RequestTooLargeError,
+  type CollectedUpload,
 } from "../lib/e2e/request-flow";
 import { downloadDecryptedV2 } from "../lib/e2e/download-flow";
 import { readNote } from "../lib/e2e/note";
@@ -77,6 +79,10 @@ function fakeServer(limits: { maxSize?: number; open?: boolean } = {}) {
     }
     const up = req.uploads.find((u) => u.id === m[3]);
     if (!up) return notFound();
+    if (method === "DELETE") {
+      req.uploads = req.uploads.filter((u) => u !== up);
+      return new Response(null, { status: 204 });
+    }
     if (m[4]) return new Response(up.blob.slice(0, headerLength(up.blob)));
     return new Response(up.blob.slice());
   }) as typeof fetch;
@@ -91,6 +97,11 @@ function fakeServer(limits: { maxSize?: number; open?: boolean } = {}) {
 }
 
 const BASE = "https://drop.example";
+
+function opened(up: CollectedUpload) {
+  assert.ok(up.readable, `upload ${up.id} does not open`);
+  return up;
+}
 
 function file(name: string, data: Uint8Array, type = "application/octet-stream"): File {
   return new File([data as Uint8Array<ArrayBuffer>], name, { type });
@@ -114,7 +125,7 @@ test("files sent to a request come back through the collect link", async () => {
   const collect = parseCollectUrl(links.collectUrl);
   const listing = await listRequestUploads(collect, srv.fetchImpl);
   assert.equal(listing.uploads.length, 1);
-  const [up] = listing.uploads;
+  const up = opened(listing.uploads[0]);
   assert.deepEqual(
     up.header.files.map((f) => [f.name, f.size]),
     [["a.bin", a.length], ["b.txt", b.length]],
@@ -133,7 +144,7 @@ test("a note sent to a request is read as a note", async () => {
   const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
   await sendToRequest("the code is 4711", parseRequestUrl(links.requestUrl), { upload: srv.upload, fetchImpl: srv.fetchImpl });
   const collect = parseCollectUrl(links.collectUrl);
-  const [up] = (await listRequestUploads(collect, srv.fetchImpl)).uploads;
+  const up = opened((await listRequestUploads(collect, srv.fetchImpl)).uploads[0]);
   assert.equal(up.header.kind, "text");
   assert.equal(await readNote(fetchUploadBlob(collect, up.id, srv.fetchImpl), { keys: up.keys }), "the code is 4711");
 });
@@ -212,4 +223,27 @@ test("closing a request needs the collect link", async () => {
   assert.equal(await closeRequest(parseCollectUrl(links.collectUrl), srv.fetchImpl), "closed");
   assert.equal(srv.requests.size, 0);
   assert.equal(await closeRequest(parseCollectUrl(links.collectUrl), srv.fetchImpl), "notfound");
+});
+
+test("an upload that does not open is listed as unreadable and can be deleted", async () => {
+  const srv = fakeServer();
+  const links = await createRequest({ expiry: "1d", maxUploads: null, maxSize: null }, { baseUrl: BASE, fetchImpl: srv.fetchImpl });
+  const link = parseRequestUrl(links.requestUrl);
+  await sendToRequest([file("good.bin", new Uint8Array(5))], link, { upload: srv.upload, fetchImpl: srv.fetchImpl });
+  // Anyone with the request link can attach a sealed key that opens nothing.
+  const good = srv.requests.get("req0")!.uploads[0];
+  srv.requests.get("req0")!.uploads.unshift({
+    ...good,
+    id: "junk",
+    sealedKey: Buffer.from(new Uint8Array(82).fill(9)).toString("base64"),
+  });
+
+  const collect = parseCollectUrl(links.collectUrl);
+  const { uploads } = await listRequestUploads(collect, srv.fetchImpl);
+  assert.deepEqual(uploads.map((u) => [u.id, u.readable]), [["junk", false], [good.id, true]]);
+  assert.equal(opened(uploads[1]).header.files[0].name, "good.bin");
+
+  assert.equal(await deleteRequestUpload(collect, "junk", srv.fetchImpl), "deleted");
+  assert.deepEqual((await listRequestUploads(collect, srv.fetchImpl)).uploads.map((u) => u.id), [good.id]);
+  assert.equal(await deleteRequestUpload(collect, "junk", srv.fetchImpl), "notfound");
 });

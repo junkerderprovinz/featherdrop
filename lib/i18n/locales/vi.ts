@@ -118,4 +118,5 @@ export const vi: Translation = {
   "collect.empty": "Chưa có gì được gửi đến.",
   "collect.close": "Đóng yêu cầu và xóa tất cả",
   "collect.closed": "Đã đóng yêu cầu. Mọi thứ gửi đến đã bị xóa.",
+  "collect.unreadable": "Không mở được tệp tải lên này. Có thể nó được gửi kèm một khóa bị hỏng.",
 };

@@ -118,4 +118,5 @@ export const ja: Translation = {
   "collect.empty": "まだ何も届いていません。",
   "collect.close": "依頼を閉じてすべて削除",
   "collect.closed": "依頼を閉じました。届いたものはすべて削除されました。",
+  "collect.unreadable": "このアップロードは開けません。壊れた鍵で送られた可能性があります。",
 };

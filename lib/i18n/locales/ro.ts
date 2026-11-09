@@ -118,4 +118,5 @@ export const ro: Translation = {
   "collect.empty": "Încă nu a sosit nimic.",
   "collect.close": "Închide cererea și șterge tot",
   "collect.closed": "Cerere închisă. Tot ce s-a trimis a fost șters.",
+  "collect.unreadable": "Această încărcare nu se deschide. Poate a fost trimisă cu o cheie stricată.",
 };

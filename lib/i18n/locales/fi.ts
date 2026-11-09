@@ -118,4 +118,5 @@ export const fi: Translation = {
   "collect.empty": "Mitään ei ole vielä saapunut.",
   "collect.close": "Sulje pyyntö ja poista kaikki",
   "collect.closed": "Pyyntö suljettu. Kaikki sille lähetetty on poistettu.",
+  "collect.unreadable": "Tätä lähetystä ei voi avata. Se on ehkä lähetetty rikkinäisellä avaimella.",
 };

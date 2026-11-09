@@ -118,4 +118,5 @@ export const zh: Translation = {
   "collect.empty": "还没有收到任何内容。",
   "collect.close": "关闭请求并删除全部",
   "collect.closed": "请求已关闭。收到的内容已全部删除。",
+  "collect.unreadable": "此上传无法打开。可能是用损坏的密钥发送的。",
 };

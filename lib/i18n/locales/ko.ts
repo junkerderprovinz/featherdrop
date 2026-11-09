@@ -118,4 +118,5 @@ export const ko: Translation = {
   "collect.empty": "아직 도착한 것이 없습니다.",
   "collect.close": "요청 닫고 모두 삭제",
   "collect.closed": "요청을 닫았습니다. 받은 것은 모두 삭제되었습니다.",
+  "collect.unreadable": "이 업로드는 열 수 없습니다. 손상된 키로 보내졌을 수 있습니다.",
 };

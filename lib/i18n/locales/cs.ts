@@ -118,4 +118,5 @@ export const cs: Translation = {
   "collect.empty": "Zatím nic nedorazilo.",
   "collect.close": "Uzavřít žádost a vše smazat",
   "collect.closed": "Žádost uzavřena. Vše, co dorazilo, je smazáno.",
+  "collect.unreadable": "Toto nahrání nejde otevřít. Možná přišlo s poškozeným klíčem.",
 };

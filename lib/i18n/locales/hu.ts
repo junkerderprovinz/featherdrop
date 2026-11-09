@@ -118,4 +118,5 @@ export const hu: Translation = {
   "collect.empty": "Még nem érkezett semmi.",
   "collect.close": "Kérés lezárása és minden törlése",
   "collect.closed": "A kérés lezárva. Minden, ami érkezett, törölve.",
+  "collect.unreadable": "Ez a feltöltés nem nyitható meg. Lehet, hogy hibás kulccsal küldték.",
 };

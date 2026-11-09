@@ -119,4 +119,5 @@ export const de: Translation = {
   "collect.empty": "Noch ist nichts angekommen.",
   "collect.close": "Anfrage schließen und alles löschen",
   "collect.closed": "Anfrage geschlossen. Alles, was dafür kam, ist gelöscht.",
+  "collect.unreadable": "Dieser Upload lässt sich nicht öffnen. Vielleicht kam er mit einem kaputten Schlüssel.",
 };

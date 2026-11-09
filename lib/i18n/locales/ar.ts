@@ -118,4 +118,5 @@ export const ar: Translation = {
   "collect.empty": "لم يصل شيء بعد.",
   "collect.close": "إغلاق الطلب وحذف كل شيء",
   "collect.closed": "أُغلق الطلب. حُذف كل ما أُرسل إليه.",
+  "collect.unreadable": "لا يمكن فتح هذا الملف المرفوع. ربما أُرسل بمفتاح تالف.",
 };

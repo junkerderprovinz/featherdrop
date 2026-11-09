@@ -118,4 +118,5 @@ export const da: Translation = {
   "collect.empty": "Der er ikke kommet noget endnu.",
   "collect.close": "Luk anmodningen og slet alt",
   "collect.closed": "Anmodningen er lukket. Alt, der blev sendt, er slettet.",
+  "collect.unreadable": "Denne upload kan ikke åbnes. Den er måske sendt med en ødelagt nøgle.",
 };

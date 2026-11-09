@@ -118,4 +118,5 @@ export const pl: Translation = {
   "collect.empty": "Nic jeszcze nie przyszło.",
   "collect.close": "Zamknij prośbę i usuń wszystko",
   "collect.closed": "Prośba zamknięta. Wszystko, co przyszło, zostało usunięte.",
+  "collect.unreadable": "Tego przesłania nie da się otworzyć. Mogło przyjść z uszkodzonym kluczem.",
 };

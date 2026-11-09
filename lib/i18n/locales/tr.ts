@@ -118,4 +118,5 @@ export const tr: Translation = {
   "collect.empty": "Henüz bir şey gelmedi.",
   "collect.close": "İsteği kapat ve her şeyi sil",
   "collect.closed": "İstek kapatıldı. Gönderilen her şey silindi.",
+  "collect.unreadable": "Bu yükleme açılmıyor. Bozuk bir anahtarla gönderilmiş olabilir.",
 };

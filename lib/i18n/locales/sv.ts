@@ -118,4 +118,5 @@ export const sv: Translation = {
   "collect.empty": "Inget har kommit än.",
   "collect.close": "Stäng förfrågan och radera allt",
   "collect.closed": "Förfrågan stängd. Allt som skickades är raderat.",
+  "collect.unreadable": "Den här uppladdningen går inte att öppna. Den kan ha skickats med en trasig nyckel.",
 };

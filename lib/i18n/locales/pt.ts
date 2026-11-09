@@ -118,4 +118,5 @@ export const pt: Translation = {
   "collect.empty": "Ainda não chegou nada.",
   "collect.close": "Fechar o pedido e apagar tudo",
   "collect.closed": "Pedido fechado. Tudo o que foi enviado foi apagado.",
+  "collect.unreadable": "Este envio não abre. Pode ter sido enviado com uma chave danificada.",
 };

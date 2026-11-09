@@ -118,4 +118,5 @@ export const fr: Translation = {
   "collect.empty": "Rien n’est encore arrivé.",
   "collect.close": "Clore la demande et tout supprimer",
   "collect.closed": "Demande close. Tout ce qui a été envoyé est supprimé.",
+  "collect.unreadable": "Cet envoi ne s’ouvre pas. Il a peut-être été envoyé avec une clé abîmée.",
 };

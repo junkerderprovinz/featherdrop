@@ -119,6 +119,7 @@ export const en = {
   "collect.empty": "Nothing has arrived yet.",
   "collect.close": "Close request and delete everything",
   "collect.closed": "Request closed. Everything sent to it is deleted.",
+  "collect.unreadable": "This upload doesn't open. It may have been sent with a broken key.",
 } as const;
 
 export type TranslationKey = keyof typeof en;

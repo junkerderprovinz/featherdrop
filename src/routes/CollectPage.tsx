@@ -15,6 +15,7 @@ import { readNote } from "@/lib/e2e/note";
 import { canStreamDownload, streamToDownload, blobDownload } from "@/lib/e2e/stream-download";
 import {
   closeRequest,
+  deleteRequestUpload,
   fetchUploadBlob,
   listRequestUploads,
   parseCollectUrl,
@@ -39,7 +40,38 @@ async function save(plaintext: ReadableStream<Uint8Array>, name: string): Promis
   else blobDownload(await new Response(plaintext).blob(), name);
 }
 
-function Upload({ collect, upload }: { collect: CollectLink; upload: CollectedUpload }) {
+type Readable = Extract<CollectedUpload, { readable: true }>;
+
+// Anyone with the request link can send one whose key opens nothing, so it is
+// shown apart, and deleting it is all there is to do.
+function UnreadableUpload({ collect, upload, onDeleted }: { collect: CollectLink; upload: CollectedUpload; onDeleted: () => void }) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await deleteRequestUpload(collect, upload.id);
+      onDeleted();
+    } catch {
+      notifications.show({ color: "red", message: t("manage.deleteFailed") });
+      setBusy(false);
+    }
+  };
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Stack gap="xs">
+        <Text size="sm" c="dimmed">
+          {t("collect.unreadable")}
+        </Text>
+        <Button color="red" variant="light" leftSection={<IconTrash size={18} />} loading={busy} onClick={() => void remove()}>
+          {t("manage.delete")}
+        </Button>
+      </Stack>
+    </Paper>
+  );
+}
+
+function Upload({ collect, upload }: { collect: CollectLink; upload: Readable }) {
   const { t, i18n } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -152,9 +184,18 @@ export function CollectPage() {
                 {t("collect.empty")}
               </Text>
             )}
-            {uploads.map((u) => (
-              <Upload key={u.id} collect={collect} upload={u} />
-            ))}
+            {uploads.map((u) =>
+              u.readable ? (
+                <Upload key={u.id} collect={collect} upload={u} />
+              ) : (
+                <UnreadableUpload
+                  key={u.id}
+                  collect={collect}
+                  upload={u}
+                  onDeleted={() => setUploads((list) => list.filter((x) => x.id !== u.id))}
+                />
+              ),
+            )}
             <Button
               color="red"
               variant={confirming ? "filled" : "light"}

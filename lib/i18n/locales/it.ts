@@ -118,4 +118,5 @@ export const it: Translation = {
   "collect.empty": "Non è ancora arrivato nulla.",
   "collect.close": "Chiudi la richiesta ed elimina tutto",
   "collect.closed": "Richiesta chiusa. Tutto ciò che è arrivato è stato eliminato.",
+  "collect.unreadable": "Questo invio non si apre. Forse è arrivato con una chiave danneggiata.",
 };

@@ -118,4 +118,5 @@ export const nl: Translation = {
   "collect.empty": "Er is nog niets binnengekomen.",
   "collect.close": "Aanvraag sluiten en alles verwijderen",
   "collect.closed": "Aanvraag gesloten. Alles wat binnenkwam is verwijderd.",
+  "collect.unreadable": "Deze upload gaat niet open. Misschien is hij met een kapotte sleutel verstuurd.",
 };
