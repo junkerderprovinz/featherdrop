@@ -27,6 +27,10 @@ import (
 // derives from the collect link's fragment.
 const collectTokenHeader = "x-fd-collect-token"
 
+// maxRequestBody bounds the JSON bodies of the request routes, which are a
+// few hundred bytes.
+const maxRequestBody = 64 << 10
+
 // absentSecret is compared when there is no request, so a refusal takes the
 // same work either way. A missing request is refused whatever the comparison
 // says.
@@ -55,7 +59,7 @@ func CreateRequestHandler(cfg config.Config, db *sql.DB, now func() time.Time) h
 			return
 		}
 		var body createRequestBody
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&body); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 			return
 		}
@@ -138,6 +142,7 @@ func RequestRoutes(cfg config.Config, db *sql.DB, now func() time.Time) http.Han
 	r.Get("/{slug}/uploads", h.list)
 	r.Get("/{slug}/uploads/{id}", h.blob)
 	r.Get("/{slug}/uploads/{id}/header", h.header)
+	r.Delete("/{slug}/uploads/{id}", h.deleteUpload)
 	r.Delete("/{slug}", h.close)
 	refuse := func(w http.ResponseWriter, _ *http.Request) {
 		setNoIndex(w)
@@ -229,7 +234,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body sendBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&body); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
@@ -260,7 +265,9 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	size := st.Size()
-	if !share.IsUploadComplete(size, info.Size, !info.SizeIsDeferred) {
+	// An upload without a declared length could still be growing after the
+	// rename below, past the size cap and the quota.
+	if info.SizeIsDeferred || !share.IsUploadComplete(size, info.Size, true) {
 		writeJSONError(w, http.StatusConflict, "upload not complete")
 		return
 	}
@@ -300,7 +307,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		Size:      size,
 		SealedKey: sealed,
 		CreatedAt: h.now().UnixMilli(),
-	})
+	}, h.now().UnixMilli())
 	if err != nil || !added {
 		// Without a row the blob would be unreachable and leak disk.
 		_ = os.Remove(storedPath)
@@ -309,7 +316,8 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusInternalServerError, "could not store upload")
 			return
 		}
-		// Another upload took the last place since the check above.
+		// Another upload took the last place since the check above, or the
+		// request was closed.
 		writeJSONError(w, http.StatusGone, "request closed")
 		return
 	}
@@ -353,9 +361,9 @@ func (h requestHandlers) list(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-// openUpload returns the blob of the upload the URL names, opened, or answers
-// 404 itself.
-func (h requestHandlers) openUpload(w http.ResponseWriter, r *http.Request) (*os.File, *store.RequestUpload, bool) {
+// collected returns the request and the upload the URL names for the holder
+// of the collect link, or answers 404 itself.
+func (h requestHandlers) collected(w http.ResponseWriter, r *http.Request) (*store.RequestRecord, *store.RequestUpload, bool) {
 	rec, ok := h.forCollector(w, r)
 	if !ok {
 		return nil, nil, false
@@ -366,6 +374,16 @@ func (h requestHandlers) openUpload(w http.ResponseWriter, r *http.Request) (*os
 	}
 	if up == nil {
 		writeJSONError(w, http.StatusNotFound, "not found")
+		return nil, nil, false
+	}
+	return rec, up, true
+}
+
+// openUpload returns the blob of the upload the URL names, opened, or answers
+// 404 itself.
+func (h requestHandlers) openUpload(w http.ResponseWriter, r *http.Request) (*os.File, *store.RequestUpload, bool) {
+	_, up, ok := h.collected(w, r)
+	if !ok {
 		return nil, nil, false
 	}
 	// The path comes from the stored file id, never from the URL.
@@ -417,12 +435,36 @@ func (h requestHandlers) header(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, io.NewSectionReader(f, 0, length))
 }
 
+// deleteUpload deletes one upload of a request, such as one whose sealed key
+// does not open, for the holder of its collect link.
+func (h requestHandlers) deleteUpload(w http.ResponseWriter, r *http.Request) {
+	rec, up, ok := h.collected(w, r)
+	if !ok {
+		return
+	}
+	err := os.Remove(filepath.Join(h.cfg.UploadsDir, up.FileID))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		writeJSONError(w, http.StatusInternalServerError, "could not delete upload")
+		return
+	}
+	if _, err := store.DeleteRequestUpload(h.db, rec.Slug, up.ID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "could not delete upload")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // close deletes a request and its uploads for the holder of its collect link.
-// The blobs go first, as in cleanup, so one that cannot be removed keeps its
-// row for a retry.
+// It closes the request first, so no upload lands between the listing and
+// the delete, and removes the blobs before the rows, as cleanup does, so one
+// that cannot be removed keeps its row for a retry.
 func (h requestHandlers) close(w http.ResponseWriter, r *http.Request) {
 	rec, ok := h.forCollector(w, r)
 	if !ok {
+		return
+	}
+	if err := store.CloseRequest(h.db, rec.Slug); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "could not close request")
 		return
 	}
 	ups, err := store.ListRequestUploads(h.db, rec.Slug)

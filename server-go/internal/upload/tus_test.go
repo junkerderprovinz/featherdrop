@@ -435,7 +435,7 @@ func TestTus_RequestUploadKeepsToTheRequestsLimits(t *testing.T) {
 	full := openCfg(t)
 	one := int64(1)
 	db := requestEnv(t, full, func(r *store.RequestRecord) { r.MaxUploads = &one })
-	if _, err := store.AddRequestUpload(db, "req", store.RequestUpload{ID: "a", FileID: "f", Size: 1, SealedKey: []byte{1}}); err != nil {
+	if _, err := store.AddRequestUpload(db, "req", store.RequestUpload{ID: "a", FileID: "f", Size: 1, SealedKey: []byte{1}}, 1); err != nil {
 		t.Fatal(err)
 	}
 	fullSrv := newTestRouter(t, full, db)
@@ -459,5 +459,21 @@ func TestTus_RequestUploadCountsTowardsTheClientLimit(t *testing.T) {
 	}
 	if rec := tusCreateFrom(srv, "203.0.113.7:1001", 11, forRequest(requestKey)); rec.Code != http.StatusTooManyRequests {
 		t.Errorf("create past the client limit = %d, want 429", rec.Code)
+	}
+}
+
+func TestTus_RequestUploadMustDeclareItsLength(t *testing.T) {
+	cfg := protectedCfg(t, "s3cret")
+	srv := newTestRouter(t, cfg, requestEnv(t, cfg, nil))
+	req := httptest.NewRequest(http.MethodPost, "/files", nil)
+	req.Header.Set("Tus-Resumable", "1.0.0")
+	req.Header.Set("Upload-Defer-Length", "1")
+	for k, v := range forRequest(requestKey) {
+		req.Header.Set(k, v)
+	}
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("deferred create for a request = %d, want 400", rec.Code)
 	}
 }

@@ -51,7 +51,7 @@ func TestAddRequestUpload_StopsAtTheMaximum(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := range 10 {
 		wg.Go(func() {
-			ok, err := AddRequestUpload(db, "req", upload(string(rune('a'+i)), 10))
+			ok, err := AddRequestUpload(db, "req", upload(string(rune('a'+i)), 10), 1)
 			if err != nil {
 				t.Errorf("add: %v", err)
 			}
@@ -75,7 +75,7 @@ func TestAddRequestUpload_StopsAtTheMaximum(t *testing.T) {
 
 func TestAddRequestUpload_UnknownRequestTakesNothing(t *testing.T) {
 	db := openTestDB(t)
-	ok, err := AddRequestUpload(db, "nope", upload("a", 1))
+	ok, err := AddRequestUpload(db, "nope", upload("a", 1), 1)
 	if err != nil || ok {
 		t.Fatalf("add = %v, %v", ok, err)
 	}
@@ -88,10 +88,10 @@ func TestRequestUploads_StayWithTheirRequest(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if ok, err := AddRequestUpload(db, "one", upload("u1", 7)); !ok || err != nil {
+	if ok, err := AddRequestUpload(db, "one", upload("u1", 7), 1); !ok || err != nil {
 		t.Fatalf("add = %v, %v", ok, err)
 	}
-	if ok, err := AddRequestUpload(db, "one", upload("u2", 8)); !ok || err != nil {
+	if ok, err := AddRequestUpload(db, "one", upload("u2", 8), 1); !ok || err != nil {
 		t.Fatalf("add = %v, %v", ok, err)
 	}
 	got, err := GetRequestUpload(db, "one", "u1")
@@ -115,7 +115,7 @@ func TestDeleteRequest_TakesItsUploadsAlong(t *testing.T) {
 	if err := CreateRequest(db, newRequest("req", nil, nil)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AddRequestUpload(db, "req", upload("u1", 7)); err != nil {
+	if _, err := AddRequestUpload(db, "req", upload("u1", 7), 1); err != nil {
 		t.Fatal(err)
 	}
 	ok, err := DeleteRequest(db, "req")
@@ -159,11 +159,60 @@ func TestTotalStoredSize_CountsRequestUploads(t *testing.T) {
 	if err := CreateRequest(db, newRequest("req", nil, nil)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AddRequestUpload(db, "req", upload("u1", 23)); err != nil {
+	if _, err := AddRequestUpload(db, "req", upload("u1", 23), 1); err != nil {
 		t.Fatal(err)
 	}
 	total, err := TotalStoredSize(db)
 	if err != nil || total != 123 {
 		t.Errorf("total = %d, %v", total, err)
+	}
+}
+
+func TestAddRequestUpload_NeedsALiveRequest(t *testing.T) {
+	db := openTestDB(t)
+	if err := CreateRequest(db, newRequest("expiring", nil, new(int64(100)))); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := AddRequestUpload(db, "expiring", upload("late", 1), 100); err != nil || ok {
+		t.Errorf("upload at expiry = %v, %v", ok, err)
+	}
+	if ok, err := AddRequestUpload(db, "expiring", upload("early", 1), 99); err != nil || !ok {
+		t.Errorf("upload before expiry = %v, %v", ok, err)
+	}
+
+	if err := CreateRequest(db, newRequest("open", nil, nil)); err != nil {
+		t.Fatal(err)
+	}
+	if err := CloseRequest(db, "open"); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := AddRequestUpload(db, "open", upload("after", 1), 1); err != nil || ok {
+		t.Errorf("upload after close = %v, %v", ok, err)
+	}
+	rec, _ := GetRequest(db, "open")
+	if rec == nil || !rec.Expired(1) {
+		t.Errorf("a closed request does not read as expired: %+v", rec)
+	}
+}
+
+func TestDeleteRequestUpload_RemovesOnlyThatUpload(t *testing.T) {
+	db := openTestDB(t)
+	if err := CreateRequest(db, newRequest("req", nil, nil)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"u1", "u2"} {
+		if _, err := AddRequestUpload(db, "req", upload(id, 3), 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if ok, err := DeleteRequestUpload(db, "req", "u1"); err != nil || !ok {
+		t.Fatalf("delete = %v, %v", ok, err)
+	}
+	ups, _ := ListRequestUploads(db, "req")
+	if len(ups) != 1 || ups[0].ID != "u2" {
+		t.Errorf("left %+v", ups)
+	}
+	if ok, _ := DeleteRequestUpload(db, "other", "u2"); ok {
+		t.Error("deleted an upload through another request")
 	}
 }

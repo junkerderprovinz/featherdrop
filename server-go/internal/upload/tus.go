@@ -118,7 +118,8 @@ func uploadGate(cfg config.Config, db *sql.DB, next http.Handler) http.Handler {
 
 // requestGate admits a tus request for the file request it names when it
 // carries that request's public key and the request has not expired. A create
-// must also find the request open and declare a length within its size cap;
+// must also find the request open and declare a length within its size cap,
+// since a deferred one could grow past the cap and the quota after the attach;
 // the attach checks both again on the real bytes. It returns 0 to admit, else
 // the status and message to refuse with, a 404 alike for every wrong proof.
 func requestGate(db *sql.DB, r *http.Request, nowMs int64) (int, string) {
@@ -136,11 +137,12 @@ func requestGate(db *sql.DB, r *http.Request, nowMs int64) (int, string) {
 	if !share.RequestTakesUploads(rec.UploadCount, rec.MaxUploads) {
 		return http.StatusGone, "request closed"
 	}
-	if rec.MaxSize != nil {
-		length, err := strconv.ParseInt(r.Header.Get("Upload-Length"), 10, 64)
-		if err != nil || length > *rec.MaxSize {
-			return http.StatusRequestEntityTooLarge, "upload larger than the request allows"
-		}
+	length, err := strconv.ParseInt(r.Header.Get("Upload-Length"), 10, 64)
+	if err != nil || length < 0 {
+		return http.StatusBadRequest, "upload length required"
+	}
+	if rec.MaxSize != nil && length > *rec.MaxSize {
+		return http.StatusRequestEntityTooLarge, "upload larger than the request allows"
 	}
 	return 0, ""
 }

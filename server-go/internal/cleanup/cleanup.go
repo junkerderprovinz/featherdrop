@@ -107,8 +107,8 @@ func deleteShares(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 	return deleted, nil
 }
 
-// deleteRequests removes the blobs of each expired request's uploads before
-// its rows, as deleteShares does. A request with a blob that cannot be
+// deleteRequests closes each expired request and removes the blobs of its
+// uploads before its rows, as deleteShares does. A request with a blob that cannot be
 // removed keeps its rows for the next pass.
 func deleteRequests(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 	expired, err := store.ListExpiredRequests(db, nowMs)
@@ -117,6 +117,11 @@ func deleteRequests(uploadsDir string, db *sql.DB, nowMs int64) (int, error) {
 	}
 	deleted, stuck := 0, 0
 	for _, rec := range expired {
+		// An attach that started before the expiry could otherwise land
+		// between the listing and the delete and leave its blob behind.
+		if err := store.CloseRequest(db, rec.Slug); err != nil {
+			return deleted, err
+		}
 		ups, err := store.ListRequestUploads(db, rec.Slug)
 		if err != nil {
 			return deleted, err

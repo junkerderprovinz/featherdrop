@@ -280,7 +280,7 @@ func addRequest(t *testing.T, cfg config.Config, db *sql.DB, slug string, size i
 	}
 	if _, err := store.AddRequestUpload(db, slug, store.RequestUpload{
 		ID: "u1", FileID: fileID, Size: size, SealedKey: []byte{1}, CreatedAt: 1,
-	}); err != nil {
+	}, 1); err != nil {
 		t.Fatalf("add upload: %v", err)
 	}
 	return fileID

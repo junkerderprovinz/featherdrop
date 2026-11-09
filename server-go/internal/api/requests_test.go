@@ -2,16 +2,20 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/tus/tusd/v2/pkg/filestore"
+	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
@@ -394,5 +398,75 @@ func TestRequestRoutes_UnknownPathsGetTheUniformRefusal(t *testing.T) {
 	})
 	if got := e.do(t, nil, http.MethodGet, "/api/r/"+slug+"/elsewhere", nil, nil).Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
 		t.Errorf("X-Robots-Tag = %q", got)
+	}
+}
+
+// makeDeferredTusUpload creates a tus upload that declared no length, as
+// Upload-Defer-Length does, and writes content to it.
+func (e *testEnv) makeDeferredTusUpload(t *testing.T, content []byte) string {
+	t.Helper()
+	fs := filestore.New(e.cfg.TmpDir)
+	up, err := fs.NewUpload(context.Background(), tushandler.FileInfo{SizeIsDeferred: true})
+	if err != nil {
+		t.Fatalf("new upload: %v", err)
+	}
+	if _, err := up.WriteChunk(context.Background(), 0, bytes.NewReader(content)); err != nil {
+		t.Fatalf("write chunk: %v", err)
+	}
+	info, _ := up.GetInfo(context.Background())
+	return info.ID
+}
+
+func TestSendToRequest_RefusesAnUploadWithoutADeclaredLength(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, nil)
+	id := e.makeDeferredTusUpload(t, v4Blob(1064, 4112))
+	rec := e.do(t, nil, http.MethodPost, "/api/r/"+slug+"/uploads", map[string]any{"uploadId": id, "sealedKey": sealedKey(1)}, asUploader())
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status %d, want 409", rec.Code)
+	}
+	if ups, _ := store.ListRequestUploads(e.db, slug); len(ups) != 0 {
+		t.Errorf("%d uploads stored", len(ups))
+	}
+}
+
+func TestDeleteRequestUpload_RemovesOneUploadForTheCollector(t *testing.T) {
+	e := newTestEnv(t)
+	slug := e.openRequest(t, nil, nil)
+	for range 2 {
+		if rec := e.send(t, nil, slug, v4Blob(1064, 4112), asUploader()); rec.Code != http.StatusNoContent {
+			t.Fatalf("send: %d", rec.Code)
+		}
+	}
+	ups, _ := store.ListRequestUploads(e.db, slug)
+	path := "/api/r/" + slug + "/uploads/" + ups[0].ID
+	if rec := e.do(t, nil, http.MethodDelete, path, nil, asUploader()); rec.Code != http.StatusNotFound {
+		t.Errorf("uploader deleted an upload: %d", rec.Code)
+	}
+	if rec := e.do(t, nil, http.MethodDelete, path, nil, asCollector()); rec.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d", rec.Code)
+	}
+	if _, err := os.Stat(filepath.Join(e.cfg.UploadsDir, ups[0].FileID)); !os.IsNotExist(err) {
+		t.Errorf("blob still there: %v", err)
+	}
+	left, _ := store.ListRequestUploads(e.db, slug)
+	if len(left) != 1 || left[0].ID != ups[1].ID {
+		t.Errorf("left %+v", left)
+	}
+	if rec := e.do(t, nil, http.MethodDelete, path, nil, asCollector()); rec.Code != http.StatusNotFound {
+		t.Errorf("second delete: %d", rec.Code)
+	}
+}
+
+func TestRequestRoutes_RefuseOversizedBodies(t *testing.T) {
+	e := newTestEnv(t)
+	huge := map[string]any{"publicKey": testRequestKey, "collectTokenHash": share.HashCollectToken(testCollectToken), "pad": strings.Repeat("x", 1<<20)}
+	if rec := e.do(t, nil, http.MethodPost, "/api/requests", huge, nil); rec.Code != http.StatusBadRequest {
+		t.Errorf("create with a 1 MiB body: %d", rec.Code)
+	}
+	slug := e.openRequest(t, nil, nil)
+	body := map[string]any{"uploadId": "x", "sealedKey": strings.Repeat("A", 1<<20)}
+	if rec := e.do(t, nil, http.MethodPost, "/api/r/"+slug+"/uploads", body, asUploader()); rec.Code != http.StatusBadRequest {
+		t.Errorf("send with a 1 MiB body: %d", rec.Code)
 	}
 }

@@ -93,9 +93,10 @@ func GetRequest(db *sql.DB, slug string) (*RequestRecord, error) {
 }
 
 // AddRequestUpload records a finished upload and counts it, unless the
-// request is gone or has taken its maximum. The count and the insert share
-// one transaction, so parallel uploads never pass the maximum.
-func AddRequestUpload(db *sql.DB, slug string, up RequestUpload) (bool, error) {
+// request is gone, expired or closed at nowMs or has taken its maximum. The
+// count and the insert share one transaction, so parallel uploads never pass
+// the maximum, and none lands after CloseRequest.
+func AddRequestUpload(db *sql.DB, slug string, up RequestUpload, nowMs int64) (bool, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return false, fmt.Errorf("add request upload: begin: %w", err)
@@ -104,8 +105,9 @@ func AddRequestUpload(db *sql.DB, slug string, up RequestUpload) (bool, error) {
 
 	res, err := tx.Exec(
 		`UPDATE requests SET upload_count = upload_count + 1
-		 WHERE slug = ? AND (max_uploads IS NULL OR upload_count < max_uploads)`,
-		slug,
+		 WHERE slug = ? AND (max_uploads IS NULL OR upload_count < max_uploads)
+		   AND (expires_at IS NULL OR expires_at > ?)`,
+		slug, nowMs,
 	)
 	if err != nil {
 		return false, fmt.Errorf("add request upload: count: %w", err)
@@ -171,6 +173,29 @@ func GetRequestUpload(db *sql.DB, slug, id string) (*RequestUpload, error) {
 		return nil, fmt.Errorf("get request upload: %w", err)
 	}
 	return &up, nil
+}
+
+// CloseRequest expires a request at once, so no upload is added to it while
+// its blobs are being removed.
+func CloseRequest(db *sql.DB, slug string) error {
+	if _, err := db.Exec(`UPDATE requests SET expires_at = 0 WHERE slug = ?`, slug); err != nil {
+		return fmt.Errorf("close request: %w", err)
+	}
+	return nil
+}
+
+// DeleteRequestUpload deletes the row of one upload of a request. ok is false
+// when the request has no such upload. The caller removes the blob first.
+func DeleteRequestUpload(db *sql.DB, slug, id string) (ok bool, err error) {
+	res, err := db.Exec(`DELETE FROM request_uploads WHERE request_slug = ? AND id = ?`, slug, id)
+	if err != nil {
+		return false, fmt.Errorf("delete request upload: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("delete request upload: rows affected: %w", err)
+	}
+	return n == 1, nil
 }
 
 // DeleteRequest deletes a request and the rows of its uploads. ok is false
