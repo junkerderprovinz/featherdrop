@@ -94,12 +94,12 @@ The files and links in these pictures are made up.
 </p>
 
 <p align="center">
-  <img src=".github/assets/screenshots/castleparcel-2.png" alt="CastleParcel showing the finished share link with a QR code" width="100%">
+  <img src=".github/assets/screenshots/castleparcel-2.png" alt="CastleParcel showing the finished share link with a QR code and the management link" width="100%">
   <br><em>The link is ready: copy it or save the QR code</em>
 </p>
 
 <p align="center">
-  <img src=".github/assets/screenshots/castleparcel-3.png" alt="The share page a recipient opens, with the file name, size, expiry and a download button" width="100%">
+  <img src=".github/assets/screenshots/castleparcel-3.png" alt="The share page a recipient opens, with the files, their sizes, the expiry and a download button" width="100%">
   <br><em>What the recipient sees, decrypted in their browser</em>
 </p>
 
