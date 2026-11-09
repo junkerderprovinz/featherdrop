@@ -148,18 +148,25 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	revoke := api.RevokeHandler(cfg, db)
 
 	// Only the tus create POST is limited; PATCH and HEAD resumes stay free.
-	// The share routes share one bucket so a slug or verifier guesser cannot
-	// multiply its budget by alternating endpoints.
+	// The share routes share one guard, so a slug or verifier guesser cannot
+	// multiply its budget by alternating endpoints. Its miss budget pays for
+	// failed lookups and key checks and for new counted downloads; reads that
+	// pass, such as a video seeking through preview ranges or a resumed
+	// download, only spend the wide read budget.
 	if cfg.RateLimit {
 		createLimiter := ratelimit.NewLimiter(30, 10, nil)
 		finalizeLimiter := ratelimit.NewLimiter(60, 10, nil)
-		downloadLimiter := ratelimit.NewLimiter(20, 10, nil)
+		shares := ratelimit.Guard{
+			Reads:   ratelimit.NewLimiter(600, 200, nil),
+			Misses:  ratelimit.NewLimiter(20, 10, nil),
+			Charged: api.ChargedOutcome,
+		}
 		files = ratelimit.Middleware(createLimiter, cfg.TrustedProxies, http.MethodPost, files)
 		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustedProxies, "", finalize)
-		download = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", download)
-		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", meta)
-		header = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", header)
-		revoke = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", revoke)
+		download = shares.Middleware(cfg.TrustedProxies, download)
+		meta = shares.Middleware(cfg.TrustedProxies, meta)
+		header = shares.Middleware(cfg.TrustedProxies, header)
+		revoke = shares.Middleware(cfg.TrustedProxies, revoke)
 	}
 
 	// chi keeps the full request path, which tusd matches against its

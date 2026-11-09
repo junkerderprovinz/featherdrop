@@ -77,6 +77,15 @@ func (l *Limiter) Allow(key string) (allowed bool, retryAfter time.Duration) {
 	return false, time.Duration(need * float64(time.Second))
 }
 
+// Refund gives back a token Allow took for key, up to the burst.
+func (l *Limiter) Refund(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if b, ok := l.buckets[key]; ok {
+		b.tokens = math.Min(l.burst, b.tokens+1)
+	}
+}
+
 // sweepLocked drops buckets that have refilled to capacity, since they are no
 // different from a fresh one. The caller holds l.mu.
 func (l *Limiter) sweepLocked(now time.Time) {
@@ -104,16 +113,20 @@ func Middleware(l *Limiter, proxies clientip.Proxies, method string, next http.H
 			return
 		}
 		if allowed, retryAfter := l.Allow(clientip.Network(proxies.ClientIP(r))); !allowed {
-			secs := int(math.Ceil(retryAfter.Seconds()))
-			if secs < 1 {
-				secs = 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(secs))
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusTooManyRequests)
-			_, _ = w.Write([]byte(`{"error":"too many requests"}`))
+			tooMany(w, retryAfter)
 			return
 		}
 		next.ServeHTTP(w, r)
 	}
+}
+
+func tooMany(w http.ResponseWriter, retryAfter time.Duration) {
+	secs := int(math.Ceil(retryAfter.Seconds()))
+	if secs < 1 {
+		secs = 1
+	}
+	w.Header().Set("Retry-After", strconv.Itoa(secs))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusTooManyRequests)
+	_, _ = w.Write([]byte(`{"error":"too many requests"}`))
 }

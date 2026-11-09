@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -291,5 +292,57 @@ func TestSPAHandler_ServesTemplatedRoot(t *testing.T) {
 		if strings.Contains(body, "%%") {
 			t.Fatalf("%s served HTML with leftover tokens", path)
 		}
+	}
+}
+
+// newRouterWithShare builds the production router with RATE_LIMIT on and one
+// unlimited format 2 share of size bytes, and returns the share's slug.
+func newRouterWithShare(t *testing.T, size int) (http.Handler, string) {
+	t.Helper()
+	var cfg config.Config
+	h := newFullRouter(t, func(c *config.Config) {
+		c.RateLimit = true
+		cfg = *c
+	})
+	db, err := store.Open(cfg.DBPath)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer db.Close()
+	rec := store.FileRecord{ID: "share-id", Slug: "share", Size: int64(size), CreatedAt: 1, Format: 2}
+	if err := os.WriteFile(filepath.Join(cfg.UploadsDir, rec.ID), make([]byte, size), 0o600); err != nil {
+		t.Fatalf("write blob: %v", err)
+	}
+	if err := store.CreateFileRecord(db, rec); err != nil {
+		t.Fatalf("create share: %v", err)
+	}
+	return h, rec.Slug
+}
+
+func TestRouter_PreviewRangeReadsAreNotHeldToTheMissBudget(t *testing.T) {
+	h, slug := newRouterWithShare(t, 1<<16)
+
+	for i := range 100 {
+		req := httptest.NewRequest(http.MethodGet, "/api/d/"+slug+"?preview=1", nil)
+		req.RemoteAddr = "192.0.2.1:1234"
+		req.Header.Set("Range", "bytes=0-1023")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusPartialContent {
+			t.Fatalf("preview read %d: status %d, want 206", i+1, rec.Code)
+		}
+	}
+}
+
+func TestRouter_NewDownloadsSpendTheMissBudget(t *testing.T) {
+	h, slug := newRouterWithShare(t, 64)
+
+	for i := range 10 {
+		if rec := get(h, "/api/d/"+slug); rec.Code != http.StatusOK {
+			t.Fatalf("download %d: status %d, want 200", i+1, rec.Code)
+		}
+	}
+	if rec := get(h, "/api/d/"+slug); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("download 11: status %d, want 429", rec.Code)
 	}
 }

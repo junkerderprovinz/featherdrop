@@ -161,7 +161,7 @@ Everything is set through environment variables. A value the server cannot read 
 | `STORAGE_QUOTA` | `0` | Bytes all shares together may use. `0` means no limit. |
 | `UPLOAD_PASSWORD` | none | Password needed to upload. Downloads never ask for it. |
 | `UPLOAD_LIMIT_PER_IP` | `0` | Bytes one visitor may upload in 24 hours. `0` means no limit. IPv6 visitors count per /64. The count stays in memory under a hash that changes with every restart, so the server never keeps an address. |
-| `RATE_LIMIT` | `true` | Per-visitor limits on creating uploads and on downloads. |
+| `RATE_LIMIT` | `true` | Per-visitor limits on creating uploads, on new downloads and on failed share lookups. |
 | `TRUST_PROXY` | `false` | Which reverse proxies may name the visitor in `X-Forwarded-For`. `true` trusts any, or list the proxies as addresses and CIDR ranges, such as `172.16.0.0/12,10.0.0.5`. |
 | `APP_NAME` | `featherdrop` | Name shown on the page and in its title. |
 | `APP_LOGO` | none | Logo as an `https://` URL or an image `data:` URL. The page allows images from that URL's host and nothing else from it, and visitors' browsers load the logo from there. |

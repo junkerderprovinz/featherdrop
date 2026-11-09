@@ -253,8 +253,9 @@ after ten in a row it locks the share for every client, for one second and
 then twice as long after each further wrong one, up to an hour, and answers
 `429` to every verifier, right or wrong, until the lock ends. A right verifier
 resets the count, which is stored with the share, so a restart does not clear
-it. With `RATE_LIMIT` on, each IPv4 address or IPv6 /64 also gets 20 requests
-a minute across the share routes.
+it. With `RATE_LIMIT` on, each IPv4 address or IPv6 /64 also gets 10 failed
+key checks at once and 20 a minute after that, shared with its unknown slugs
+and new downloads across the share routes.
 
 ## Password-only mode
 

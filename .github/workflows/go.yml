@@ -164,7 +164,6 @@ jobs:
           PORT: "3000"
           DATA_DIR: /tmp/fd-go-e2e
           BASE_URL: http://localhost:3000
-          RATE_LIMIT: "false"
           E2E_BASE_URL: http://localhost:3000
         run: |
           set -e

@@ -39,3 +39,11 @@ func NotFoundHandler() http.HandlerFunc {
 		writeJSONError(w, http.StatusNotFound, "not found")
 	}
 }
+
+// ChargedOutcome reports whether an answer of a share route is one the
+// per-client miss budget pays for: a failed lookup or key check, or a new
+// counted download, which carries a resume token.
+func ChargedOutcome(status int, h http.Header) bool {
+	return status == http.StatusNotFound || status == http.StatusUnauthorized ||
+		h.Get(resumeTokenHeader) != ""
+}
