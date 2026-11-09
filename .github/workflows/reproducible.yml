@@ -11,14 +11,11 @@ on:
     branches: [main]
     paths:
       - "src/**"
-      - "components/**"
       - "lib/**"
       - "app/**"
       - "public/**"
       - "index.html"
-      - "theme.ts"
       - "vite.config.ts"
-      - "postcss.config.cjs"
       - "tsconfig.json"
       - "package.json"
       - "package-lock.json"

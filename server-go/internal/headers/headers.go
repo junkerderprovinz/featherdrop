@@ -15,7 +15,7 @@ const PermissionsPolicy = "accelerometer=(), autoplay=(), bluetooth=(), browsing
 	"screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()"
 
 // ContentSecurityPolicy returns the policy for the app. libsodium compiles its
-// WebAssembly at runtime, Mantine injects style elements, Vite inlines the
+// WebAssembly at runtime, Vue sets inline style attributes, Vite inlines the
 // smallest font files as data: URLs, previews are blob: URLs, the PDF preview
 // is an <embed> and the crypto worker starts from a blob: URL made from code
 // inside the pinned main script. A non-empty logoOrigin, the origin of an

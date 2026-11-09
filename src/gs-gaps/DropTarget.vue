@@ -1,0 +1,22 @@
+<script setup lang="ts">
+// The place files go: a large button around a picture that opens the file picker, and lights up while files are
+// dragged over the page, wherever they would be let go.
+defineProps<{ label: string; armed: boolean; disabled?: boolean }>();
+</script>
+
+<template>
+  <button type="button" class="gs-drop" :class="{ armed }" :aria-label="label" :disabled="disabled">
+    <span class="gs-drop-glow" aria-hidden="true"></span>
+    <slot />
+  </button>
+</template>
+
+<style scoped>
+.gs-drop { position: relative; display: grid; place-items: center; padding: 1.5rem 2.5rem; border-radius: var(--radius-card); cursor: pointer; transition: transform var(--motion-control-dur, .15s) ease; }
+.gs-drop:disabled { cursor: default; }
+.gs-drop:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 4px; }
+.gs-drop-glow { position: absolute; inset: 8% 12%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 38%, transparent), transparent); opacity: 0; transition: opacity var(--motion-control-dur, .15s) ease; pointer-events: none; }
+.gs-drop:not(:disabled):is(:hover, :focus-visible) .gs-drop-glow { opacity: .55; }
+.gs-drop.armed .gs-drop-glow { opacity: 1; }
+:root:not([data-motion="off"]) .gs-drop.armed { transform: scale(1.04); }
+</style>

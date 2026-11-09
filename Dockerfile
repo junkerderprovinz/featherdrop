@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
-# featherdrop: one static Go binary that serves the React client as embedded
+# featherdrop: one static Go binary that serves the Vue client as embedded
 # assets plus the JSON/file API. Encryption happens in the browser. The /config
 # and /data volumes, database schema and blob layout stay those of earlier
 # releases, so an existing install keeps working.

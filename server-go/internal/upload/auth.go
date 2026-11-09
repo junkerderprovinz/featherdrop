@@ -5,7 +5,7 @@ package upload
 import "crypto/subtle"
 
 // UploadTokenHeader carries the upload password, as the client sends it from
-// app/page.tsx.
+// src/upload.ts.
 const UploadTokenHeader = "x-fd-upload-token"
 
 // RequestHeader names the file request a tus upload is for, and

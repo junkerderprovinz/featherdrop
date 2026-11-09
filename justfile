@@ -1,5 +1,5 @@
 # featherdrop task runner; `just --list` shows the recipes.
-# Frontend: Vite and React SPA. Backend: Go in server-go/. Image: distroless.
+# Frontend: Vite and Vue SPA. Backend: Go in server-go/. Image: distroless.
 set shell := ["sh", "-cu"]
 
 # Show all recipes
@@ -22,9 +22,9 @@ build-spa:
 lint:
     npm run lint
 
-# TypeScript typecheck (no emit)
+# TypeScript and Vue typecheck (no emit)
 typecheck:
-    npx tsc --noEmit
+    npm run typecheck
 
 # Logic tests (node test runner + tsx)
 test:
