@@ -152,10 +152,10 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 		createLimiter := ratelimit.NewLimiter(30, 10, nil)
 		finalizeLimiter := ratelimit.NewLimiter(60, 10, nil)
 		downloadLimiter := ratelimit.NewLimiter(20, 10, nil)
-		files = ratelimit.Middleware(createLimiter, cfg.TrustProxy, http.MethodPost, files)
-		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustProxy, "", finalize)
-		download = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", download)
-		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", meta)
+		files = ratelimit.Middleware(createLimiter, cfg.TrustedProxies, http.MethodPost, files)
+		finalize = ratelimit.Middleware(finalizeLimiter, cfg.TrustedProxies, "", finalize)
+		download = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", download)
+		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustedProxies, "", meta)
 	}
 
 	// chi keeps the full request path, which tusd matches against its

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -235,15 +237,18 @@ func TestValidate_RateLimit(t *testing.T) {
 
 func TestValidate_TrustProxy(t *testing.T) {
 	tests := []struct {
-		name    string
-		value   string
-		want    bool
-		wantErr bool
+		name       string
+		value      string
+		wantClient string
+		wantErr    bool
 	}{
-		{"empty defaults false", "", false, false},
-		{"true", "true", true, false},
-		{"false", "false", false, false},
-		{"invalid", "yes please", false, true},
+		{"empty trusts no proxy", "", "10.0.0.9", false},
+		{"true trusts every proxy", "true", "1.2.3.4", false},
+		{"false trusts no proxy", "false", "10.0.0.9", false},
+		{"CIDR list covering the peer", "192.168.0.0/16, 10.0.0.0/8", "1.2.3.4", false},
+		{"CIDR list missing the peer", "192.168.0.0/16", "10.0.0.9", false},
+		{"invalid word", "yes please", "", true},
+		{"invalid CIDR", "10.0.0.0/33", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -261,8 +266,11 @@ func TestValidate_TrustProxy(t *testing.T) {
 				}
 				return
 			}
-			if cfg.TrustProxy != tt.want {
-				t.Errorf("TrustProxy = %v, want %v", cfg.TrustProxy, tt.want)
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.RemoteAddr = "10.0.0.9:1234"
+			r.Header.Set("X-Forwarded-For", "1.2.3.4")
+			if got := cfg.TrustedProxies.ClientIP(r); got != tt.wantClient {
+				t.Errorf("client IP = %q, want %q", got, tt.wantClient)
 			}
 		})
 	}

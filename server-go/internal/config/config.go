@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
 )
 
@@ -37,9 +38,8 @@ type Config struct {
 	StorageQuota int64
 	// RateLimit turns on the per-client-IP token buckets.
 	RateLimit bool
-	// TrustProxy takes the client IP from the first X-Forwarded-For entry,
-	// which is only safe behind a proxy that sets it.
-	TrustProxy bool
+	// TrustedProxies are the proxies whose X-Forwarded-For names the client.
+	TrustedProxies clientip.Proxies
 
 	// Load keeps these verbatim and Validate parses them, because an invalid
 	// value has to stop the boot and Load returns no error.
@@ -92,7 +92,6 @@ func Load() Config {
 
 		MaxExpiry:       getenv("MAX_EXPIRY", ""),
 		RateLimit:       true,
-		TrustProxy:      false,
 		rawStorageQuota: getenv("STORAGE_QUOTA", ""),
 		rawRateLimit:    getenv("RATE_LIMIT", ""),
 		rawTrustProxy:   getenv("TRUST_PROXY", ""),
@@ -139,15 +138,13 @@ func (c *Config) Validate() (warnings []string, err error) {
 		}
 		c.RateLimit = v
 	}
-	if c.rawTrustProxy != "" {
-		v, perr := strconv.ParseBool(c.rawTrustProxy)
-		if perr != nil {
-			return warnings, fmt.Errorf(
-				`TRUST_PROXY=%q is invalid: accepted values are "true" and "false" (default false)`,
-				c.rawTrustProxy)
-		}
-		c.TrustProxy = v
+	proxies, perr := clientip.Parse(c.rawTrustProxy)
+	if perr != nil {
+		return warnings, fmt.Errorf(
+			`TRUST_PROXY=%q is invalid (%v): accepted values are "true", "false" or a comma-separated list of proxy addresses and CIDR ranges (default false)`,
+			c.rawTrustProxy, perr)
 	}
+	c.TrustedProxies = proxies
 
 	// Clamping instead of refusing keeps an install booting when a stricter cap
 	// meets its old default. An unknown token would store no expiry, so it is
