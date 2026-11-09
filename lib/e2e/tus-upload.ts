@@ -74,3 +74,12 @@ export function tusUpload(
     upload.start();
   });
 }
+
+/** The upload password the upload page keeps for this tab, or "". */
+export function storedUploadToken(): string {
+  try {
+    return sessionStorage.getItem("fd-upload-token") ?? "";
+  } catch {
+    return "";
+  }
+}

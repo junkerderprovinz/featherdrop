@@ -10,8 +10,7 @@ import { ExpirySelect } from "@/components/ExpirySelect";
 import { useServerConfig } from "@/components/ServerConfigProvider";
 import { clampExpiry } from "@/lib/expiry";
 import { MAX_NOTE_BYTES, uploadNote } from "@/lib/e2e/note";
-import { storedUploadToken } from "@/lib/tus-upload";
-import { tusUpload } from "@/lib/e2e/tus-upload";
+import { storedUploadToken, tusUpload } from "@/lib/e2e/tus-upload";
 import { cryptoWorker } from "@/lib/e2e/v2/crypto-worker";
 
 // A UTF-16 code unit takes at most three bytes in UTF-8.
