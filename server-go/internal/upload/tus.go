@@ -2,11 +2,14 @@ package upload
 
 import (
 	"database/sql"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
+	"golang.org/x/exp/slog"
 
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
@@ -24,6 +27,13 @@ const BasePath = "/files/"
 // cfg.UploadsDir. RespectForwardedHeaders makes the Location header carry the
 // public URL behind a reverse proxy.
 func NewHandler(cfg config.Config, db *sql.DB) (http.Handler, error) {
+	return newHandler(cfg, db, os.Stderr)
+}
+
+// newHandler builds the handler with tusd logging to logs. tusd logs every
+// request with its upload id and size at info level, which would put a trail
+// of every share into the container log, so only errors get through.
+func newHandler(cfg config.Config, db *sql.DB, logs io.Writer) (http.Handler, error) {
 	store := filestore.New(cfg.TmpDir)
 
 	composer := tushandler.NewStoreComposer()
@@ -40,6 +50,7 @@ func NewHandler(cfg config.Config, db *sql.DB) (http.Handler, error) {
 		MaxSize:                 cfg.MaxFileSize, // tusd treats 0 as no limit
 		RespectForwardedHeaders: true,
 		Cors:                    &cors,
+		Logger:                  slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelError})),
 	})
 	if err != nil {
 		return nil, err

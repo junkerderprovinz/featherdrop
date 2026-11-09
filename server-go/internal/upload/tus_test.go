@@ -1,11 +1,14 @@
 package upload
 
 import (
+	"bytes"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -205,5 +208,49 @@ func TestTus_Quota_Unlimited_201(t *testing.T) {
 	rec := tusCreateLen(srv, 1<<40)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("POST /files (no quota) = %d, want 201; body=%q", rec.Code, rec.Body.String())
+	}
+}
+
+func TestTus_LogsOnlyErrors(t *testing.T) {
+	cfg := openCfg(t)
+	var logs bytes.Buffer
+	h, err := newHandler(cfg, nil, &logs)
+	if err != nil {
+		t.Fatalf("newHandler: %v", err)
+	}
+	r := chi.NewRouter()
+	r.Handle("/files", h)
+	r.Handle("/files/*", h)
+
+	create := tusCreate(r, "")
+	if create.Code != http.StatusCreated {
+		t.Fatalf("create = %d, want 201", create.Code)
+	}
+	patch := httptest.NewRequest(http.MethodPatch, create.Header().Get("Location"), strings.NewReader("hello world"))
+	patch.Header.Set("Tus-Resumable", "1.0.0")
+	patch.Header.Set("Upload-Offset", "0")
+	patch.Header.Set("Content-Type", "application/offset+octet-stream")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, patch)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("patch = %d, want 204; body=%q", rec.Code, rec.Body.String())
+	}
+	if logs.Len() != 0 {
+		t.Fatalf("a normal upload logged:\n%s", logs.String())
+	}
+
+	// A file where the store expects its directory is a real failure the
+	// operator should see.
+	if err := os.RemoveAll(cfg.TmpDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg.TmpDir, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if rec := tusCreate(r, ""); rec.Code != http.StatusInternalServerError {
+		t.Fatalf("create without a store dir = %d, want 500", rec.Code)
+	}
+	if !strings.Contains(logs.String(), "InternalServerError") {
+		t.Fatalf("the store failure was not logged: %q", logs.String())
 	}
 }
