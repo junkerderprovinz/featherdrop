@@ -12,7 +12,6 @@
   <a href="https://hub.docker.com/r/junkerderprovinz/castleparcel"><img src="https://img.shields.io/docker/image-size/junkerderprovinz/castleparcel/latest?style=for-the-badge&logo=docker&logoColor=white&label=Size&color=1d99f3" alt="Image Size" height="36"></a>&nbsp;
   <a href="https://github.com/junkerderprovinz/castleparcel/pkgs/container/castleparcel"><img src="https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-success?style=for-the-badge&logo=linux&logoColor=white" alt="Arch" height="36"></a>&nbsp;
   <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" height="36"></a>&nbsp;
-  <a href="https://mantine.dev"><img src="https://img.shields.io/badge/Mantine-339af0?style=for-the-badge&logo=mantine&logoColor=white" alt="Mantine" height="36"></a>&nbsp;
   <a href="https://ca.unraid.net/apps?q=castleparcel"><img src="https://img.shields.io/badge/Unraid-Template-f15a2c?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid" height="36"></a>&nbsp;
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue?style=for-the-badge&logo=gnu&logoColor=white" alt="License: AGPL-3.0" height="36"></a>
 </p>
@@ -125,7 +124,7 @@ It has no user accounts, no OIDC or LDAP, no email and no S3 storage. If you nee
 
 Everything is encrypted in your browser, so the server only ever holds ciphertext. That protects a lot, but not everything, and one part still comes down to trust. Here is where the lines are.
 
-The server never sees your files, their names or types, or the password in readable form. The key travels in the `#` part of the link, and browsers do not send that part to the server. Shares in the v2 format pad their sizes with Padmé, so the server learns a size bucket instead of the exact size or the number of files. The upload page still writes the older formats until the new interface ships. For those the server sees the exact size, and a share protected by a password alone can be guessed offline by anyone who has its slug. [docs/encryption-format.md](docs/encryption-format.md) covers both in detail.
+The server never sees your files, their names or types, or the password in readable form. The key travels in the `#` part of the link, and browsers do not send that part to the server. Shares in the v2 format pad their sizes with Padmé, so the server learns a size bucket instead of the exact size or the number of files. Every new share is written in v2. Older shares stay readable, and for those the server sees the exact size, while one protected by a password alone can be guessed offline by anyone who has its slug. [docs/encryption-format.md](docs/encryption-format.md) covers both in detail.
 
 Whoever runs the server can still see visitors' IP addresses, when a share was uploaded and downloaded and how often, its expiry and download limit, and the size of the encrypted file. With HTTPS, someone watching the network sees that you talk to the server, when, and roughly how much data moves. Without HTTPS they can also change the page on its way to you, so put HTTPS in front of any instance you use for real. If the operator sets `APP_LOGO` to an outside URL, that host sees your IP address as well.
 
@@ -174,7 +173,7 @@ docker run -d --name castleparcel -p 3000:3000 \
 
 Then open port 3000 and drop a file. `/data` holds the uploads and `/config` the small database, so the two can sit on different disks. To keep both in `/data`, set `CONFIG_DIR=/data` and leave out the `/config` mount.
 
-Put HTTPS in front of it before you share links outside your network. The browser needs a secure context for large uploads, streaming downloads and the clipboard, and over plain HTTP uploads stop at 500 MB. Set `BASE_URL` to the public address so the links point there, and in Nginx or Nginx Proxy Manager let big uploads through:
+Put HTTPS in front of it before you share links outside your network. The browser needs a secure context for streaming downloads, resuming an upload that broke off, and the clipboard. Set `BASE_URL` to the public address so the links point there, and in Nginx or Nginx Proxy Manager let big uploads through:
 
 ```nginx
 client_max_body_size 0;
