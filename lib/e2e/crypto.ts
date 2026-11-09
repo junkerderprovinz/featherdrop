@@ -32,6 +32,12 @@ export async function ready(): Promise<void> {
   return readyPromise;
 }
 
+/** The loaded libsodium, for the v2 format's primitives that are not wrapped here. */
+export async function loadSodium(): Promise<Sodium> {
+  await ready();
+  return sodium;
+}
+
 export function generateKey(): Uint8Array {
   return sodium.crypto_secretstream_xchacha20poly1305_keygen();
 }

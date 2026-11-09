@@ -10,3 +10,5 @@
 package-lock.json linguist-generated=true -diff
 server-go/go.sum linguist-generated=true -diff
 server-go/webroot/** linguist-generated=true
+
+test/fixtures/*.json linguist-generated=true -diff
