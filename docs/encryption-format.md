@@ -14,7 +14,7 @@ Known-answer vectors are in `test/fixtures/encryption-v2-vectors.json`.
 | --- | --- | --- | --- | --- |
 | 2 | varint header, secretbox metadata | single file | cf=1 secretstream or cf=2 seekable AEAD | read and written |
 | 3 | varint header, secretbox manifest | bundle | cf=1 or cf=2 | read and written |
-| 4 | v2 container (this document) | single or bundle, encrypted | per-chunk XChaCha20-Poly1305 | read; written when asked for |
+| 4 | v2 container (this document) | single, bundle or note, encrypted | per-chunk XChaCha20-Poly1305 | read; written when asked for |
 
 The upload page keeps writing formats 2 and 3 until the new UI switches over.
 `uploadEncrypted(files, { format: 4, ... })` and `downloadDecryptedV2` in
@@ -138,7 +138,7 @@ by the reference implementation:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `v` | number | `2` |
-| `kind` | string | `"single"` (exactly one file) or `"bundle"` |
+| `kind` | string | `"single"` (exactly one file), `"bundle"` or `"text"` (a note, see below) |
 | `mode` | string | `"link"` or `"link+password"`, must match the token |
 | `kdf` | object or null | `{"alg":"argon2id13","ops":3,"mem":67108864}` in link and password mode, `null` in link mode; must match the token |
 | `chunk` | number | plaintext bytes per chunk, a power of two from 4096 to 16777216; 65536 by default |
@@ -150,6 +150,16 @@ by the reference implementation:
 A decoder rejects a header with missing or extra fields, a field of the wrong
 type, a `size` that is not the sum of the file sizes, nonzero padding, or a
 `headerPlain` whose length is not `pad_header(4 + jsonLen)`.
+
+A `"text"` share is a note. Its `files` holds exactly one entry with the name
+`""` and the type `"text/plain; charset=utf-8"`, and the content is the note in
+UTF-8, at most 1 MiB (`MAX_NOTE_BYTES` in `lib/e2e/note.ts`). A decoder rejects
+a text header with a name, another type or more than one entry, and content
+that is not valid UTF-8. The client shows a note as a text node and never
+parses it as markup. Since the kind is inside the sealed header and the content
+is padded like any file's, a note is a format 4 share like any other to the
+server: a short note and a file of up to 4 KiB with a short name give blobs of
+the same length.
 
 Because kind, mode, KDF parameters, chunk size and padding scheme live inside
 the authenticated header, the server can neither read nor swap them.
@@ -256,6 +266,121 @@ resets the count, which is stored with the share, so a restart does not clear
 it. With `RATE_LIMIT` on, each IPv4 address or IPv6 /64 also gets 10 failed
 key checks at once and 20 a minute after that, shared with its unknown slugs
 and new downloads across the share routes.
+
+## File requests
+
+A file request lets someone ask for files without an account. The requester
+keeps a collect link; whoever gets the request link can send files or a note
+that only the collect link opens. The reference implementation is
+`lib/e2e/v2/request.ts` (keys) and `lib/e2e/request-flow.ts` (requests).
+
+### Keys
+
+The requester's browser draws a fresh 32-byte secret `Q` from
+`randombytes_buf` and derives:
+
+```
+seed         = KDF(Q, 1, "CPv2rqst", 32)
+(pk, sk)     = crypto_box_seed_keypair(seed)               X25519
+collectToken = base64url(KDF(Q, 2, "CPv2rqst", 32))        43 characters
+collectHash  = base64url(SHA-256(UTF-8 bytes of collectToken))
+```
+
+### Links
+
+```
+request link = /r/<slug>#p=base64url(0x02 || 0x11 || pk)    46 characters
+collect link = /c/<slug>#c=base64url(0x02 || 0x10 || Q)     46 characters
+```
+
+The second byte tells the kinds apart, and neither 0x10 nor 0x11 is a share
+token mode, so no link of one kind decodes as another. The collect link holds
+everything: from `Q` the browser rebuilds `pk`, the request link and the collect
+token. The request link holds only `pk`, from which neither `sk` nor the
+collect token follows.
+
+### Opening a request
+
+`POST /api/requests` sends `publicKey = base64url(pk)` (43 characters),
+`collectHash`, the expiry, an optional upload count (1 to 1000) and an optional
+size cap in bytes of encrypted upload. It needs the upload password when the
+server has one, since a request lets strangers upload. The server answers with
+the slug.
+
+### Sending
+
+The uploader's browser checks `GET /api/r/<slug>` (expiry, size cap, whether
+the request still takes an upload), then encrypts the files or the note as a
+fresh link-mode format 4 share exactly as above, with a fresh token `T` of
+34 bytes. It uploads the blob with tus and attaches it:
+
+```
+sealedKey = crypto_box_seal(T, pk)          34 + 48 = 82 bytes
+POST /api/r/<slug>/uploads  { uploadId, sealedKey: base64(sealedKey) }
+```
+
+`crypto_box_seal` encrypts to `pk` under a fresh ephemeral key pair, so the
+sealed key carries no sender identity and the uploader keeps nothing that
+opens the upload once the page closes. The blob's own key verifier is not sent:
+the collect token guards the download instead.
+
+Every uploader request (the info, every tus request and the attach) carries
+`x-fd-request-key: base64url(pk)`, and the tus requests also
+`x-fd-request: <slug>`. The server compares the key with the stored one in
+constant time. A matching key lets a tus upload pass without the upload
+password; a tus create must also fit the size cap and find the request open.
+Wrong keys, unknown slugs and expired requests all get the same 404, so the
+slug alone, without the fragment, sends nothing and confirms nothing.
+
+### Collecting
+
+The requester's browser sends `x-fd-collect-token: collectToken` to:
+
+| Route | |
+| --- | --- |
+| `GET /api/r/<slug>/uploads` | the uploads: id, encrypted size, time, sealed key |
+| `GET /api/r/<slug>/uploads/<id>/header` | prefix and sealed header of one upload |
+| `GET /api/r/<slug>/uploads/<id>` | the blob, with Range, never counted |
+| `DELETE /api/r/<slug>` | deletes the request and its uploads |
+
+The server hashes the token and compares it with `collectHash` in constant
+time, also when there is no such request. A missing or wrong token, the request
+key sent as a token, an unknown slug, an expired request and an upload of
+another request all get the same 404. The browser opens each sealed key with
+`crypto_box_seal_open(sealedKey, pk, sk)`, checks that it decodes as a
+link-mode token, derives the share's keys and opens the header and the content
+as for any format 4 share.
+
+### Why the collect proof is separate
+
+Anyone who has the request link must not be able to list or download, so
+the collect proof cannot be anything the request link carries. A hash of a
+random token, as for the management link, would need a second secret in the
+collect link; deriving the token from `Q` keeps the link to one secret. The
+token is a KDF subkey independent of the box seed, so neither it nor its hash
+says anything about `sk`, and the stored hash does not let a copy of the
+database collect. A signature over a server challenge would prove the same with
+an extra round trip and gains nothing while the token goes over TLS only.
+
+### What the server stores and learns
+
+For a request the server stores the slug, `pk`, `collectHash`, the expiry, the
+upload count and its cap and the size cap. For each upload it stores the blob,
+its length, the sealed key and the time. It never has `Q`, `sk`, the collect
+token or any share token, so it opens nothing.
+
+It learns how many uploads arrive and when, from which address, and the padded
+length of each. It cannot tell files from notes or count the files in an
+upload. The request link and the slug say nothing to an outsider without the
+fragment.
+
+What it cannot stop: anyone with the request link, and the operator, who has
+`pk`, can add uploads; the requester cannot tell who sent one. The operator can
+drop uploads or answer the requester with a smaller list. It cannot swap the
+key an uploader encrypts to, because the uploader uses `pk` from the fragment.
+An uploader learns only whether the request still takes an upload, not how
+many others came before. A copy of the database with `pk` lets its holder add
+uploads to a live request, never read them.
 
 ## Password-only mode
 
