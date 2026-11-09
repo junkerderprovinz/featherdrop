@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { deriveKeys, type ShareKeys } from "../lib/e2e/v2/keys";
+import { deriveKeys, ARGON2ID, type ShareKeys } from "../lib/e2e/v2/keys";
+import { aeadEncrypt, toBase64 } from "../lib/e2e/crypto";
+import { deriveNonce } from "../lib/e2e/seekable";
+import { paddedHeaderLength } from "../lib/e2e/v2/padding";
 import {
   createEncryptor,
   buildEncryptor,
@@ -337,4 +340,126 @@ test("a share with the largest chunk decrypts from small network reads in linear
   assert.equal(got, size);
   // Re-copying the pending bytes on every read takes several seconds here.
   assert.ok(ms < 1500, `decrypting took ${Math.round(ms)} ms`);
+});
+
+// Seals a hand-made header plaintext the way the encryptor does, so a header
+// the encryptor would never write can be checked against the decoder.
+function sealPlain(keys: ShareKeys, plain: Uint8Array): Uint8Array {
+  const sealedLen = 24 + plain.length + 16;
+  const out = new Uint8Array(5 + sealedLen);
+  out[0] = 0x02;
+  new DataView(out.buffer).setUint32(1, sealedLen);
+  out.set(NONCE_A, 5);
+  out.set(aeadEncrypt(plain, out.subarray(0, 5), NONCE_A, keys.header), 29);
+  return out;
+}
+
+function headerPlain(json: string, opts: { jsonLen?: number; padTo?: number } = {}): Uint8Array {
+  const body = new TextEncoder().encode(json);
+  const plain = new Uint8Array(opts.padTo ?? paddedHeaderLength(4 + body.length));
+  new DataView(plain.buffer).setUint32(0, opts.jsonLen ?? body.length);
+  plain.set(body, 4);
+  return plain;
+}
+
+function validHeader(): Record<string, unknown> {
+  return {
+    v: 2,
+    kind: "single",
+    mode: "link",
+    kdf: null,
+    chunk: 4096,
+    pad: "padme",
+    nonce: toBase64(NONCE_B),
+    size: 10,
+    files: [{ name: "a", type: "", size: 10 }],
+  };
+}
+
+const linkKeys = () => deriveKeys({ mode: "link", secret: SECRET });
+
+test("a hand-sealed valid header opens", async () => {
+  const keys = await linkKeys();
+  const { header } = readHeader(keys, sealPlain(keys, headerPlain(JSON.stringify(validHeader()))));
+  assert.equal(header.size, 10);
+});
+
+const badHeaders: [string, (h: Record<string, unknown>) => void, RegExp][] = [
+  ["a mode other than the token's", (h) => (h.mode = "link+password"), /mode/],
+  ["KDF parameters in link mode", (h) => (h.kdf = { alg: "argon2id13", ...ARGON2ID }), /kdf/],
+  ["an extra field", (h) => (h.extra = 1), /fields/],
+  ["a missing field", (h) => delete h.pad, /fields/],
+  ["a chunk size that is not a power of two", (h) => (h.chunk = 5000), /chunk/],
+  ["a size that is not the sum of the files", (h) => (h.size = 11), /size/],
+];
+for (const [what, change, err] of badHeaders) {
+  test(`a header with ${what} is rejected`, async () => {
+    const keys = await linkKeys();
+    const h = validHeader();
+    change(h);
+    assert.throws(() => readHeader(keys, sealPlain(keys, headerPlain(JSON.stringify(h)))), err);
+  });
+}
+
+test("a link-and-password header must carry the token's KDF parameters", async () => {
+  const keys = await deriveKeys({ mode: "link+password", secret: SECRET }, "correct horse battery");
+  const h = { ...validHeader(), mode: "link+password", kdf: { alg: "argon2id13", ops: 4, mem: ARGON2ID.mem } };
+  assert.throws(() => readHeader(keys, sealPlain(keys, headerPlain(JSON.stringify(h)))), /kdf/);
+});
+
+test("a header with nonzero padding is rejected", async () => {
+  const keys = await linkKeys();
+  const plain = headerPlain(JSON.stringify(validHeader()));
+  plain[plain.length - 1] = 1;
+  assert.throws(() => readHeader(keys, sealPlain(keys, plain)), /padding/);
+});
+
+test("a header padded past its bucket is rejected", async () => {
+  const keys = await linkKeys();
+  const plain = headerPlain(JSON.stringify(validHeader()), { padTo: 2048 });
+  assert.throws(() => readHeader(keys, sealPlain(keys, plain)), /padding/);
+});
+
+test("a header whose JSON length runs past the plaintext is rejected", async () => {
+  const keys = await linkKeys();
+  const plain = headerPlain(JSON.stringify(validHeader()), { jsonLen: 1021 });
+  assert.throws(() => readHeader(keys, sealPlain(keys, plain)), /padding/);
+});
+
+test("a header whose JSON length cuts the JSON short is rejected", async () => {
+  const keys = await linkKeys();
+  const json = JSON.stringify(validHeader());
+  assert.throws(() => readHeader(keys, sealPlain(keys, headerPlain(json, { jsonLen: json.length - 1 }))), /padding/);
+});
+
+test("content with nonzero padding is rejected", async () => {
+  const keys = await linkKeys();
+  const head = sealPlain(keys, headerPlain(JSON.stringify(validHeader())));
+  const plain = new Uint8Array(4096);
+  plain.set(bytes(10));
+  plain[4095] = 1;
+  const aad = new Uint8Array(9);
+  aad[8] = 1;
+  const chunk = aeadEncrypt(plain, aad, deriveNonce(NONCE_B, 0), keys.content);
+  await assert.rejects(decryptAll(new Uint8Array(Buffer.concat([head, chunk])), keys), /nonzero padding/);
+});
+
+test("a chunk from another blob under the same key does not open", async () => {
+  const files = [{ name: "n", type: "t", size: 20_000 }];
+  const data = bytes(20_000);
+  const a = await sealed(files, data);
+  const other = buildEncryptor({
+    keys: a.keys,
+    kind: "single",
+    files,
+    chunk: 4096,
+    headerNonce: NONCE_A,
+    baseNonce: new Uint8Array(24).fill(5),
+  });
+  const b = await encryptAll(other, data);
+  const p = headerLength(a.blob.subarray(0, 5));
+  const c = 4096 + 16;
+  const spliced = new Uint8Array(a.blob);
+  spliced.set(b.subarray(p + c, p + 2 * c), p + c);
+  await assert.rejects(decryptAll(spliced, a.keys), /chunk 1/);
 });
