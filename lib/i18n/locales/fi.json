@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Lähetä tiedostoja, jotka vain vastaanottaja voi avata",
-    "drop": "Pudota tiedostot linnan päälle, liitä ne tai valitse ne",
+    "drop": "Pudota tiedostot mihin tahansa sivulle, liitä ne tai valitse ne",
     "choose": "Valitse tiedostot",
     "dropping": "Päästä irti, niin ne lisätään",
     "trust": "Salattu selaimessasi. Poissa, kun niin päätät. Ei tiliä.",
@@ -288,7 +288,7 @@
     "metadata": "Poista kuvan metatiedot",
     "metadataHint": "Päällä jokaisessa uudessa jaossa, jossa on JPEG-kuvia.",
     "paste": "Liitä ja lähetä",
-    "pasteHint": "Mihin tahansa sivulle liittämäsi tiedostot otetaan mukaan, esimerkiksi kuvakaappaus.",
+    "pasteHint": "Mihin tahansa sivulle liittämäsi tiedostot otetaan mukaan, esimerkiksi kuvakaappaus. Aloitussivulle liitetty teksti avaa muistiinpanon.",
     "feedback": "Palaute",
     "quiet": "Hiljaiset ilmoitukset",
     "quietHint": "Jättää tavalliset vahvistukset pois. Ongelmat näkyvät silti.",

@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Dateien senden, die nur der Empfänger öffnen kann",
-    "drop": "Zieh Dateien auf die Burg, füg sie ein oder wähl sie aus",
+    "drop": "Zieh Dateien irgendwohin auf die Seite, füg sie ein oder wähl sie aus",
     "choose": "Dateien auswählen",
     "dropping": "Loslassen, dann sind sie dabei",
     "trust": "Im Browser verschlüsselt. Weg, wann du willst. Ohne Konto.",
@@ -288,7 +288,7 @@
     "metadata": "Fotodaten entfernen",
     "metadataHint": "Bei jeder neuen Freigabe mit JPEG-Fotos eingeschaltet.",
     "paste": "Einfügen zum Senden",
-    "pasteHint": "Dateien, die du irgendwo auf der Seite einfügst, werden übernommen, etwa ein Bildschirmfoto.",
+    "pasteHint": "Dateien, die du irgendwo auf der Seite einfügst, werden übernommen, etwa ein Bildschirmfoto. Text, den du auf der Startseite einfügst, öffnet eine Notiz.",
     "feedback": "Rückmeldungen",
     "quiet": "Leise Benachrichtigungen",
     "quietHint": "Lässt Routinemeldungen weg. Probleme zeigen sich trotzdem.",

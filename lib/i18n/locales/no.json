@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Send filer som bare mottakeren kan åpne",
-    "drop": "Slipp filer på borgen, lim dem inn eller velg dem",
+    "drop": "Slipp filer hvor som helst på siden, lim dem inn eller velg dem",
     "choose": "Velg filer",
     "dropping": "Slipp for å legge dem til",
     "trust": "Kryptert i nettleseren din. Borte når du sier det. Ingen konto.",
@@ -288,7 +288,7 @@
     "metadata": "Fjern fotometadata",
     "metadataHint": "Slått på for hver ny deling med JPEG-bilder.",
     "paste": "Lim inn for å sende",
-    "pasteHint": "Filer du limer inn hvor som helst på siden, blir plukket opp, for eksempel et skjermbilde.",
+    "pasteHint": "Filer du limer inn hvor som helst på siden, blir plukket opp, for eksempel et skjermbilde. Tekst du limer inn på startsiden, åpner et notat.",
     "feedback": "Tilbakemelding",
     "quiet": "Stille varsler",
     "quietHint": "Utelater vanlige bekreftelser. Problemer vises fortsatt.",

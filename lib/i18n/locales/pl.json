@@ -36,7 +36,7 @@
   },
   "home": {
     "claim": "Wysyłaj pliki, które otworzy tylko odbiorca",
-    "drop": "Upuść pliki na zamek, wklej je albo wybierz",
+    "drop": "Upuść pliki w dowolnym miejscu strony, wklej je albo wybierz",
     "choose": "Wybierz pliki",
     "dropping": "Puść, aby je dodać",
     "trust": "Szyfrowane w Twojej przeglądarce. Znikają, kiedy zechcesz. Bez konta.",
@@ -296,7 +296,7 @@
     "metadata": "Usuń metadane zdjęć",
     "metadataHint": "Włączone dla każdego nowego udostępnienia ze zdjęciami JPEG.",
     "paste": "Wklej, aby wysłać",
-    "pasteHint": "Pliki wklejone w dowolnym miejscu strony, na przykład zrzut ekranu, zostaną dodane.",
+    "pasteHint": "Pliki wklejone w dowolnym miejscu strony, na przykład zrzut ekranu, zostaną dodane. Tekst wklejony na stronie startowej otwiera notatkę.",
     "feedback": "Powiadomienia",
     "quiet": "Ciche powiadomienia",
     "quietHint": "Pomija zwykłe potwierdzenia. Problemy nadal się wyświetlają.",

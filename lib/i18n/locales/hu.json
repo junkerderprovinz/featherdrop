@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Küldj fájlokat, amelyeket csak a címzett nyithat meg",
-    "drop": "Dobd a fájlokat a várra, illeszd be, vagy válaszd ki őket",
+    "drop": "Dobd a fájlokat bárhová az oldalon, illeszd be, vagy válaszd ki őket",
     "choose": "Fájlok kiválasztása",
     "dropping": "Engedd el, és bekerülnek",
     "trust": "Titkosítás a böngésződben. Akkor tűnik el, amikor mondod. Fiók nélkül.",
@@ -288,7 +288,7 @@
     "metadata": "Fotó-metaadatok eltávolítása",
     "metadataHint": "Bekapcsolva minden új megosztásnál, amelyben JPEG fotók vannak.",
     "paste": "Beillesztés küldéshez",
-    "pasteHint": "Az oldalon bárhová beillesztett fájlok bekerülnek, például egy képernyőkép.",
+    "pasteHint": "Az oldalon bárhová beillesztett fájlok bekerülnek, például egy képernyőkép. A kezdőoldalra beillesztett szöveg jegyzetet nyit.",
     "feedback": "Visszajelzés",
     "quiet": "Csendes értesítések",
     "quietHint": "Kihagyja a rutin megerősítéseket. A hibák továbbra is megjelennek.",

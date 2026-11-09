@@ -1,9 +1,11 @@
 <script setup lang="ts">
 // The start page and the way of a parcel from there: the files and their
 // options, the upload, and the link. With UPLOAD_PASSWORD set the gate comes
-// first. Files arrive here only while the start or the options show.
+// first. Files arrive here only while the start or the options show, and
+// text pasted on the start page becomes the draft of a note.
 import { computed, onMounted, watchEffect } from 'vue';
-import { sharedFiles, takeFiles } from '@/src/intake';
+import { pastedText, sharedFiles, takeFiles } from '@/src/intake';
+import { go } from '@/src/router';
 import Done from '@/src/screens/Done.vue';
 import Gate from '@/src/screens/Gate.vue';
 import Home from '@/src/screens/Home.vue';
@@ -18,8 +20,13 @@ function take(files: File[]) {
   else addFiles(files);
 }
 
+function writeNote(text: string) {
+  pastedText.value = text;
+  go('/note');
+}
+
 watchEffect((onCleanup) => {
-  if (open.value) onCleanup(takeFiles(take));
+  if (open.value) onCleanup(takeFiles(take, send.stage === 'home' ? writeNote : undefined));
 });
 
 onMounted(async () => {

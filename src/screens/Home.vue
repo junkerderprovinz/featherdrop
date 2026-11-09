@@ -52,11 +52,11 @@ async function discard(id: string) {
     </DropTarget>
     <h1 class="cp-claim">{{ dragging ? t('home.dropping') : t('home.claim') }}</h1>
     <p class="cp-lead">{{ t('home.drop') }}</p>
-    <Button size="key" tone="accent" :label="t('home.choose')" label-key="IconUpload" data-cp="choose" @click="choose" />
+    <div class="cp-start">
+      <Button size="key" tone="accent" :label="t('home.choose')" label-key="IconUpload" data-cp="choose" @click="choose" />
+      <Button size="key" tone="accent" :label="t('home.note')" label-key="IconPencil" href="/note" data-cp="to-note" @click="follow($event, '/note')" />
+      <Button size="key" tone="accent" :label="t('home.request')" label-key="IconDownload" href="/request" data-cp="to-request" @click="follow($event, '/request')" />
+    </div>
     <p class="cp-trust"><G n="IconShieldOn" />{{ t('home.trust') }}</p>
-    <nav class="cp-more">
-      <a href="/note" data-cp="to-note" @click="follow($event, '/note')">{{ t('home.note') }}</a>
-      <a href="/request" data-cp="to-request" @click="follow($event, '/request')">{{ t('home.request') }}</a>
-    </nav>
   </section>
 </template>

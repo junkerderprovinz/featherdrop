@@ -6,6 +6,7 @@ import { Select } from '@glimstone/vue/Select';
 import { computed, reactive, ref } from 'vue';
 import { MAX_NOTE_BYTES, uploadNote } from '@/lib/e2e/note';
 import { t } from '@/src/i18n';
+import { pastedText } from '@/src/intake';
 import Done from '@/src/screens/Done.vue';
 import Gate from '@/src/screens/Gate.vue';
 import { eyeWords } from '@/src/ui';
@@ -21,7 +22,8 @@ import {
   type Sent,
 } from '@/src/upload';
 
-const note = reactive({ text: '', expiry: startExpiry(), limit: 'none' as Limit, count: 3, locked: false, password: '' });
+const note = reactive({ text: pastedText.value, expiry: startExpiry(), limit: 'none' as Limit, count: 3, locked: false, password: '' });
+pastedText.value = '';
 const busy = ref(false);
 const error = ref('');
 const sent = ref<Sent | null>(null);

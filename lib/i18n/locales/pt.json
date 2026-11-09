@@ -35,7 +35,7 @@
   },
   "home": {
     "claim": "Envia ficheiros que só o destinatário consegue abrir",
-    "drop": "Larga ficheiros no castelo, cola-os ou escolhe-os",
+    "drop": "Larga ficheiros em qualquer parte da página, cola-os ou escolhe-os",
     "choose": "Escolher ficheiros",
     "dropping": "Larga para os adicionar",
     "trust": "Encriptado no teu navegador. Desaparece quando quiseres. Sem conta.",
@@ -292,7 +292,7 @@
     "metadata": "Remover metadados das fotos",
     "metadataHint": "Ativado em cada nova partilha com fotos JPEG.",
     "paste": "Colar para enviar",
-    "pasteHint": "Os ficheiros que colares em qualquer parte da página são apanhados, como uma captura de ecrã.",
+    "pasteHint": "Os ficheiros que colares em qualquer parte da página são apanhados, como uma captura de ecrã. O texto que colares na página inicial abre uma nota.",
     "feedback": "Avisos",
     "quiet": "Notificações discretas",
     "quietHint": "Deixa de fora as confirmações de rotina. Os problemas continuam a aparecer.",

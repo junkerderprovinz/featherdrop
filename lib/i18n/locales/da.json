@@ -34,7 +34,7 @@
   },
   "home": {
     "claim": "Send filer, som kun modtageren kan åbne",
-    "drop": "Slip filer på borgen, indsæt dem, eller vælg dem",
+    "drop": "Slip filer hvor som helst på siden, indsæt dem, eller vælg dem",
     "choose": "Vælg filer",
     "dropping": "Slip for at tilføje dem",
     "trust": "Krypteret i din browser. Væk, når du siger til. Ingen konto.",
@@ -288,7 +288,7 @@
     "metadata": "Fjern fotometadata",
     "metadataHint": "Slået til for hver ny deling med JPEG-fotos.",
     "paste": "Indsæt for at sende",
-    "pasteHint": "Filer, du indsætter et vilkårligt sted på siden, bliver samlet op, for eksempel et skærmbillede.",
+    "pasteHint": "Filer, du indsætter et vilkårligt sted på siden, bliver samlet op, for eksempel et skærmbillede. Tekst, du indsætter på startsiden, åbner en note.",
     "feedback": "Feedback",
     "quiet": "Stille notifikationer",
     "quietHint": "Udelader rutinebekræftelser. Problemer vises stadig.",

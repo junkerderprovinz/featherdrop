@@ -35,7 +35,7 @@
   },
   "home": {
     "claim": "Envía archivos que solo el destinatario puede abrir",
-    "drop": "Suelta archivos sobre el castillo, pégalos o elígelos",
+    "drop": "Suelta archivos en cualquier parte de la página, pégalos o elígelos",
     "choose": "Elegir archivos",
     "dropping": "Suelta para añadirlos",
     "trust": "Cifrado en tu navegador. Se borra cuando tú digas. Sin cuenta.",
@@ -292,7 +292,7 @@
     "metadata": "Eliminar metadatos de fotos",
     "metadataHint": "Activado en cada nuevo envío con fotos JPEG.",
     "paste": "Pegar para enviar",
-    "pasteHint": "Se recogen los archivos que pegues en cualquier parte de la página, como una captura de pantalla.",
+    "pasteHint": "Se recogen los archivos que pegues en cualquier parte de la página, como una captura de pantalla. El texto que pegues en la página de inicio abre una nota.",
     "feedback": "Avisos",
     "quiet": "Notificaciones discretas",
     "quietHint": "Omite las confirmaciones rutinarias. Los problemas se siguen mostrando.",
