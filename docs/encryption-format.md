@@ -181,7 +181,37 @@ stream the ciphertext as it is produced.
 every share, so the keys never repeat; the random nonces keep a retried upload
 that reuses a token from repeating a (key, nonce) pair.
 
+## Uploading and resuming
+
+Because the blob length is known up front, a format 4 upload writes no
+encrypted copy first. Each tus request asks for a byte range, and the browser
+encrypts just the chunks that range covers from the same range of the files
+(`blobSource`). A chunk depends only on the content key, the base nonce and its
+index, so any range comes out the same however often it is made.
+
+That also makes an upload resumable after a reload or a closed tab. The
+browser keeps a record in IndexedDB holding the tus upload URL and, sealed,
+everything needed to make the rest of the blob again: the content key, the
+sealed header, the link token, the verifier and a fingerprint of each file
+(name, size, modification time and a SHA-256 of 16 samples of 4 KiB). The
+password is never stored; the content key and the sealed header are all a
+resume needs. To resume, the user picks the same files again, since browsers
+keep no file handles across a reload; files that do not match are refused
+before anything is sent. tus asks the server for its offset, and the upload
+goes on from there.
+
+The sealed part is AES-GCM under a non-extractable WebCrypto key kept in the
+same record. That keeps the key, the link and the file names out of storage as
+readable bytes, so they do not show up in a storage dump or the developer
+tools, but it is no barrier to code running in the app's origin, which can use
+the key. In link mode the record is as good as the link itself. So a record
+lives only as long as its upload: it is deleted when the share is finalized,
+when the user discards it, and when it has been untouched for 24 hours, after
+which the server has dropped the unfinished upload anyway. A private window or
+a browser that refuses storage simply uploads without a record.
+
 ## Padding
+
 
 Both paddings use Padmé (Nikitin et al., PETS 2019):
 

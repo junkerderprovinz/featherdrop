@@ -36,11 +36,19 @@ export function tusUpload(
     headers?: Record<string, string>;
     chunkSize?: number;
     onProgress?: (sent: number, total: number) => void;
+    /** Continues this upload from the offset the server reports. */
+    resumeUrl?: string;
+    /** Gets the URL of a new upload as soon as the server has made it. */
+    onUploadUrl?: (url: string) => void;
   } = {},
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
+    // tus announces the URL again on every retry.
+    let reported = opts.resumeUrl ?? null;
     const upload = new tus.Upload(source as unknown as Blob, {
       endpoint: opts.endpoint ?? "/files",
+      // An upload the server no longer has is started again at the endpoint.
+      uploadUrl: opts.resumeUrl ?? null,
       fileReader: sourceReader(source),
       uploadSize: source.size,
       chunkSize: opts.chunkSize ?? CHUNK_SIZE,
@@ -52,6 +60,11 @@ export function tusUpload(
       // No metadata: name and type are encrypted inside the blob.
       onError: reject,
       onProgress: opts.onProgress ?? null,
+      onUploadUrlAvailable: () => {
+        if (!upload.url || upload.url === reported) return;
+        reported = upload.url;
+        opts.onUploadUrl?.(upload.url);
+      },
       onSuccess: () => {
         const id = upload.url?.split("/").pop();
         if (id) resolve(id);

@@ -12,7 +12,7 @@
     "build:spa": "npm run build:client && npm run build:webroot",
     "lint": "eslint src components lib app --max-warnings 0",
     "test": "node --import tsx --test \"test/**/*.test.ts\"",
-    "test:browser": "node test/browser/run.mjs && node test/browser/stream-download.mjs && node test/browser/upload-download-flow.mjs && node test/browser/v2-worker.mjs && node test/browser/tus-upload.mjs",
+    "test:browser": "node test/browser/run.mjs && node test/browser/stream-download.mjs && node test/browser/upload-download-flow.mjs && node test/browser/v2-worker.mjs && node test/browser/upload-resume.mjs",
     "//postinstall": "Workaround for upstream bug: libsodium-wrappers-sumo@0.7.16 ships an ESM wrapper that imports ./libsodium-sumo.mjs by relative path but omits that file from its package 'files' field, so it is missing after install. Copy it from the libsodium-sumo dependency. Remove once the upstream package is fixed.",
     "postinstall": "node -e \"const{cpSync}=require('fs');cpSync('node_modules/libsodium-sumo/dist/modules-sumo-esm/libsodium-sumo.mjs','node_modules/libsodium-wrappers-sumo/dist/modules-sumo-esm/libsodium-sumo.mjs')\""
   },

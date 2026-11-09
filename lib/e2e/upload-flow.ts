@@ -9,6 +9,15 @@ import { createEncryptor, blobSource } from "./v2/share";
 import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
 import { createManageToken, manageUrl } from "./manage-link";
+import {
+  fingerprintFiles,
+  matchFiles,
+  recallUpload,
+  rememberUpload,
+  trackUpload,
+  type ResumeState,
+  type ResumeStore,
+} from "./upload-resume";
 
 // Without OPFS, on plain HTTP, the encrypted blob of formats 2 and 3 sits in
 // memory, so that path is capped to keep the tab alive.
@@ -45,12 +54,25 @@ export interface UploadSource {
 }
 
 export interface UploadDeps {
-  /** Uploads the source and resolves to the server's upload id. */
-  upload(source: UploadSource, opts: { onProgress: (sent: number, total: number) => void }): Promise<string>;
+  /**
+   * Uploads the source and resolves to the server's upload id. With resumeUrl
+   * it continues that upload from the offset the server reports.
+   * onUploadUrl gets the URL of a new upload as soon as the server has made it.
+   */
+  upload(
+    source: UploadSource,
+    opts: {
+      onProgress: (sent: number, total: number) => void;
+      resumeUrl?: string;
+      onUploadUrl?: (url: string) => void;
+    },
+  ): Promise<string>;
   /** POST /api/finalize, resolving to the share slug. */
   finalize(body: FinalizeRequest): Promise<{ slug: string }>;
   /** Base URL without a trailing slash, e.g. "https://drop.example.tld". */
   baseUrl: string;
+  /** Where a format 4 upload keeps what it needs to resume after a reload; without it nothing is kept. */
+  resume?: ResumeStore;
 }
 
 function packFiles(files: File[]): PackFile[] {
@@ -86,10 +108,23 @@ export async function uploadEncrypted(
       files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
       { password: opts.password || undefined },
     );
-    const source = blobSource(enc.state, readFiles(files));
-    const uploadId = await send(source, deps, onPhase);
-    const fields = { expiry: opts.expiry, maxDownloads: opts.maxDownloads, format: 4 as const, keyVerifier: enc.verifier };
-    return finish(uploadId, fields, enc.token, deps);
+    const state: ResumeState = {
+      token: enc.token,
+      verifier: enc.verifier,
+      blob: enc.state,
+      files: [],
+      expiry: opts.expiry,
+      maxDownloads: opts.maxDownloads,
+    };
+    let id: string | null = null;
+    if (deps.resume) {
+      const store = deps.resume;
+      // A browser that refuses storage, such as a private window, still uploads.
+      id = await fingerprintFiles(files)
+        .then((fps) => rememberUpload(store, { ...state, files: fps }))
+        .catch(() => null);
+    }
+    return sendV2(state, files, { id, uploadUrl: null }, deps, onPhase);
   }
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
@@ -137,7 +172,11 @@ export async function uploadEncrypted(
       size: scratchFile.size,
       slice: async (start, end) => scratchFile.slice(start, end),
     };
-    const uploadId = await send(source, deps, onPhase);
+    onPhase?.("uploading", 0);
+    const uploadId = await deps.upload(source, {
+      onProgress: (sent, total) => onPhase?.("uploading", total > 0 ? sent / total : 0),
+    });
+    onPhase?.("uploading", 1);
     const fields: FinalizeFields = { expiry: opts.expiry, maxDownloads: opts.maxDownloads, format, keyVerifier };
     if (wrapped) {
       fields.wrappedKey = btoa(String.fromCharCode(...wrapped.wrapped));
@@ -147,6 +186,53 @@ export async function uploadEncrypted(
   } finally {
     await cleanup();
   }
+}
+
+/**
+ * Continues a format 4 upload that stopped, after a reload or in a closed tab,
+ * with the same files picked again in any order. Files that do not match the
+ * recorded ones are refused before anything is sent. The share gets the link
+ * the first attempt would have given.
+ */
+export async function resumeUpload(
+  id: string,
+  files: File[],
+  deps: UploadDeps,
+  onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
+): Promise<{ shareUrl: string; manageUrl: string }> {
+  if (!deps.resume) throw new Error("resumeUpload: no resume store");
+  const { state, uploadUrl } = await recallUpload(deps.resume, id);
+  const ordered = await matchFiles(state.files, files);
+  return sendV2(state, ordered, { id, uploadUrl }, deps, onPhase);
+}
+
+/** Uploads and finalizes a format 4 blob, then deletes its resume record. */
+async function sendV2(
+  state: ResumeState,
+  files: File[],
+  pending: { id: string | null; uploadUrl: string | null },
+  deps: UploadDeps,
+  onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
+): Promise<{ shareUrl: string; manageUrl: string }> {
+  const tracker = pending.id && deps.resume ? trackUpload(deps.resume, pending.id) : null;
+  onPhase?.("uploading", 0);
+  const uploadId = await deps.upload(blobSource(state.blob, readFiles(files)), {
+    onProgress: (sent, total) => {
+      tracker?.touch();
+      onPhase?.("uploading", total > 0 ? sent / total : 0);
+    },
+    resumeUrl: pending.uploadUrl ?? undefined,
+    onUploadUrl: tracker ? (url) => void tracker.setUploadUrl(url) : undefined,
+  });
+  onPhase?.("uploading", 1);
+  const links = await finish(
+    uploadId,
+    { expiry: state.expiry, maxDownloads: state.maxDownloads, format: 4, keyVerifier: state.verifier },
+    state.token,
+    deps,
+  );
+  await tracker?.done();
+  return links;
 }
 
 /** Reads the plaintext range [start, end) of the files laid end to end. */
@@ -164,18 +250,7 @@ function readFiles(files: Blob[]): (start: number, end: number) => Promise<Uint8
   };
 }
 
-async function send(
-  source: UploadSource,
-  deps: UploadDeps,
-  onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
-): Promise<string> {
-  onPhase?.("uploading", 0);
-  const uploadId = await deps.upload(source, {
-    onProgress: (sent, total) => onPhase?.("uploading", total > 0 ? sent / total : 0),
-  });
-  onPhase?.("uploading", 1);
-  return uploadId;
-}
+
 
 type FinalizeFields = Omit<FinalizeRequest, "uploadId" | "manageTokenHash">;
 
