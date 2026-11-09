@@ -24,6 +24,7 @@
     "@mantine/notifications": "^9.4.1",
     "@tabler/icons-react": "^3.45.0",
     "canvas-confetti": "^1.9.4",
+    "client-zip": "^2.5.1",
     "flag-icons": "^7.5.0",
     "i18next": "^26.3.0",
     "libsodium-wrappers-sumo": "^0.8.0",
