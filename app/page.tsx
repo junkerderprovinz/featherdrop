@@ -86,6 +86,7 @@ export default function HomePage() {
     initialPrefs.current.stripMetadata ?? true,
   );
   const [shareUrl, setShareUrl] = useState<string>("");
+  const [manageUrl, setManageUrl] = useState<string>("");
 
   useEffect(() => {
     savePrefs({ expiry, maxDownloads, stripMetadata });
@@ -159,6 +160,7 @@ export default function HomePage() {
   const reset = () => {
     setFiles([]);
     setShareUrl("");
+    setManageUrl("");
     setProgress(0);
     setPassword("");
     setExpiry(baseExpiry);
@@ -296,8 +298,9 @@ export default function HomePage() {
         }
       },
     )
-      .then(({ shareUrl: url }) => {
-        setShareUrl(url);
+      .then((links) => {
+        setShareUrl(links.shareUrl);
+        setManageUrl(links.manageUrl);
         setStatus("done");
       })
       .catch((e: unknown) => {
@@ -409,7 +412,12 @@ export default function HomePage() {
           the middle of the page, so they cross-fade into one another. */}
       <Box style={{ flex: 1, display: "grid", placeItems: "center", width: "100%" }}>
         {status === "done" ? (
-          <ResultPanel url={shareUrl} expiryLabel={expiryText} onReset={reset} />
+          <ResultPanel
+            url={shareUrl}
+            manageUrl={manageUrl}
+            expiryLabel={expiryText}
+            onReset={reset}
+          />
         ) : (
           <Box style={{ display: "grid", placeItems: "center", width: "100%" }}>
             <Transition

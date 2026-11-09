@@ -158,6 +158,9 @@ func TestRouter_SharePageNoIndex(t *testing.T) {
 	if got := rec.Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
 		t.Fatalf("/d/<slug> X-Robots-Tag = %q, want noindex, nofollow", got)
 	}
+	if got := get(h, "/m/some-slug").Header().Get("X-Robots-Tag"); got != "noindex, nofollow" {
+		t.Fatalf("/m/<slug> X-Robots-Tag = %q, want noindex, nofollow", got)
+	}
 	// No share is seeded, so these are the uniform 404s.
 	for _, path := range []string{"/api/d/some-slug", "/api/d/some-slug/meta", "/api/d/some-slug/header"} {
 		rec := get(h, path)
@@ -205,6 +208,13 @@ func TestRouter_ShareRoutesShareOneRateLimitBucket(t *testing.T) {
 		if rec := get(h, path); rec.Code != http.StatusTooManyRequests {
 			t.Fatalf("%s after the shared burst: status = %d, want 429", path, rec.Code)
 		}
+	}
+	req := httptest.NewRequest(http.MethodDelete, "/api/m/nonexistent", nil)
+	req.RemoteAddr = "192.0.2.1:1234"
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("DELETE /api/m/<slug> after the shared burst: status = %d, want 429", rec.Code)
 	}
 }
 

@@ -32,6 +32,9 @@ type finalizeBody struct {
 	WrappedKey   string          `json:"wrappedKey"`
 	KDFSalt      string          `json:"kdfSalt"`
 	KeyVerifier  json.RawMessage `json:"keyVerifier"`
+	// ManageTokenHash is base64url(SHA-256(manage token)); the token itself
+	// stays in the uploader's management link. Nil means no such link.
+	ManageTokenHash *string `json:"manageTokenHash"`
 }
 
 // finalizeResponse carries only the slug; the content key never leaves the
@@ -87,6 +90,11 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 		keyVerifier, err := resolveKeyVerifier(body.KeyVerifier)
 		if err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid keyVerifier")
+			return
+		}
+
+		if body.ManageTokenHash != nil && !share.IsValidManageTokenHash(*body.ManageTokenHash) {
+			writeJSONError(w, http.StatusBadRequest, "invalid manageTokenHash")
 			return
 		}
 
@@ -174,8 +182,8 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			expiresAt = &ts
 		}
 
-		// Name, type and password stay on the client. The encryption and manage
-		// token columns belong to older formats and stay NULL.
+		// Name, type and password stay on the client. The encryption columns
+		// belong to format 1 and stay NULL.
 		rec := store.FileRecord{
 			ID:              body.UploadID,
 			Slug:            slug,
@@ -193,7 +201,7 @@ func FinalizeHandler(cfg config.Config, db *sql.DB, now func() time.Time) http.H
 			WrappedKey:      wrappedKey,
 			KDFSalt:         kdfSalt,
 			KeyVerifier:     keyVerifier,
-			ManageTokenHash: nil,
+			ManageTokenHash: body.ManageTokenHash,
 		}
 		if err := store.CreateFileRecord(db, rec); err != nil {
 			// Without a row the renamed blob would be unreachable and leak disk.

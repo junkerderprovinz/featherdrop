@@ -9,7 +9,7 @@ import (
 
 // The manage token lets an uploader delete a share early. Only its SHA-256 hash
 // is stored, so a stolen database cannot delete shares. Both the raw token and
-// the hash are 43 unpadded base64url characters, as in lib/manage-token.ts.
+// the hash are 43 unpadded base64url characters, as in lib/e2e/manage-link.ts.
 var manageTokenRe = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
 
 // NewManageToken returns 32 random bytes as unpadded base64url. It panics only

@@ -6,6 +6,7 @@ import { encryptFilesForUpload } from "./multi-pipeline";
 import type { PackFile } from "./multi-file";
 import { writeScratch, writeMemoryScratch, canUseOpfs } from "./opfs-scratch";
 import { streamToAsyncIterable } from "./stream-adapters";
+import { createManageToken, manageUrl } from "./manage-link";
 
 // Without OPFS, on plain HTTP, the encrypted blob sits in memory, so that path
 // is capped to keep the tab alive.
@@ -26,6 +27,8 @@ export interface FinalizeRequest {
    * counting a download, so a leaked slug alone cannot burn the share.
    */
   keyVerifier: string;
+  /** base64url(SHA-256(manage token)); the token itself stays in the link. */
+  manageTokenHash: string;
 }
 
 export interface UploadDeps {
@@ -40,15 +43,16 @@ export interface UploadDeps {
 /**
  * Encrypts files and uploads them under one share link. A single file becomes
  * format 2 and keeps the inline preview; several files are packed into one
- * format 3 blob and unpacked on download. The scratch file is removed even when
- * the upload fails.
+ * format 3 blob and unpacked on download. Besides the share link it returns
+ * the uploader's management link, which deletes the share. The scratch file is
+ * removed even when the upload fails.
  */
 export async function uploadEncrypted(
   files: File[],
   opts: { expiry: string; maxDownloads: number | null; password?: string },
   deps: UploadDeps,
   onPhase?: (phase: "encrypting" | "uploading", fraction: number) => void,
-): Promise<{ shareUrl: string }> {
+): Promise<{ shareUrl: string; manageUrl: string }> {
   if (files.length === 0) throw new Error("uploadEncrypted: no files given");
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
@@ -104,12 +108,14 @@ export async function uploadEncrypted(
     });
     onPhase?.("uploading", 1);
 
+    const manage = await createManageToken();
     const body: FinalizeRequest = {
       uploadId,
       expiry: opts.expiry,
       maxDownloads: opts.maxDownloads,
       format,
       keyVerifier,
+      manageTokenHash: manage.hash,
     };
     if (wrapped) {
       body.wrappedKey = btoa(String.fromCharCode(...wrapped.wrapped));
@@ -123,7 +129,7 @@ export async function uploadEncrypted(
     const shareUrl =
       keyForUrl ? `${deps.baseUrl}/d/${slug}#k=${keyForUrl}` : `${deps.baseUrl}/d/${slug}`;
 
-    return { shareUrl };
+    return { shareUrl, manageUrl: manageUrl(deps.baseUrl, slug, manage.token) };
   } finally {
     await cleanup();
   }

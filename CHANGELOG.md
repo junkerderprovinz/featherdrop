@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **See what a share holds before you spend a download.** `GET /api/d/{slug}/header` returns only the encrypted names and sizes at the start of a share, never a byte of the files, and does not count as a download. It needs the same key proof as the download. Limited link shares use it to show their file names and sizes right away.
+- **The management link is back.** Next to the share link you get a second, private link that deletes the share and its file before it expires. Its secret is created in your browser and travels only in the link's `#` part; the server keeps a hash of it and nothing else. `DELETE /api/m/{slug}` with the token in `x-fd-manage-token` answers `204`, and a wrong token, a missing share or one without a management link all get the same `404`.
 
 ### Changed
 

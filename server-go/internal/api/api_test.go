@@ -91,6 +91,7 @@ func (e *testEnv) router(now func() time.Time) http.Handler {
 	r.Post("/api/finalize", FinalizeHandler(e.cfg, e.db, now))
 	r.Get("/api/d/{slug}", DownloadHandler(e.cfg, e.db, now))
 	r.Get("/api/d/{slug}/header", HeaderHandler(e.cfg, e.db, now))
+	r.Delete("/api/m/{slug}", RevokeHandler(e.cfg, e.db))
 	return r
 }
 

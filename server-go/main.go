@@ -143,6 +143,7 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	download := api.DownloadHandler(cfg, db, nil)
 	meta := api.MetaHandler(db, nil)
 	header := api.HeaderHandler(cfg, db, nil)
+	revoke := api.RevokeHandler(cfg, db)
 
 	// Only the tus create POST is limited; PATCH and HEAD resumes stay free.
 	// The share routes share one bucket so a slug or verifier guesser cannot
@@ -156,6 +157,7 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 		download = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", download)
 		meta = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", meta)
 		header = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", header)
+		revoke = ratelimit.Middleware(downloadLimiter, cfg.TrustProxy, "", revoke)
 	}
 
 	// chi keeps the full request path, which tusd matches against its
@@ -167,6 +169,7 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	r.Get("/api/d/{slug}", download)
 	r.Get("/api/d/{slug}/meta", meta)
 	r.Get("/api/d/{slug}/header", header)
+	r.Delete("/api/m/{slug}", revoke)
 	r.Get("/api/config", api.ConfigHandler(cfg))
 
 	// Without this, an unknown /api path would fall through to the SPA and
@@ -223,8 +226,9 @@ func renderShell(assets fs.FS, cfg config.Config) ([]byte, error) {
 func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
 	fileServer := http.FileServer(http.FS(assets))
 	return func(w http.ResponseWriter, r *http.Request) {
-		// A crawled share link would expose the share to anyone searching.
-		if strings.HasPrefix(r.URL.Path, "/d/") {
+		// A crawled share or management link would expose the share to
+		// anyone searching.
+		if strings.HasPrefix(r.URL.Path, "/d/") || strings.HasPrefix(r.URL.Path, "/m/") {
 			w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		}
 		upath := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")

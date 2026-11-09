@@ -33,8 +33,8 @@ type FileRecord struct {
 	// KeyVerifier is base64url(SHA-256(content key)); nil for uploads made
 	// before verifiers existed.
 	KeyVerifier *string
-	// ManageTokenHash stays in the schema for existing databases; new rows
-	// leave it NULL.
+	// ManageTokenHash is base64url(SHA-256(manage token)); nil for a share
+	// without a management link.
 	ManageTokenHash *string
 }
 
