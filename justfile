@@ -1,4 +1,4 @@
-# featherdrop task runner; `just --list` shows the recipes.
+# CastleParcel task runner; `just --list` shows the recipes.
 # Frontend: Vite and Vue SPA. Backend: Go in server-go/. Image: distroless.
 set shell := ["sh", "-cu"]
 
@@ -63,12 +63,12 @@ fmt: go-fmt
 
 # Build the full multi-stage image for the local platform
 docker-build:
-    docker build -t featherdrop:local .
+    docker build -t castleparcel:local .
 
 # Build the amd64 image, boot it, require it to serve / (mirrors CI smoke)
 docker-smoke:
-    docker build -t featherdrop:smoke .
-    docker run -d --name fd-smoke -p 3000:3000 featherdrop:smoke
+    docker build -t castleparcel:smoke .
+    docker run -d --name fd-smoke -p 3000:3000 castleparcel:smoke
     sh -c 'for i in $(seq 1 40); do curl -fsS -o /dev/null http://localhost:3000/ && break || sleep 1; done'
     docker rm -f fd-smoke
 

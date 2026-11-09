@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 // metaRouter mounts the meta route on chi as main.go does, so {slug} resolves.
@@ -188,8 +188,8 @@ func TestConfig_DefaultsShape(t *testing.T) {
 	if resp.MaxExpiry != "" {
 		t.Fatalf("maxExpiry = %q, want empty (no cap)", resp.MaxExpiry)
 	}
-	if resp.Branding.AppName != "featherdrop" {
-		t.Fatalf("branding.appName = %q, want featherdrop (default)", resp.Branding.AppName)
+	if resp.Branding.AppName != "CastleParcel" {
+		t.Fatalf("branding.appName = %q, want CastleParcel (default)", resp.Branding.AppName)
 	}
 	if resp.Branding.LogoURL != "" {
 		t.Fatalf("branding.logoUrl = %q, want empty (default = no logo)", resp.Branding.LogoURL)

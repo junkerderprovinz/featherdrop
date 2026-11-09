@@ -23,6 +23,6 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ vars.DOCKERHUB_USERNAME }}/featherdrop
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/castleparcel
           short-description: "A clean, login-free, self-hosted file sharer. Drop a file, set an expiry, share a link."
           enable-url-completion: true

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
 )
 
 // Window is how long an upload counts against its client.

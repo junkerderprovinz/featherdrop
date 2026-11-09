@@ -17,9 +17,9 @@ import (
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientip"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientip"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 // newTestRouter mounts the tus handler on chi at "/files" and "/files/*" as

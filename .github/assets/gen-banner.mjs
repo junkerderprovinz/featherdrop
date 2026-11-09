@@ -1,18 +1,16 @@
 /**
- * Generates the theme-adaptive README banner pair at 1600x500:
+ * Generates the 1600x500 banners:
  *
- *   featherdrop-banner.svg / .png       light: white background, grey claim
- *   featherdrop-banner-dark.svg / .png  dark: #0d1117 background, light claim
+ *   castleparcel-banner.svg/.png       light, logo, name and claim  (README)
+ *   castleparcel-banner-dark.svg/.png  dark, logo, name and claim   (README, GitHub dark)
+ *   castleparcel-banner-logo.svg/.png  light, logo only             (support thread)
  *
- * The feather and wordmark are hand-tuned art kept in featherdrop-banner.svg;
- * this script never redraws them. It only sets the claim in Lato, the claim
- * font shared across the house banners, as SVG paths so the file needs no font.
- * The dark variant swaps the background, claim and wordmark colours of the
- * light one. featherdrop-banner-logo.svg is left alone.
+ * Both themes embed castleparcel-logo.svg, whose stone greys and gold read on either background.
+ * CastleParcel has no wordmark font of its own, so the name is set in Bree Serif, the house font.
+ * Text becomes SVG paths, so the SVG renders the same everywhere without the fonts.
  *
- * Needs opentype.js and @resvg/resvg-js installed globally; Lato is downloaded
- * to the OS temp dir. To change the claim, edit CLAIM and run
- * `node .github/assets/gen-banner.mjs`.
+ * Deps (global): opentype.js, @resvg/resvg-js. Fonts are fetched to the OS temp dir.
+ * Run: node .github/assets/gen-banner.mjs
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -27,51 +25,87 @@ const opentype = require(`${groot}/opentype.js`);
 const { Resvg } = require(`${groot}/@resvg/resvg-js`);
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const svgPath = join(__dir, "featherdrop-banner.svg");
 
-const CLAIM = "Big files, zero baggage.";
-const W = 1600;
-const claimSize = 44;
-// Pen origin and baseline that keep the claim's left edge at x=638.
-const textX = 633.974, claimBaseline = 364.406;
-const LIGHT = { bg: "#ffffff", claim: "#5a5d5e" };
-const DARK = { bg: "#0d1117", claim: "#9aa4ad" };
+const NAME = "CastleParcel";
+const CLAIM = "Sealed in the keep. Only your link gets in.";
+const LOGO = "castleparcel-logo.svg";
+const W = 1600, H = 500;
+const LH = 400, LW = 400;
+// Sizes and gaps shared by the banners of all repos.
+const claimSize = 44, gap = 70, lineGap = 8, margin = 60;
 
-const latoPath = join(tmpdir(), "featherdrop-Lato-Regular.ttf");
-if (!existsSync(latoPath)) {
-  const r = await fetch("https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf");
-  if (!r.ok) throw new Error(`Lato fetch ${r.status}`);
-  writeFileSync(latoPath, Buffer.from(await r.arrayBuffer()));
+const THEMES = [
+  { suffix: "", bg: "#ffffff", name: "#1f2328", claim: "#5a5d5e" },
+  { suffix: "-dark", bg: "#0d1117", name: "#e6edf3", claim: "#9aa4ad" },
+];
+
+async function font(file, url) {
+  const path = join(tmpdir(), file);
+  if (!existsSync(path)) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`font fetch ${res.status}: ${url}`);
+    writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+  }
+  return opentype.parse(readFileSync(path));
 }
-const lato = opentype.parse(readFileSync(latoPath));
-const claimPathData = lato.getPath(CLAIM, textX, claimBaseline, claimSize).toPathData(2);
+const nameFont = await font("CastleParcel-BreeSerif-Regular.ttf", "https://github.com/google/fonts/raw/main/ofl/breeserif/BreeSerif-Regular.ttf");
+const claimFont = await font("CastleParcel-Lato-Regular.ttf", "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf");
 
-// Any count other than one means the canonical SVG has changed shape.
-function swapOnce(svg, re, replacement, what) {
-  const matches = svg.match(new RegExp(re, "g")) || [];
-  if (matches.length !== 1) throw new Error(`expected exactly one ${what}, found ${matches.length}`);
-  return svg.replace(re, replacement);
+// The shared name size is 132; a name too long for the row beside the logo is set smaller rather than run off.
+const room = W - 2 * margin - LW - gap;
+const nameSize = Math.min(132, Math.floor((132 * room) / nameFont.getAdvanceWidth(NAME, 132)));
+const textW = Math.max(nameFont.getAdvanceWidth(NAME, nameSize), claimFont.getAdvanceWidth(CLAIM, claimSize));
+
+// The logo is narrower than its box, so the group is centred on the drawn width and not on LW.
+const vb = readFileSync(join(__dir, LOGO), "utf8").match(/viewBox="([^"]+)"/)[1].split(/[\s,]+/).map(Number);
+const drawnW = (LH * vb[2]) / vb[3];
+const startX = Math.round((W - (drawnW + gap + textW)) / 2);
+const LX = startX - (LW - drawnW) / 2, LY = (H - LH) / 2;
+const textX = startX + drawnW + gap;
+
+const nameAsc = nameFont.ascender * (nameSize / nameFont.unitsPerEm);
+const nameDesc = -nameFont.descender * (nameSize / nameFont.unitsPerEm);
+const claimAsc = claimFont.ascender * (claimSize / claimFont.unitsPerEm);
+const blockH = nameAsc + nameDesc + lineGap + claimAsc;
+const nameBaseline = H / 2 - blockH / 2 + nameAsc;
+const claimBaseline = nameBaseline + nameDesc + lineGap + claimAsc;
+
+// Written from the commands, as opentype.js 2.0's own toPathData puts a NaN into some curves of Lato. The text is
+// set at the origin and moved with a transform, because large coordinates make some glyphs come out as NaN too.
+const pathData = (path) => path.commands.map((c) => (c.type === "Z" ? "Z"
+  : c.type + [c.x1, c.y1, c.x2, c.y2, c.x, c.y].filter((v) => v !== undefined).map((v) => v.toFixed(2)).join(" "))).join("");
+const namePath = pathData(nameFont.getPath(NAME, 0, 0, nameSize));
+const claimPath = pathData(claimFont.getPath(CLAIM, 0, 0, claimSize));
+if (/NaN/.test(namePath + claimPath)) throw new Error("a glyph came out as NaN");
+
+function embedLogo(x, y, w, h) {
+  const raw = readFileSync(join(__dir, LOGO), "utf8").replace(/<\?xml[^>]*\?>\s*/, "");
+  return raw.replace(
+    /<svg\b[^>]*>/,
+    `<svg x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="${h}" viewBox="${vb.join(" ")}" xmlns="http://www.w3.org/2000/svg">`,
+  );
 }
 
 function emit(name, svg, bg) {
   writeFileSync(join(__dir, `${name}.svg`), svg);
   const png = new Resvg(svg, { background: bg, fitTo: { mode: "width", value: W } }).render().asPng();
   writeFileSync(join(__dir, `${name}.png`), png);
-  console.log(`wrote ${name}.svg + .png`);
+  console.log(`wrote ${name}.svg and .png`);
 }
 
-const lightSvg = swapOnce(
-  readFileSync(svgPath, "utf8"),
-  /<path d="[^"]+" fill="#5a5d5e"\/>/,
-  `<path d="${claimPathData}" fill="${LIGHT.claim}"/>`,
-  "claim path (fill #5a5d5e)",
-);
-emit("featherdrop-banner", lightSvg, LIGHT.bg);
+for (const t of THEMES) {
+  emit(`castleparcel-banner${t.suffix}`, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${NAME}">
+  <rect width="${W}" height="${H}" fill="${t.bg}"/>
+  ${embedLogo(LX, LY, LW, LH)}
+  <path transform="translate(${textX.toFixed(2)} ${nameBaseline.toFixed(2)})" d="${namePath}" fill="${t.name}"/>
+  <path transform="translate(${textX.toFixed(2)} ${claimBaseline.toFixed(2)})" d="${claimPath}" fill="${t.claim}"/>
+</svg>
+`, t.bg);
+}
 
-let darkSvg = swapOnce(lightSvg, /fill="#ffffff"/, `fill="${DARK.bg}"`, "background fill");
-darkSvg = swapOnce(darkSvg, /fill="#5a5d5e"/, `fill="${DARK.claim}"`, "claim fill");
-// The dark wordmark would disappear on the dark background.
-darkSvg = swapOnce(darkSvg, /fill="#1f2328"/, `fill="#e6edf3"`, "wordmark fill");
-emit("featherdrop-banner-dark", darkSvg, DARK.bg);
-
-console.log(`claim: "${CLAIM}"`);
+// The support thread takes a banner without text, on the forum's light surface.
+emit("castleparcel-banner-logo", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${NAME}">
+  <rect width="${W}" height="${H}" fill="${THEMES[0].bg}"/>
+  ${embedLogo((W - LW) / 2, (H - LH) / 2, LW, LH)}
+</svg>
+`, THEMES[0].bg);

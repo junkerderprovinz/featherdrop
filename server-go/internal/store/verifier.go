@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
 )
 
 // VerifierCheck is the outcome of CheckKeyVerifier.

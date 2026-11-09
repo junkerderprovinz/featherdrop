@@ -112,7 +112,7 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: featherdrop-go:smoke
+          tags: castleparcel-go:smoke
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -135,7 +135,7 @@ jobs:
       - name: Boot smoke, server must serve /healthz, / and /api/config
         run: |
           set -euo pipefail
-          docker run -d --name fd-go -p 3000:3000 featherdrop-go:smoke
+          docker run -d --name fd-go -p 3000:3000 castleparcel-go:smoke
           ok=0
           for i in $(seq 1 30); do
             if curl -fsS -o /dev/null http://localhost:3000/healthz; then ok=1; break; fi

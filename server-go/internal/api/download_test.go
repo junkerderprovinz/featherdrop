@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 // brokenWriter accepts limit bytes and then fails every write, like a client

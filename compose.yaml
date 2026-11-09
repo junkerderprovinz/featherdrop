@@ -6,9 +6,9 @@
 # first, and fill in every value marked "required".
 
 services:
-  featherdrop:
-    image: junkerderprovinz/featherdrop:latest
-    container_name: featherdrop
+  castleparcel:
+    image: junkerderprovinz/castleparcel:latest
+    container_name: castleparcel
     restart: unless-stopped
     ports:
       - "3000:3000"

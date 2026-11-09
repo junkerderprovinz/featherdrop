@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 // blobWithHeader lays out [varint(len(meta))][meta][content] for a meta under

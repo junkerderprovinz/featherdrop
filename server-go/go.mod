@@ -1,4 +1,4 @@
-module github.com/junkerderprovinz/featherdrop/server-go
+module github.com/junkerderprovinz/castleparcel/server-go
 
 go 1.26.0
 

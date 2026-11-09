@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
 )
 
 // HeaderHandler builds GET /api/d/{slug}/header. It serves the start of the

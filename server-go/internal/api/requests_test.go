@@ -17,9 +17,9 @@ import (
 	"github.com/tus/tusd/v2/pkg/filestore"
 	tushandler "github.com/tus/tusd/v2/pkg/handler"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/upload"
 )
 
 const (

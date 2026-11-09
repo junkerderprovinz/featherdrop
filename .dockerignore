@@ -1,5 +1,5 @@
 # =============================================================================
-# .dockerignore — featherdrop
+# .dockerignore for CastleParcel
 # Keep the build context small; the image is built from source via multi-stage.
 # =============================================================================
 

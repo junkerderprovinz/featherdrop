@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 )
 
 func TestFinalize_ExpiryCap(t *testing.T) {

@@ -7,7 +7,7 @@ export interface Branding {
 }
 
 export const DEFAULT_BRANDING: Branding = {
-  appName: "featherdrop",
+  appName: "CastleParcel",
   logoUrl: null,
   accentColor: "#d4af37",
 };

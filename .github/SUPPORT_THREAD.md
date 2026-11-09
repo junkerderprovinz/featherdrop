@@ -1,49 +1,45 @@
 <!--
-Template for the Unraid Community Applications support thread.
-Create it at https://forums.unraid.net (Docker Containers board), then point the
-template's <Support> at the thread URL. Title format matches the sister apps.
+Markdown copy of SUPPORT_THREAD.html, the text of the Unraid Community
+Applications support thread. The HTML is what goes into the forum.
 -->
 
 # Title
 
-[Support] junkerderprovinz - featherdrop
+[Support] junkerderprovinz - CastleParcel
 
 # Body
 
-**featherdrop** is a feather-light, self-hosted file sharer. Drop a file, set an
-expiry (plus an optional password or download limit), and share a short link or
-QR code. Files are end-to-end encrypted in your browser before upload, uploads are
-resumable, and metadata lives in a single SQLite file. No accounts, no separate
-database, no tracking.
+**CastleParcel** is a self-hosted file sharer, a WeTransfer of your own without accounts or a
+size paywall. Open the page, drop your files, choose how long they stay and how often they can be
+downloaded, and share a short link or a QR code. Everything is encrypted in your browser before
+it uploads, so the server only ever stores ciphertext. It runs as one small container and is set
+up entirely from the Unraid template.
+
+CastleParcel used to be called featherdrop. If you run featherdrop, open the container's
+settings, change the Repository to `junkerderprovinz/castleparcel:latest` and leave the paths as
+they are. Your shares and every link you sent keep working.
 
 **Links**
-- Source: https://github.com/junkerderprovinz/featherdrop
-- Image: `ghcr.io/junkerderprovinz/featherdrop:latest` (amd64 + arm64)
-- Changelog: https://github.com/junkerderprovinz/featherdrop/releases
+- Source: https://github.com/junkerderprovinz/castleparcel
+- Images: `junkerderprovinz/castleparcel:latest` on Docker Hub and `ghcr.io/junkerderprovinz/castleparcel:latest` (amd64 and arm64)
+- Changelog: https://github.com/junkerderprovinz/castleparcel/releases
 
-**Features**
-- 🔒 Zero-knowledge: end-to-end encrypted in your browser; the server only ever stores opaque ciphertext (name and type encrypted inside)
-- 🔑 Link mode (key in the URL `#fragment`) or optional password (Argon2id); the key never reaches the server
-- ⏳ Expiry 1h to 30d or never, plus optional burn-after-N-downloads
-- 🖼️ Inline image/PDF preview · savable QR code · clean link previews
-- 🌍 26 languages (right-to-left for Arabic/Hebrew) · light/dark
-- 🎨 Custom branding: name, logo, accent colour (env vars)
-- 📦 One container · resumable uploads (tus) · SQLite (no DB server)
-- 🧹 No accounts, no telemetry; your files stay on your server
+**Highlights**
+- Zero-knowledge: files and their names are encrypted in the browser with libsodium (XChaCha20-Poly1305), and the key travels in the part of the link after the `#`, which browsers never send to the server
+- An optional password on top of the link, to send over a second channel
+- Expiry from one hour to 30 days or never, and an optional download limit
+- Several files under one link, saved as one ZIP, plus encrypted text notes and file requests
+- Resumable uploads, previews, 26 languages, light and dark, your own name, logo and accent colour
+- A client you can check against the hashes of every release
 
-**Installation**
-Search "featherdrop" in Community Applications and click Install. Map the **Data**
-directory (uploads) and **Config** directory (database), pick a port, and, behind
-a reverse proxy, set `BASE_URL` to your public URL. Apply, then open the WebUI.
+**Requirements**
+Unraid 6.10+. Put HTTPS in front of it before you share links outside your network and set
+`BASE_URL` to the public address. Let large uploads through your reverse proxy.
 
-**Configuration (key variables)**
-- `BASE_URL`: your public URL, so share links use your domain
-- `DEFAULT_EXPIRY`: `1h` | `6h` | `1d` | `7d` | `30d` | `never`
-- `MAX_FILE_SIZE`: bytes; `0` = unlimited
-- `APP_NAME` / `APP_LOGO` / `ACCENT_COLOR`: custom branding
+**Bugs, problems, wishes**
+The best place is an issue on GitHub: https://github.com/junkerderprovinz/castleparcel/issues.
+For a bug, the Unraid version, the image tag, `docker logs --tail 200 CastleParcel` and the
+browsers on both ends help a lot.
 
-**Support**
-Reply here, or open an issue: https://github.com/junkerderprovinz/featherdrop/issues
-
-If featherdrop saves you a trip to a third-party host, you can buy me a coffee:
+If CastleParcel saves you a trip to someone else's cloud, you can buy me a coffee:
 https://buymeacoffee.com/junkerderprovinz

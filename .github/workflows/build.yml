@@ -2,7 +2,7 @@ name: Build & Push Docker Image
 
 # Builds the multi-arch image and pushes :latest and :sha-<short> to GHCR on
 # every push to main. With the DOCKERHUB_USERNAME variable and DOCKERHUB_TOKEN
-# secret set it also pushes to docker.io/<DOCKERHUB_USERNAME>/featherdrop. The
+# secret set it also pushes to docker.io/<DOCKERHUB_USERNAME>/castleparcel. The
 # weekly cron and a manual run build without the layer cache, so :latest picks
 # up base image updates.
 
@@ -25,7 +25,7 @@ permissions:
   security-events: write
 
 env:
-  IMAGE_NAME: ghcr.io/junkerderprovinz/featherdrop
+  IMAGE_NAME: ghcr.io/junkerderprovinz/castleparcel
   # Runs JavaScript actions on Node 24 and silences the Node 20 deprecation
   # warning.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -64,7 +64,7 @@ jobs:
         with:
           images: |
             ${{ env.IMAGE_NAME }}
-            name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/featherdrop,enable=${{ vars.DOCKERHUB_USERNAME != '' }}
+            name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/castleparcel,enable=${{ vars.DOCKERHUB_USERNAME != '' }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
@@ -78,7 +78,7 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: featherdrop:smoke-amd64
+          tags: castleparcel:smoke-amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
@@ -90,7 +90,7 @@ jobs:
           platforms: linux/arm64
           push: false
           load: true
-          tags: featherdrop:smoke-arm64
+          tags: castleparcel:smoke-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
           no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
@@ -120,15 +120,15 @@ jobs:
             echo "::endgroup::"
             return 1
           }
-          smoke featherdrop:smoke-amd64 linux/amd64 40
-          smoke featherdrop:smoke-arm64 linux/arm64 150
+          smoke castleparcel:smoke-amd64 linux/amd64 40
+          smoke castleparcel:smoke-arm64 linux/arm64 150
 
       # A fresh advisory should show up in the Security tab, not block a
       # release, so the scan never fails the build.
       - name: Scan image for CVEs (Trivy)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: featherdrop:smoke-amd64
+          image-ref: castleparcel:smoke-amd64
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
@@ -172,6 +172,6 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ vars.DOCKERHUB_USERNAME }}/featherdrop
+          repository: ${{ vars.DOCKERHUB_USERNAME }}/castleparcel
           short-description: "A clean, login-free, self-hosted file sharer. Drop a file, set an expiry, share a link."
           enable-url-completion: true

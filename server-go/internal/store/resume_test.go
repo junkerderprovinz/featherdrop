@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/share"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/share"
 )
 
 const t0 = int64(1_900_000_000_000)
