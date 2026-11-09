@@ -18,7 +18,11 @@ on:
       - "vite.config.ts"
       - "package.json"
       - "package-lock.json"
+      - ".nvmrc"
       - "scripts/build-client.mjs"
+      - "scripts/client-integrity.mjs"
+      - "scripts/client-manifest.mjs"
+      - "scripts/verify-client.mjs"
       - "Dockerfile"
       - ".dockerignore"
       - ".github/workflows/go.yml"
@@ -113,6 +117,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      # The same build and manifest release.yml publishes. The boot smoke
+      # checks the image against it with the script users run.
+      - name: Build the client natively and hash it
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run build:spa
+          node scripts/client-manifest.mjs --out "$RUNNER_TEMP/castleparcel-client.json"
+
       # A green build only proves the image builds; the SPA shell and the API
       # have to answer too.
       - name: Boot smoke, server must serve /healthz, / and /api/config
@@ -129,9 +147,12 @@ jobs:
           code_root="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)"
           code_cfg="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/config)"
           echo "/ -> $code_root ; /api/config -> $code_cfg"
+          verified=0
+          node scripts/verify-client.mjs http://localhost:3000 "$RUNNER_TEMP/castleparcel-client.json" && verified=1
           docker rm -f fd-go >/dev/null
           [ "$code_root" = 200 ] && [ "$code_cfg" = 200 ] || { echo "❌ endpoint check failed"; exit 1; }
-          echo "✅ Go image boots and serves the SPA shell + API"
+          [ "$verified" = 1 ] || { echo "❌ the image does not serve the client the native build produced"; exit 1; }
+          echo "✅ Go image boots, serves the SPA shell + API and embeds the reproducible client"
 
   browser-e2e:
     name: browser e2e (real Chromium) against the Go server
@@ -143,7 +164,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: "24"
+          node-version-file: .nvmrc
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7

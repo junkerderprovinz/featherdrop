@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -10,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientmanifest"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
 	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
@@ -98,7 +101,11 @@ func newFullRouter(t *testing.T, mutate func(*config.Config)) http.Handler {
 	if err != nil {
 		t.Fatalf("build tus handler: %v", err)
 	}
-	return newRouter(cfg, db, tusHandler, assets, shell)
+	client, err := clientmanifest.Load(assets)
+	if err != nil {
+		t.Fatalf("load client manifest: %v", err)
+	}
+	return newRouter(cfg, db, tusHandler, assets, shell, client)
 }
 
 func get(h http.Handler, path string) *httptest.ResponseRecorder {
@@ -344,5 +351,70 @@ func TestRouter_NewDownloadsSpendTheMissBudget(t *testing.T) {
 	}
 	if rec := get(h, "/api/d/"+slug); rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("download 11: status %d, want 429", rec.Code)
+	}
+}
+
+func TestRouter_PublishesTheManifestOfTheEmbeddedClient(t *testing.T) {
+	h := newFullRouter(t, nil)
+
+	rec := get(h, clientmanifest.Path)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("%s status = %d, want 200", clientmanifest.Path, rec.Code)
+	}
+	var served clientmanifest.Manifest
+	if err := json.Unmarshal(rec.Body.Bytes(), &served); err != nil {
+		t.Fatalf("manifest is not JSON: %v", err)
+	}
+	want, err := clientmanifest.Build(webrootSub(t))
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if served.Root != want.Root || len(served.Files) != len(want.Files) {
+		t.Fatalf("served root %s with %d files, want %s with %d", served.Root, len(served.Files), want.Root, len(want.Files))
+	}
+}
+
+func TestRouter_ServesEveryManifestFileWithTheListedHash(t *testing.T) {
+	h := newFullRouter(t, nil)
+	m, err := clientmanifest.Build(webrootSub(t))
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	for _, f := range m.Files {
+		if f.Path == "index.html" {
+			continue
+		}
+		rec := get(h, "/"+f.Path)
+		sum := sha256.Sum256(rec.Body.Bytes())
+		if got := hex.EncodeToString(sum[:]); got != f.SHA256 {
+			t.Errorf("/%s served sha256 %s, manifest lists %s", f.Path, got, f.SHA256)
+		}
+	}
+}
+
+func TestRouter_ServesTheRawShellTemplate(t *testing.T) {
+	h := newFullRouter(t, func(c *config.Config) { c.AppName = "Acme Files" })
+
+	rec := get(h, clientmanifest.TemplatePath)
+	raw, err := fs.ReadFile(webrootSub(t), "index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || rec.Body.String() != string(raw) {
+		t.Fatalf("%s status %d, body differs from the embedded index.html", clientmanifest.TemplatePath, rec.Code)
+	}
+	if !strings.Contains(get(h, "/").Body.String(), "<title>Acme Files</title>") {
+		t.Fatal("/ no longer serves the rendered shell")
+	}
+}
+
+func TestPrintClientManifest_WritesTheServedManifest(t *testing.T) {
+	var out strings.Builder
+	if code := printClientManifest(&out); code != 0 {
+		t.Fatalf("exit code %d, want 0", code)
+	}
+	served := get(newFullRouter(t, nil), clientmanifest.Path).Body.String()
+	if out.String() != served {
+		t.Fatalf("-client-manifest printed\n%s\nbut the server serves\n%s", out.String(), served)
 	}
 }

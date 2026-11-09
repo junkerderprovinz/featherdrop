@@ -1,7 +1,10 @@
 name: Release
 
 # Creates a GitHub Release for every pushed vX.Y.Z tag, with the body from
-# .github/release-notes/<tag>.md or generated notes when there is none.
+# .github/release-notes/<tag>.md or generated notes when there is none. The
+# release carries castleparcel-client.json, the hashes of the web client built
+# from the tag, which scripts/verify-client.mjs checks a running instance
+# against.
 
 on:
   push:
@@ -26,19 +29,39 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-
       - name: Resolve tag
         id: tag
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "tag=${INPUT_TAG}" >> "$GITHUB_OUTPUT"
           else
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
+
+      # A manual run would otherwise check out the default branch, and the
+      # manifest has to describe the tag.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+
+      # reproducible.yml proves this build gives the same bytes on any machine,
+      # and go.yml that the image embeds them.
+      - name: Build the client and hash it
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run build:spa
+          node scripts/client-manifest.mjs --out castleparcel-client.json
+          echo "Client root \`$(jq -r .root castleparcel-client.json)\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Locate release notes
         id: notes
@@ -58,6 +81,8 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           body_path: ${{ steps.notes.outputs.notes_file }}
+          files: castleparcel-client.json
+          fail_on_unmatched_files: true
           make_latest: true
 
       - name: Create release (auto-generated)
@@ -66,4 +91,6 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           generate_release_notes: true
+          files: castleparcel-client.json
+          fail_on_unmatched_files: true
           make_latest: true

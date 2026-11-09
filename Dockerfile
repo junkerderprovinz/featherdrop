@@ -8,10 +8,13 @@
 #   client:  node builds the Vite SPA into server-go/webroot
 #   gobuild: a CGO-free go build that embeds the webroot
 #   runtime: distroless static with only the binary
-ARG NODE_VERSION=24-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
+ARG NODE_VERSION=24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
 ARG GO_VERSION=1.27@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e
 
-FROM node:${NODE_VERSION} AS client
+# The client is the same for every architecture, so it is built once on the
+# build host and both images embed the same bytes. NODE_VERSION matches .nvmrc,
+# which the release uses for the manifest it publishes.
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS client
 WORKDIR /app
 # Dependencies first for layer caching. postinstall copies the libsodium ESM
 # wrapper the browser bundle needs (see package.json), so it has to run.
