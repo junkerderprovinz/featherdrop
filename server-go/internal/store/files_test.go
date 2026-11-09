@@ -237,12 +237,12 @@ func TestListExpiredEmpty(t *testing.T) {
 	}
 }
 
-func TestTotalStoredSize(t *testing.T) {
+func TestQuotaUsage_CountsShares(t *testing.T) {
 	db := openTestDB(t)
 
-	total, err := TotalStoredSize(db)
+	total, err := QuotaUsage(db, "")
 	if err != nil {
-		t.Fatalf("TotalStoredSize (empty): %v", err)
+		t.Fatalf("QuotaUsage (empty): %v", err)
 	}
 	if total != 0 {
 		t.Errorf("empty total = %d, want 0", total)
@@ -258,9 +258,9 @@ func TestTotalStoredSize(t *testing.T) {
 			t.Fatalf("CreateFileRecord(%s): %v", rec.Slug, err)
 		}
 	}
-	total, err = TotalStoredSize(db)
+	total, err = QuotaUsage(db, "")
 	if err != nil {
-		t.Fatalf("TotalStoredSize: %v", err)
+		t.Fatalf("QuotaUsage: %v", err)
 	}
 	if total != 350 {
 		t.Errorf("total = %d, want 350", total)
@@ -270,9 +270,9 @@ func TestTotalStoredSize(t *testing.T) {
 	if _, ok, err := DeleteFileBySlug(db, "sizeA"); err != nil || !ok {
 		t.Fatalf("DeleteFileBySlug: ok=%v err=%v", ok, err)
 	}
-	total, err = TotalStoredSize(db)
+	total, err = QuotaUsage(db, "")
 	if err != nil {
-		t.Fatalf("TotalStoredSize (after delete): %v", err)
+		t.Fatalf("QuotaUsage (after delete): %v", err)
 	}
 	if total != 250 {
 		t.Errorf("total after delete = %d, want 250", total)

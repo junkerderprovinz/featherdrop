@@ -95,7 +95,7 @@ func assertShareKept(t *testing.T, cfg config.Config, db *sql.DB, slug string) {
 
 func assertStoredSize(t *testing.T, db *sql.DB, want int64) {
 	t.Helper()
-	got, err := store.TotalStoredSize(db)
+	got, err := store.QuotaUsage(db, "")
 	if err != nil {
 		t.Fatalf("total stored size: %v", err)
 	}
@@ -445,4 +445,63 @@ func TestRunSweepsAtStartAndOnEveryTickUntilCancelled(t *testing.T) {
 			t.Fatal("Run kept going after its context was cancelled")
 		}
 	})
+}
+
+func trackPending(t *testing.T, db *sql.DB, id string, createdAt time.Time) {
+	t.Helper()
+	if err := store.TrackPendingUpload(db, store.PendingUpload{ID: id, Size: 72, CreatedAt: createdAt.UnixMilli()}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func isPending(t *testing.T, db *sql.DB, id string) bool {
+	t.Helper()
+	up, err := store.GetPendingUpload(db, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return up != nil
+}
+
+func TestSweepStopsCountingTheUploadsItRemoves(t *testing.T) {
+	cfg, db := newTestEnv(t)
+	now := time.Now()
+	stale := makeTusUpload(t, cfg, now.Add(-25*time.Hour))
+	trackPending(t, db, stale, now.Add(-25*time.Hour))
+	fresh := makeTusUpload(t, cfg, now.Add(-time.Hour))
+	trackPending(t, db, fresh, now.Add(-time.Hour))
+
+	if _, err := Sweep(cfg, db, now); err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	if isPending(t, db, stale) {
+		t.Error("a removed upload still counts toward the quota")
+	}
+	if !isPending(t, db, fresh) {
+		t.Error("a live upload stopped counting")
+	}
+}
+
+func TestSweepDropsAPendingUploadWhoseFilesAreGone(t *testing.T) {
+	cfg, db := newTestEnv(t)
+	now := time.Now()
+	trackPending(t, db, "lost", now.Add(-25*time.Hour))
+	// A create still in flight has its row before tusd writes the files.
+	trackPending(t, db, "creating", now.Add(-time.Second))
+	running := makeTusUpload(t, cfg, now.Add(-30*time.Hour))
+	touch(t, filepath.Join(cfg.TmpDir, running), now.Add(-time.Minute))
+	trackPending(t, db, running, now.Add(-30*time.Hour))
+
+	if _, err := Sweep(cfg, db, now); err != nil {
+		t.Fatalf("Sweep: %v", err)
+	}
+	if isPending(t, db, "lost") {
+		t.Error("a day-old row without files still counts")
+	}
+	if !isPending(t, db, "creating") {
+		t.Error("the row of a create in flight was dropped")
+	}
+	if !isPending(t, db, running) {
+		t.Error("a long upload still running stopped counting")
+	}
 }

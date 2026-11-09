@@ -151,7 +151,7 @@ func TestListExpiredRequests(t *testing.T) {
 	}
 }
 
-func TestTotalStoredSize_CountsRequestUploads(t *testing.T) {
+func TestQuotaUsage_CountsRequestUploads(t *testing.T) {
 	db := openTestDB(t)
 	if err := CreateFileRecord(db, FileRecord{ID: "f", Slug: "s", Size: 100, CreatedAt: 1, Format: 4}); err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func TestTotalStoredSize_CountsRequestUploads(t *testing.T) {
 	if _, err := AddRequestUpload(db, "req", upload("u1", 23), 1); err != nil {
 		t.Fatal(err)
 	}
-	total, err := TotalStoredSize(db)
+	total, err := QuotaUsage(db, "")
 	if err != nil || total != 123 {
 		t.Errorf("total = %d, %v", total, err)
 	}
@@ -214,5 +214,49 @@ func TestDeleteRequestUpload_RemovesOnlyThatUpload(t *testing.T) {
 	}
 	if ok, _ := DeleteRequestUpload(db, "other", "u2"); ok {
 		t.Error("deleted an upload through another request")
+	}
+}
+
+func TestDeleteRequestUpload_GivesItsPlaceBack(t *testing.T) {
+	db := openTestDB(t)
+	if err := CreateRequest(db, newRequest("req", new(int64(1)), nil)); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := AddRequestUpload(db, "req", upload("junk", 3), 1); err != nil || !ok {
+		t.Fatalf("add = %v, %v", ok, err)
+	}
+	if ok, err := DeleteRequestUpload(db, "req", "junk"); err != nil || !ok {
+		t.Fatalf("delete = %v, %v", ok, err)
+	}
+	if rec, _ := GetRequest(db, "req"); rec.UploadCount != 0 {
+		t.Errorf("count after delete = %d, want 0", rec.UploadCount)
+	}
+	if ok, err := AddRequestUpload(db, "req", upload("real", 3), 1); err != nil || !ok {
+		t.Errorf("add after delete = %v, %v", ok, err)
+	}
+}
+
+func TestDeleteRequestUpload_NeverCountsBelowZero(t *testing.T) {
+	db := openTestDB(t)
+	if err := CreateRequest(db, newRequest("req", nil, nil)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddRequestUpload(db, "req", upload("u1", 3), 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE requests SET upload_count = 0 WHERE slug = 'req'`); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := DeleteRequestUpload(db, "req", "u1"); err != nil || !ok {
+		t.Fatalf("delete = %v, %v", ok, err)
+	}
+	if rec, _ := GetRequest(db, "req"); rec.UploadCount != 0 {
+		t.Errorf("count = %d, want 0", rec.UploadCount)
+	}
+	if ok, _ := DeleteRequestUpload(db, "req", "u1"); ok {
+		t.Error("deleted the same upload twice")
+	}
+	if rec, _ := GetRequest(db, "req"); rec.UploadCount != 0 {
+		t.Errorf("count after a delete that found nothing = %d, want 0", rec.UploadCount)
 	}
 }

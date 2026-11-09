@@ -27,9 +27,9 @@ import (
 // derives from the collect link's fragment.
 const collectTokenHeader = "x-fd-collect-token"
 
-// maxRequestBody bounds the JSON bodies of the request routes, which are a
-// few hundred bytes.
-const maxRequestBody = 64 << 10
+// maxJSONBody bounds every JSON body the API reads, which are a few hundred
+// bytes.
+const maxJSONBody = 64 << 10
 
 // absentSecret is compared when there is no request, so a refusal takes the
 // same work either way. A missing request is refused whatever the comparison
@@ -59,7 +59,7 @@ func CreateRequestHandler(cfg config.Config, db *sql.DB, now func() time.Time) h
 			return
 		}
 		var body createRequestBody
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&body); err != nil {
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBody)).Decode(&body); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 			return
 		}
@@ -225,16 +225,18 @@ type sendBody struct {
 	SealedKey string `json:"sealedKey"`
 }
 
-// send attaches a finished tus upload to the request. The blob has to be a
-// well-formed format 4 container and the sealed key the length a sealed link
-// token has; neither can be checked further without the requester's key.
+// send attaches a finished tus upload to the request. An upload started for
+// another request is refused, so one request link cannot fill another
+// request's places. The blob has to be a well-formed format 4 container and
+// the sealed key the length a sealed link token has; neither can be checked
+// further without the requester's key.
 func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 	rec, ok := h.forUploader(w, r)
 	if !ok {
 		return
 	}
 	var body sendBody
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBody)).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxJSONBody)).Decode(&body); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
@@ -248,6 +250,16 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pending, err := store.GetPendingUpload(h.db, body.UploadID)
+	if err != nil {
+		log.Printf("requests: get pending upload: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "could not store upload")
+		return
+	}
+	if pending != nil && pending.RequestSlug != "" && pending.RequestSlug != rec.Slug {
+		writeJSONError(w, http.StatusNotFound, "upload not found")
+		return
+	}
 	up, err := h.tus.GetUpload(r.Context(), body.UploadID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "upload not found")
@@ -282,7 +294,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.cfg.StorageQuota > 0 {
-		used, err := store.TotalStoredSize(h.db)
+		used, err := store.QuotaUsage(h.db, body.UploadID)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "could not check storage quota")
 			return
@@ -309,6 +321,7 @@ func (h requestHandlers) send(w http.ResponseWriter, r *http.Request) {
 	if err != nil || !added {
 		// Without a row the blob would be unreachable and leak disk.
 		_ = os.Remove(storedPath)
+		_ = store.DeletePendingUpload(h.db, body.UploadID)
 		if err != nil {
 			log.Printf("requests: add upload: %v", err)
 			writeJSONError(w, http.StatusInternalServerError, "could not store upload")
@@ -434,7 +447,7 @@ func (h requestHandlers) header(w http.ResponseWriter, r *http.Request) {
 }
 
 // deleteUpload deletes one upload of a request, such as one whose sealed key
-// does not open, for the holder of its collect link.
+// does not open, for the holder of its collect link, and frees its place.
 func (h requestHandlers) deleteUpload(w http.ResponseWriter, r *http.Request) {
 	rec, up, ok := h.collected(w, r)
 	if !ok {

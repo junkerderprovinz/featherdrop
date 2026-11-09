@@ -744,12 +744,13 @@ async function requestRoundTrip(ctx, errors, fail) {
   for (const f of files) await col.getByText(f.name, { exact: true }).waitFor({ timeout: 120_000 });
   await col.getByRole("button", { name: /^(download file|datei herunterladen)$/i }).click();
   const deadline = Date.now() + 120_000;
-  while (downloads.length < files.length && Date.now() < deadline) await col.waitForTimeout(100);
-  if (downloads.length !== files.length) fail(`request: ${downloads.length} downloads`);
-  for (const [i, d] of downloads.entries()) {
-    const got = readFileSync(await d.path());
-    if (d.suggestedFilename() !== files[i].name || !got.equals(files[i].buffer)) {
-      fail(`request: ${d.suggestedFilename()} does not match ${files[i].name}`);
+  while (downloads.length < 1 && Date.now() < deadline) await col.waitForTimeout(100);
+  if (downloads.length !== 1) fail(`request: ${downloads.length} downloads, want one ZIP`);
+  const entries = unzipped(await downloads[0].path());
+  if (entries.length !== files.length) fail(`request: the ZIP holds ${entries.length} files`);
+  for (const [i, e] of entries.entries()) {
+    if (e.name !== files[i].name || !e.data.equals(files[i].buffer)) {
+      fail(`request: ${e.name} does not match ${files[i].name}`);
     }
   }
 

@@ -84,6 +84,9 @@ The script
 It exits with 0 when everything matches, 1 on a mismatch, which it names, and
 2 when it could not run.
 
+The release text ends with the same root, so a quick look at the release page
+and at the instance's startup log tells you whether they match.
+
 To look inside an image without starting it:
 
 ```sh
