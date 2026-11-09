@@ -292,7 +292,7 @@
     "metadata": "Supprimer les métadonnées photo",
     "metadataHint": "Activé pour chaque nouveau partage contenant des photos JPEG.",
     "paste": "Coller pour envoyer",
-    "pasteHint": "Les fichiers collés n’importe où sur la page sont pris en compte, une capture d’écran par exemple.",
+    "pasteHint": "Les fichiers collés n’importe où sur la page sont pris en compte, une capture d’écran par exemple. Le texte collé sur la page d’accueil ouvre une note.",
     "feedback": "Retours",
     "quiet": "Notifications discrètes",
     "quietHint": "Masque les confirmations de routine. Les problèmes s’affichent toujours.",

@@ -296,7 +296,7 @@
     "metadata": "Odstranit metadata fotografií",
     "metadataHint": "Zapnuto pro každé nové sdílení s fotkami JPEG.",
     "paste": "Vložit a poslat",
-    "pasteHint": "Soubory vložené kamkoli na stránku, třeba snímek obrazovky, se rovnou přidají.",
+    "pasteHint": "Soubory vložené kamkoli na stránku, třeba snímek obrazovky, se rovnou přidají. Text vložený na úvodní stránce otevře poznámku.",
     "feedback": "Oznámení",
     "quiet": "Tichá oznámení",
     "quietHint": "Vynechá běžná potvrzení. Problémy se zobrazí dál.",

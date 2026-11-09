@@ -292,7 +292,7 @@
     "metadata": "Eliminar metadatos de fotos",
     "metadataHint": "Activado en cada nuevo envío con fotos JPEG.",
     "paste": "Pegar para enviar",
-    "pasteHint": "Se recogen los archivos que pegues en cualquier parte de la página, como una captura de pantalla.",
+    "pasteHint": "Se recogen los archivos que pegues en cualquier parte de la página, como una captura de pantalla. El texto que pegues en la página de inicio abre una nota.",
     "feedback": "Avisos",
     "quiet": "Notificaciones discretas",
     "quietHint": "Omite las confirmaciones rutinarias. Los problemas se siguen mostrando.",

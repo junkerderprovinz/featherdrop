@@ -1,26 +1,34 @@
 // How files reach the page: the picker, a drop anywhere on the page, a paste
 // or the share sheet of the system. The page has one file input, and the
-// screen on show decides what the files are for.
+// screen on show decides what the files are for, and what pasted text is for.
 import { ref } from "vue";
 import { filesFromDropEvent } from "@/lib/dropped-files";
 import { collectSharedFiles, isShareTargetLaunch } from "@/lib/share-target";
 import { prefs } from "@/src/prefs";
 
 type Taker = (files: File[]) => void;
+type TextTaker = (text: string) => void;
 
 let taker: Taker | null = null;
+let textTaker: TextTaker | null = null;
 export const dragging = ref(false);
 let input: HTMLInputElement | null = null;
+
+/** Text pasted on the start page, waiting for the note page to begin with it. */
+export const pastedText = ref("");
 
 export const setInput = (el: unknown) => {
   input = el as HTMLInputElement | null;
 };
 
-/** Gives picked, dropped and pasted files to take until the returned function is called. */
-export function takeFiles(take: Taker) {
+/** Gives picked, dropped and pasted files to take, and pasted text to text, until the returned function is called. */
+export function takeFiles(take: Taker, text?: TextTaker) {
   taker = take;
+  textTaker = text ?? null;
   return () => {
-    if (taker === take) taker = null;
+    if (taker !== take) return;
+    taker = null;
+    textTaker = null;
   };
 }
 
@@ -51,14 +59,16 @@ export function installIntake() {
     e.preventDefault();
     taker(files);
   });
-  // A paste into a field is the field's, so only a paste elsewhere on the page picks up files.
+  // A paste into a field is the field's, so only a paste elsewhere on the page picks up files or text.
   document.addEventListener("paste", (e) => {
     const el = document.activeElement;
     if (!prefs.paste || !taker || el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
     const files = [...(e.clipboardData?.files ?? [])];
-    if (!files.length) return;
+    const text = e.clipboardData?.getData("text/plain") ?? "";
+    if (files.length) taker(files);
+    else if (textTaker && text.trim()) textTaker(text);
+    else return;
     e.preventDefault();
-    taker(files);
   });
 }
 

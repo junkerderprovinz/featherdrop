@@ -296,7 +296,7 @@
     "metadata": "Usuń metadane zdjęć",
     "metadataHint": "Włączone dla każdego nowego udostępnienia ze zdjęciami JPEG.",
     "paste": "Wklej, aby wysłać",
-    "pasteHint": "Pliki wklejone w dowolnym miejscu strony, na przykład zrzut ekranu, zostaną dodane.",
+    "pasteHint": "Pliki wklejone w dowolnym miejscu strony, na przykład zrzut ekranu, zostaną dodane. Tekst wklejony na stronie startowej otwiera notatkę.",
     "feedback": "Powiadomienia",
     "quiet": "Ciche powiadomienia",
     "quietHint": "Pomija zwykłe potwierdzenia. Problemy nadal się wyświetlają.",

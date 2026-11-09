@@ -288,7 +288,7 @@
     "metadata": "Remove photo metadata",
     "metadataHint": "Switched on for every new share that holds JPEG photos.",
     "paste": "Paste to send",
-    "pasteHint": "Files you paste anywhere on the page are picked up, such as a screenshot.",
+    "pasteHint": "Files you paste anywhere on the page are picked up, such as a screenshot. Text pasted on the start page opens a note.",
     "feedback": "Feedback",
     "quiet": "Quiet notifications",
     "quietHint": "Leaves out routine confirmations. Problems still show.",

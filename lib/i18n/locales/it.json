@@ -292,7 +292,7 @@
     "metadata": "Rimuovi metadati foto",
     "metadataHint": "Attivo per ogni nuova condivisione con foto JPEG.",
     "paste": "Incolla per inviare",
-    "pasteHint": "I file che incolli in qualsiasi punto della pagina vengono presi, per esempio uno screenshot.",
+    "pasteHint": "I file che incolli in qualsiasi punto della pagina vengono presi, per esempio uno screenshot. Il testo incollato nella pagina iniziale apre una nota.",
     "feedback": "Avvisi",
     "quiet": "Notifiche discrete",
     "quietHint": "Tralascia le conferme di routine. I problemi si vedono comunque.",

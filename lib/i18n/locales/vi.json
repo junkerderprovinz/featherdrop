@@ -284,7 +284,7 @@
     "metadata": "Xóa siêu dữ liệu ảnh",
     "metadataHint": "Được bật cho mỗi chia sẻ mới có ảnh JPEG.",
     "paste": "Dán để gửi",
-    "pasteHint": "Tệp bạn dán vào bất cứ đâu trên trang sẽ được thêm vào, ví dụ một ảnh chụp màn hình.",
+    "pasteHint": "Tệp bạn dán vào bất cứ đâu trên trang sẽ được thêm vào, ví dụ một ảnh chụp màn hình. Văn bản bạn dán ở trang đầu sẽ mở thành một ghi chú.",
     "feedback": "Phản hồi",
     "quiet": "Thông báo nhẹ nhàng",
     "quietHint": "Bỏ qua các xác nhận thường lệ. Lỗi vẫn được hiện.",

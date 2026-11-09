@@ -288,7 +288,7 @@
     "metadata": "Fotoğraf meta verilerini kaldır",
     "metadataHint": "JPEG fotoğraf içeren her yeni paylaşımda açık.",
     "paste": "Yapıştırarak gönder",
-    "pasteHint": "Sayfanın herhangi bir yerine yapıştırdığın dosyalar alınır, örneğin bir ekran görüntüsü.",
+    "pasteHint": "Sayfanın herhangi bir yerine yapıştırdığın dosyalar alınır, örneğin bir ekran görüntüsü. Başlangıç sayfasına yapıştırdığın metin bir not açar.",
     "feedback": "Geri bildirim",
     "quiet": "Sessiz bildirimler",
     "quietHint": "Olağan onayları göstermez. Sorunlar yine görünür.",

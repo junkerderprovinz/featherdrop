@@ -292,7 +292,7 @@
     "metadata": "Elimină metadatele foto",
     "metadataHint": "Activat pentru fiecare partajare nouă care conține fotografii JPEG.",
     "paste": "Lipește ca să trimiți",
-    "pasteHint": "Fișierele lipite oriunde pe pagină sunt preluate, de exemplu o captură de ecran.",
+    "pasteHint": "Fișierele lipite oriunde pe pagină sunt preluate, de exemplu o captură de ecran. Textul lipit pe pagina de start deschide o notă.",
     "feedback": "Feedback",
     "quiet": "Notificări discrete",
     "quietHint": "Omite confirmările de rutină. Problemele apar în continuare.",

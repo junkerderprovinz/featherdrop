@@ -288,7 +288,7 @@
     "metadata": "Ta bort fotometadata",
     "metadataHint": "Påslaget för varje ny delning med JPEG-foton.",
     "paste": "Klistra in för att skicka",
-    "pasteHint": "Filer du klistrar in var som helst på sidan plockas upp, till exempel en skärmbild.",
+    "pasteHint": "Filer du klistrar in var som helst på sidan plockas upp, till exempel en skärmbild. Text du klistrar in på startsidan öppnar en anteckning.",
     "feedback": "Återkoppling",
     "quiet": "Tysta aviseringar",
     "quietHint": "Hoppar över vanliga bekräftelser. Problem visas ändå.",

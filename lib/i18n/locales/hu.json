@@ -288,7 +288,7 @@
     "metadata": "Fotó-metaadatok eltávolítása",
     "metadataHint": "Bekapcsolva minden új megosztásnál, amelyben JPEG fotók vannak.",
     "paste": "Beillesztés küldéshez",
-    "pasteHint": "Az oldalon bárhová beillesztett fájlok bekerülnek, például egy képernyőkép.",
+    "pasteHint": "Az oldalon bárhová beillesztett fájlok bekerülnek, például egy képernyőkép. A kezdőoldalra beillesztett szöveg jegyzetet nyit.",
     "feedback": "Visszajelzés",
     "quiet": "Csendes értesítések",
     "quietHint": "Kihagyja a rutin megerősítéseket. A hibák továbbra is megjelennek.",
