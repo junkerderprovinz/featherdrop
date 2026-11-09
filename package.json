@@ -26,7 +26,7 @@
     "age-encryption": "^0.3.0",
     "canvas-confetti": "^1.9.4",
     "flag-icons": "^7.5.0",
-    "i18next": "^26.3.0",
+    "i18next": "^27.0.0",
     "libsodium-wrappers-sumo": "^0.8.0",
     "nanoid": "^6.0.0",
     "qrcode.react": "^4.0.1",
