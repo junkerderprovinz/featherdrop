@@ -20,8 +20,11 @@ svg { display: block; }
 
 .cp-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem; text-align: center; padding-bottom: 2rem; }
 .cp-hero .gs-drop { margin-bottom: .5rem; }
-.cp-claim { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2; max-width: 30ch; text-wrap: balance; }
+.cp-claim { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2; text-wrap: balance; }
 .cp-lead { margin: 0 0 .75rem; color: var(--carbon-text-sub); font-size: 15px; }
+.cp-start { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; width: min(42rem, 100%); }
+.cp-start > * { width: 100%; justify-content: center; }
+@media (max-width: 600px) { .cp-start { grid-template-columns: minmax(0, 1fr); width: min(22rem, 100%); } }
 .cp-trust { margin: 1.25rem 0 0; color: var(--carbon-text-muted); font-size: 13px; }
 .cp-trust svg { display: inline; width: 1em; height: 1em; margin-inline-end: .45rem; vertical-align: -.15em; color: var(--accent-glyph); }
 .cp-sub svg { width: 1em; height: 1em; flex: none; color: var(--accent-glyph); }
@@ -76,10 +79,6 @@ svg { display: block; }
 
 .cp-confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
 
-.cp-more { display: flex; gap: 1.5rem; margin: .25rem 0 0; font-size: 13px; }
-.cp-more a { color: var(--carbon-text-sub); text-underline-offset: 3px; }
-.cp-more a:hover { color: var(--carbon-text); }
-.cp-more a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 2px; }
 .cp-resume { width: min(44rem, 100%); margin-bottom: 1.5rem; text-align: start; }
 .cp-hint-line { margin: 0; color: var(--status-warn-text); font-size: 13px; }
 .cp-note { display: flex; flex-direction: column; gap: .9rem; }
