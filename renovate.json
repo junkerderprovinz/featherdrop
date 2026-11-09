@@ -89,7 +89,7 @@
         "docker-compose"
       ],
       "matchPackageNames": [
-        "junkerderprovinz/featherdrop"
+        "junkerderprovinz/castleparcel"
       ],
       "enabled": false
     }
