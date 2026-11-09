@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
 )
 
 // configResponse is the GET /api/config body. It carries only non-secret

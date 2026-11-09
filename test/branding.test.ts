@@ -4,14 +4,14 @@ import { resolveBranding, normalizeHex, accentTuple } from "../lib/branding";
 
 test("defaults when no env is set", () => {
   const b = resolveBranding({});
-  assert.equal(b.appName, "featherdrop");
+  assert.equal(b.appName, "CastleParcel");
   assert.equal(b.logoUrl, null);
   assert.equal(b.accentColor, "#d4af37");
 });
 
 test("APP_NAME overrides the wordmark; blank falls back", () => {
   assert.equal(resolveBranding({ APP_NAME: "MyShare" }).appName, "MyShare");
-  assert.equal(resolveBranding({ APP_NAME: "   " }).appName, "featherdrop");
+  assert.equal(resolveBranding({ APP_NAME: "   " }).appName, "CastleParcel");
 });
 
 test("APP_LOGO sets the logo url; blank -> null", () => {

@@ -1,4 +1,4 @@
-// Command server-go is the featherdrop server, a zero-knowledge file sharer. It
+// Command server-go is the CastleParcel server, a zero-knowledge file sharer. It
 // serves the React client as embedded static assets plus the tus upload endpoint
 // and a small JSON/file API; all encryption happens in the browser.
 package main
@@ -23,15 +23,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/api"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/cleanup"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/clientmanifest"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/config"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/headers"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/ratelimit"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/static"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/store"
-	"github.com/junkerderprovinz/featherdrop/server-go/internal/upload"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/api"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/cleanup"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientmanifest"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/headers"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/ratelimit"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/static"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/upload"
 )
 
 //go:embed all:webroot
@@ -117,7 +117,7 @@ func main() {
 		}
 	}()
 
-	log.Printf("featherdrop: data=%s db=%s", cfg.DataDir, cfg.DBPath)
+	log.Printf("castleparcel: data=%s db=%s", cfg.DataDir, cfg.DBPath)
 	log.Printf("client: root %s, %d files, manifest at %s", client.Manifest.Root, len(client.Manifest.Files), clientmanifest.Path)
 	printBanner()
 	printReady("HTTP", cfg.Port)
@@ -311,7 +311,7 @@ func serveShell(w http.ResponseWriter, shell []byte) {
 }
 
 const (
-	bannerName     = "featherdrop"
+	bannerName     = "CastleParcel"
 	bannerSubtitle = "Self-hosted, end-to-end-encrypted file sharing. Drop a file, share a link."
 )
 
@@ -328,6 +328,6 @@ func printBanner() {
 // printReady prints the house ready line, the last output before the server
 // waits for requests.
 func printReady(scheme, port string) {
-	fmt.Printf("  \033[0;32m✓ FEATHERDROP IS READY\033[0m - Open the WebUI now (%s %s)\n", scheme, port)
+	fmt.Printf("  \033[0;32m✓ CASTLEPARCEL IS READY\033[0m - Open the WebUI now (%s %s)\n", scheme, port)
 	fmt.Println()
 }

@@ -166,7 +166,7 @@ export async function uploadEncrypted(
   } else {
     if (totalSize > MEMORY_FALLBACK_MAX_BYTES) {
       throw new Error(
-        "These files are too large to encrypt without OPFS. Open featherdrop over " +
+        "These files are too large to encrypt without OPFS. Open CastleParcel over " +
           "HTTPS (a secure context), or choose files under 500 MB total.",
       );
     }
