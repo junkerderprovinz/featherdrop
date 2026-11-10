@@ -17,8 +17,9 @@
 </p>
 
 <p align="center">
-CastleParcel is a self-hosted drop zone for your files, with <b>castle walls</b> around it. It sends big
-files the way the transfer services do, only from your own server and with no size paywall. Drop your
+CastleParcel is a self-hosted drop zone for your files, with <b>castle walls</b> around it. Think of the
+site everyone uses to send big files, only on your own server, with no size paywall, and sealed so tight
+that not even that server can look inside. Drop your
 files (one or a whole batch), set how long they live (plus an optional password or download
 limit), and share a short link or QR code. Zero-knowledge end-to-end encryption, resumable
 uploads, inline previews, one tiny container. No accounts, no clouds, no tracking, no nonsense.

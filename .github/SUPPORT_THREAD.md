@@ -9,10 +9,10 @@ Applications support thread. The HTML is what goes into the forum.
 
 # Body
 
-**CastleParcel** is a self-hosted file sharer for big files, without accounts or a
-size paywall. Open the page, drop your files, choose how long they stay and how often they can be
+**CastleParcel** is a self-hosted file sharer for big files: the transfer site you already know,
+minus the accounts, the size paywall and someone else's cloud. Open the page, drop your files, choose how long they stay and how often they can be
 downloaded, and share a short link or a QR code. Everything is encrypted in your browser before
-it uploads, so the server only ever stores ciphertext. It runs as one small container and is set
+it uploads, so not even your own server can read what you send. It runs as one small container and is set
 up entirely from the Unraid template.
 
 CastleParcel used to be called featherdrop. If you run featherdrop, open the container's
