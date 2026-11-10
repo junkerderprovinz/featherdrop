@@ -116,6 +116,7 @@ try {
   await limitedShareListsBeforeDownload();
   await startPageShortcuts();
   await infoTabStaysInSettings();
+  await castleLoaderPlays();
   if (errors.length) fail("page/console errors occurred");
   console.log("E2E PASSED: zero-knowledge upload→download round trip verified");
 } catch (e) {
@@ -676,4 +677,51 @@ async function infoTabStaysInSettings() {
   await page.waitForURL(`${BASE}/note`, WAIT);
   await page.close();
   console.log("settings: the Info tab opens in place, Back leads where Settings was opened from ✓");
+}
+
+// The castle loader plays while a transfer runs. A slow network keeps the
+// upload and the download on screen, and a CSP refusal of the WebAssembly the
+// main script carries would land in the console errors the run fails on.
+async function castleLoaderPlays() {
+  const throttle = async (page, bytesPerSecond) => {
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send("Network.enable");
+    await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: bytesPerSecond, uploadThroughput: bytesPerSecond });
+    return () => cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  };
+  const drawn = async (page, mode) => {
+    await page.waitForFunction((m) => {
+      const canvas = document.querySelector(`.castle[data-mode="${m}"] canvas`);
+      if (!canvas || canvas.width === 0) return false;
+      const copy = Object.assign(document.createElement("canvas"), { width: canvas.width, height: canvas.height });
+      const g = copy.getContext("2d");
+      g.drawImage(canvas, 0, 0);
+      const alpha = g.getImageData(0, 0, copy.width, copy.height).data;
+      for (let i = 3; i < alpha.length; i += 4) if (alpha[i] > 0) return true;
+      return false;
+    }, mode, WAIT);
+    const bar = await page.locator(".castle [role=progressbar]").getAttribute("aria-valuenow");
+    if (bar === null) fail(`castle ${mode}: the progress bar has no value`);
+  };
+
+  const payload = randomBytes(2 * 1024 * 1024);
+  const up = await open("castle up", BASE);
+  await up.setInputFiles('input[type="file"]', { name: "castle.bin", mimeType: "application/octet-stream", buffer: payload });
+  const fastUp = await throttle(up, 256 * 1024);
+  await up.locator("[data-cp=upload]").click();
+  await drawn(up, "upload");
+  await fastUp();
+  const shareUrl = await waitForLink(up, "/d/");
+
+  const dl = await open("castle dl", shareUrl);
+  await dl.getByText("castle.bin", { exact: true }).waitFor(WAIT);
+  const fastDown = await throttle(dl, 256 * 1024);
+  const saved = dl.waitForEvent("download", WAIT);
+  await dl.locator("[data-cp=download-all]").click();
+  await drawn(dl, "download");
+  await fastDown();
+  if (!readFileSync(await (await saved).path()).equals(payload)) fail("castle: the download does not match the upload");
+  await up.close();
+  await dl.close();
+  console.log("castle loader: drawn on its canvas during the upload and the download ✓");
 }

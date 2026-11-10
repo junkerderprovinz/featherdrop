@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The castle stands for the app wherever its name does, unless the server brought a logo of its own.
 import { config } from '@/src/config';
-import CastleLoader from '@/src/loaderStub.vue';
+import CastleLoader from '@/src/components/CastleLoader.vue';
 
 defineProps<{ size: number; mode?: 'idle' | 'upload' | 'download'; progress?: number | null }>();
 </script>

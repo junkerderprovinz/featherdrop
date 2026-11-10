@@ -33,7 +33,7 @@ test("the page reaches libsodium only through the crypto worker", async () => {
     platform: "browser",
     logLevel: "silent",
     plugins: [probe, vueSfc],
-    loader: { ".css": "empty", ".png": "empty", ".svg": "empty", ".woff": "empty", ".woff2": "empty" },
+    loader: { ".css": "empty", ".png": "empty", ".riv": "empty", ".svg": "empty", ".woff": "empty", ".woff2": "empty" },
   });
 
   assert.deepEqual([...importers], []);

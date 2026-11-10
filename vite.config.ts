@@ -8,6 +8,8 @@ const repoRoot = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [vue()],
+  // The castle loader's Rive file, inlined into the main chunk with ?url&inline.
+  assetsInclude: ["**/*.riv"],
   base: "/",
   resolve: {
     // Anchored on "@/" so a bare "@" package scope never matches.
