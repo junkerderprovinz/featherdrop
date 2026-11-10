@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--
   Unraid Community Applications support thread for CastleParcel.
-  Structure: name and claim -> banner -> buttons -> What is this? ->
+  Structure: name and claim -> banner -> buttons -> What is this? (with the
+  README pictures) ->
   Highlights & Features -> Requirements -> Bugs, Problems, Wishes -> Credits
   -> disclaimer.
   The forum drops <style> and class attributes, so sizes are attributes and the
@@ -45,6 +46,19 @@ entirely from the Unraid template.</p>
 <p>CastleParcel used to be called featherdrop. If you run featherdrop, open the container's settings,
 change the Repository to <code>junkerderprovinz/castleparcel:latest</code> and leave the paths as they
 are. Your shares and every link you sent keep working.</p>
+<p>The files and links in these pictures are made up.</p>
+<p style="text-align:center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/screenshots/castleparcel-1.png" alt="CastleParcel in a browser window: a photo is selected and the options for expiry, download limit, password and photo metadata are shown" width="100%">
+  <br><em>Pick the files, then decide how long they live and how often they can be downloaded</em>
+</p>
+<p style="text-align:center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/screenshots/castleparcel-2.png" alt="CastleParcel showing the finished share link with a QR code and the management link" width="100%">
+  <br><em>The link is ready: copy it or save the QR code</em>
+</p>
+<p style="text-align:center">
+  <img src="https://raw.githubusercontent.com/junkerderprovinz/castleparcel/main/.github/assets/screenshots/castleparcel-3.png" alt="The share page a recipient opens, with the files, their sizes, the expiry and a download button" width="100%">
+  <br><em>What the recipient sees, decrypted in their browser</em>
+</p>
 
 <h2>Highlights &amp; Features</h2>
 <ul>
@@ -64,7 +78,7 @@ are. Your shares and every link you sent keep working.</p>
 <h2>Requirements</h2>
 <ul>
   <li>Unraid 6.10+</li>
-  <li>HTTPS in front of it before you share links outside your network. Set <code>BASE_URL</code> to the public address so the links point there. Over plain HTTP, uploads stop at 500 MB</li>
+  <li>HTTPS in front of it before you share links outside your network. Set <code>BASE_URL</code> to the public address so the links point there. Over plain HTTP an upload still works, but it cannot pick up again after a break</li>
   <li>Let large uploads through your reverse proxy, for example <code>client_max_body_size 0</code> and long timeouts in Nginx</li>
 </ul>
 
@@ -84,7 +98,8 @@ Everything stays in one place there, and nothing gets lost in a long thread.</p>
 <h2>Credits</h2>
 <p>A much smaller take inspired by <a href="https://github.com/stonith404/pingvin-share">Pingvin Share</a>.
 Built with Go on <a href="https://doc.libsodium.org">libsodium</a> for the encryption,
-<a href="https://tus.io">tus</a> for resumable uploads and SQLite. If CastleParcel saves you a trip
+<a href="https://tus.io">tus</a> for resumable uploads and SQLite, with a Vue client and the castle loader
+animated in <a href="https://rive.app">Rive</a>. If CastleParcel saves you a trip
 to someone else's cloud, you can <a href="https://buymeacoffee.com/junkerderprovinz">buy me a coffee</a>.</p>
 
 <hr>
