@@ -625,16 +625,30 @@ async function limitedShareListsBeforeDownload() {
   console.log("limited share: name shown before the download, nothing spent ✓");
 }
 
-// The ways in and out of the start page that need no upload: the Back button
-// of a secondary page, text pasted outside a field, and files dropped away
-// from the castle.
+// The ways in and out of the start page that need no upload: a note or a
+// request opening under the castle and Back closing it, text pasted outside a
+// field, and files dropped away from the castle.
 async function startPageShortcuts() {
   const page = await open("shortcuts", BASE);
+  // Tall enough that the start page stands centred with room above the castle.
+  await page.setViewportSize({ width: 1280, height: 1100 });
+  const castle = page.locator(".cp-mark");
+  const settled = async () => {
+    await page.waitForTimeout(1000);
+    return castle.boundingBox();
+  };
+  const home = await settled();
   for (const [to, path] of [["to-note", "/note"], ["to-request", "/request"]]) {
     await page.locator(`[data-cp=${to}]`).click();
     await page.waitForURL(`${BASE}${path}`, WAIT);
+    await page.locator(`[data-cp=panel-${path.slice(1)}]`).waitFor(WAIT);
+    const open = await settled();
+    if (Math.round(open.width) !== Math.round(home.width) || Math.round(open.height) !== Math.round(home.height)) fail(`${path}: the castle changed its size`);
+    if (open.y >= home.y) fail(`${path}: the castle did not move up`);
+    if (await page.locator(".cp-claim, [data-cp=choose], .cp-trust").count()) fail(`${path}: the start page texts stayed under the castle`);
     await page.locator("[data-cp=back]").click();
     await page.waitForURL(`${BASE}/`, WAIT);
+    await page.locator(".cp-claim").waitFor(WAIT);
   }
 
   const text = "pasted on the start page\nsecond line";
@@ -659,7 +673,7 @@ async function startPageShortcuts() {
   await page.getByText("dropped-anywhere.txt", { exact: true }).waitFor(WAIT);
   if (await page.locator("[data-cp=dropzone]").count()) fail("the drop zone stayed after the drop");
   await page.close();
-  console.log("start page: Back returns home, pasted text opens a note, a drop anywhere adds files ✓");
+  console.log("start page: a note and a request open under the castle, Back returns home, pasted text opens a note, a drop anywhere adds files ✓");
 }
 
 // Options and the finished link lead out from the same spot as every other

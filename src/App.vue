@@ -11,18 +11,18 @@ import { route } from '@/src/router';
 import Collect from '@/src/screens/Collect.vue';
 import Manage from '@/src/screens/Manage.vue';
 import NotFound from '@/src/screens/NotFound.vue';
-import Note from '@/src/screens/Note.vue';
 import Receive from '@/src/screens/Receive.vue';
-import Request from '@/src/screens/Request.vue';
 import SendTo from '@/src/screens/SendTo.vue';
 import Sender from '@/src/screens/Sender.vue';
 import Settings from '@/src/settings/Settings.vue';
 
-// The routes that take a slug name it as their second part.
-const SCREENS = { '': Sender, d: Receive, m: Manage, note: Note, request: Request, r: SendTo, c: Collect, settings: Settings } as const;
+// The routes that take a slug name it as their second part. A note and a request open under the castle of the start
+// page, so those three share one screen that stays put while the castle moves.
+const SCREENS = { '': Sender, d: Receive, m: Manage, note: Sender, request: Sender, r: SendTo, c: Collect, settings: Settings } as const;
 const name = computed(() => route.parts[0] ?? '');
 const screen = computed(() => SCREENS[name.value as keyof typeof SCREENS] ?? NotFound);
 const inSettings = computed(() => name.value === 'settings');
+const screenKey = computed(() => (screen.value === Sender ? 'home' : route.parts.slice(0, inSettings.value ? 1 : 2).join('/')));
 
 watchEffect(() => {
   document.title = config.branding.appName;
@@ -34,7 +34,7 @@ watchEffect(() => {
     <TopBar :screen="name || 'home'" />
     <UnavailableNotice v-if="insecure" class="cp-insecure" :title="t('insecure.title')">{{ t('insecure.text') }}</UnavailableNotice>
     <main class="cp-main">
-      <component :is="screen" :key="route.parts.slice(0, inSettings ? 1 : 2).join('/')" class="glim-page-enter" />
+      <component :is="screen" :key="screenKey" class="glim-page-enter" />
     </main>
     <div v-if="dragging" class="cp-dropzone" aria-hidden="true" data-cp="dropzone"></div>
     <input :ref="setInput" type="file" multiple hidden data-cp="files" @change="picked">

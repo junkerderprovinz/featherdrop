@@ -20,6 +20,9 @@ svg { display: block; }
 
 .cp-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem; text-align: center; padding-bottom: 2rem; }
 .cp-hero .gs-drop { margin-bottom: .5rem; }
+.cp-hero-open { justify-content: flex-start; padding-bottom: 0; }
+.cp-panel { width: min(44rem, 100%); text-align: start; }
+.cp-panel > .cp-column { padding-top: 0; }
 .cp-claim { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2; text-wrap: balance; }
 .cp-lead { margin: 0 0 .75rem; color: var(--carbon-text-sub); font-size: 15px; }
 .cp-start { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; width: min(42rem, 100%); }
