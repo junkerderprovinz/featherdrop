@@ -81,7 +81,7 @@
     "metadata": "Poista kuvan metatiedot",
     "metadataHint": "Kameran tiedot ja GPS-sijainti poistetaan JPEG-kuvista ennen salausta.",
     "upload": "Lähetä ja jaa",
-    "emptyTitle": "Tiedostoja ei ole jäljellä",
+    "emptyTitle": "Täällä ei ole vielä tiedostoja",
     "emptyHint": "Lisää tiedostoja, niin voit lähettää ne."
   },
   "expiry": {

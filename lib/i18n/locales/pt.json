@@ -82,7 +82,7 @@
     "metadata": "Remover metadados das fotos",
     "metadataHint": "Os dados da câmara e a posição GPS saem das fotos JPEG antes da encriptação.",
     "upload": "Carregar e partilhar",
-    "emptyTitle": "Não restam ficheiros",
+    "emptyTitle": "Ainda não há ficheiros",
     "emptyHint": "Adiciona ficheiros para os enviar."
   },
   "expiry": {

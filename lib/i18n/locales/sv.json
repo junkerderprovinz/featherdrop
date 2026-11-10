@@ -81,7 +81,7 @@
     "metadata": "Ta bort fotometadata",
     "metadataHint": "Kamerauppgifter och GPS-position tas bort från JPEG-foton före krypteringen.",
     "upload": "Ladda upp och dela",
-    "emptyTitle": "Inga filer kvar",
+    "emptyTitle": "Inga filer här än",
     "emptyHint": "Lägg till några filer för att skicka dem."
   },
   "expiry": {

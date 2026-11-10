@@ -82,7 +82,7 @@
     "metadata": "Eliminar metadatos de fotos",
     "metadataHint": "Los datos de la cámara y la posición GPS salen de las fotos JPEG antes de cifrarlas.",
     "upload": "Subir y compartir",
-    "emptyTitle": "No quedan archivos",
+    "emptyTitle": "Aún no hay archivos",
     "emptyHint": "Añade archivos para enviarlos."
   },
   "expiry": {

@@ -80,7 +80,7 @@
     "metadata": "사진 메타데이터 제거",
     "metadataHint": "암호화하기 전에 JPEG 사진에서 카메라 정보와 GPS 위치를 빼요.",
     "upload": "업로드 및 공유",
-    "emptyTitle": "남은 파일이 없어요",
+    "emptyTitle": "아직 파일이 없어요",
     "emptyHint": "보낼 파일을 추가해 주세요."
   },
   "expiry": {

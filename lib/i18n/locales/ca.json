@@ -82,7 +82,7 @@
     "metadata": "Treu les metadades de les fotos",
     "metadataHint": "Les dades de la càmera i la posició GPS surten de les fotos JPEG abans de xifrar-les.",
     "upload": "Puja i comparteix",
-    "emptyTitle": "No queda cap fitxer",
+    "emptyTitle": "Encara no hi ha cap fitxer",
     "emptyHint": "Afegeix fitxers per enviar-los."
   },
   "expiry": {

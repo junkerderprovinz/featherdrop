@@ -82,7 +82,7 @@
     "metadata": "Supprimer les métadonnées photo",
     "metadataHint": "Les infos de l’appareil et la position GPS sont retirées des photos JPEG avant le chiffrement.",
     "upload": "Envoyer et partager",
-    "emptyTitle": "Plus aucun fichier",
+    "emptyTitle": "Pas encore de fichiers ici",
     "emptyHint": "Ajoutez des fichiers pour les envoyer."
   },
   "expiry": {

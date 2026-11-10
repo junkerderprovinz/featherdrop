@@ -83,7 +83,7 @@
     "metadata": "Odstrani metapodatke fotografij",
     "metadataHint": "Podatki o fotoaparatu in položaj GPS se pred šifriranjem odstranijo iz fotografij JPEG.",
     "upload": "Naloži in deli",
-    "emptyTitle": "Ni več datotek",
+    "emptyTitle": "Tukaj še ni datotek",
     "emptyHint": "Dodaj datoteke, ki jih želiš poslati."
   },
   "expiry": {

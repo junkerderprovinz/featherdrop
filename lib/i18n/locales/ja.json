@@ -80,7 +80,7 @@
     "metadata": "写真のメタデータを削除",
     "metadataHint": "暗号化の前に、JPEG 写真からカメラ情報と GPS の位置を取り除きます。",
     "upload": "アップロードして共有",
-    "emptyTitle": "ファイルがありません",
+    "emptyTitle": "まだファイルがありません",
     "emptyHint": "送りたいファイルを追加してください。"
   },
   "expiry": {

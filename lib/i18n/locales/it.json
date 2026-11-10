@@ -82,7 +82,7 @@
     "metadata": "Rimuovi metadati foto",
     "metadataHint": "I dati della fotocamera e la posizione GPS vengono tolti dalle foto JPEG prima della cifratura.",
     "upload": "Carica e condividi",
-    "emptyTitle": "Nessun file rimasto",
+    "emptyTitle": "Ancora nessun file qui",
     "emptyHint": "Aggiungi dei file per inviarli."
   },
   "expiry": {

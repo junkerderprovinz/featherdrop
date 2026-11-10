@@ -80,7 +80,7 @@
     "metadata": "移除照片元数据",
     "metadataHint": "加密前会从 JPEG 照片中去掉相机信息和 GPS 位置。",
     "upload": "上传并分享",
-    "emptyTitle": "没有文件了",
+    "emptyTitle": "还没有文件",
     "emptyHint": "添加一些文件来发送吧。"
   },
   "expiry": {

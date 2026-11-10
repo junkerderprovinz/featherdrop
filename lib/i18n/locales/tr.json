@@ -81,7 +81,7 @@
     "metadata": "Fotoğraf meta verilerini kaldır",
     "metadataHint": "Kamera bilgileri ve GPS konumu, şifrelemeden önce JPEG fotoğraflardan çıkarılır.",
     "upload": "Yükle ve paylaş",
-    "emptyTitle": "Dosya kalmadı",
+    "emptyTitle": "Henüz dosya yok",
     "emptyHint": "Göndermek için birkaç dosya ekle."
   },
   "expiry": {

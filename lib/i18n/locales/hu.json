@@ -81,7 +81,7 @@
     "metadata": "Fotó-metaadatok eltávolítása",
     "metadataHint": "A kamera adatai és a GPS-pozíció titkosítás előtt kikerülnek a JPEG fotókból.",
     "upload": "Feltöltés és megosztás",
-    "emptyTitle": "Nem maradt fájl",
+    "emptyTitle": "Még nincs itt fájl",
     "emptyHint": "Adj hozzá fájlokat a küldéshez."
   },
   "expiry": {

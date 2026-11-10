@@ -81,7 +81,7 @@
     "metadata": "Remove photo metadata",
     "metadataHint": "Camera details and the GPS position come out of JPEG photos before encrypting.",
     "upload": "Upload and share",
-    "emptyTitle": "No files left",
+    "emptyTitle": "No files in here yet",
     "emptyHint": "Add some files to send them."
   },
   "expiry": {
