@@ -1,7 +1,8 @@
 // What the castle loader tells its Rive state machine "loader": mode picks the
-// direction the letters fly, progress lights the gate from 0 to 100, still
-// swaps the flights for a letter resting at the gate, and reach from 0 to 100
-// sends the letters far enough out to come from and go past the window's edge.
+// direction the letters fly, still swaps the flights for a letter resting at
+// the gate, and reach from 0 to 100 sends the letters far enough out to come
+// from and go past the window's edge. Progress goes along from 0 to 100, but
+// the gate stays dark and only flares as a letter passes through it.
 // The animation's tower stands exactly on the tower of the static logo, so one
 // turns into the other in place.
 

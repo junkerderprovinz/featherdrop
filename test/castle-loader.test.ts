@@ -18,13 +18,13 @@ test("an upload flies letters in, a download flies them out, idle leaves the tow
   }
 });
 
-test("the gate glows with the transfer's progress in percent", () => {
+test("progress reaches the animation in percent", () => {
   const list = inputs();
   setCastle(list, { mode: "upload", progress: 0.42, still: false, reach: 0 });
   assert.equal(values(list).progress, 42);
 });
 
-test("progress beyond either end lights the gate no further than empty or full", () => {
+test("progress beyond either end reaches the animation as empty or full", () => {
   const list = inputs();
   setCastle(list, { mode: "download", progress: -0.3, still: false, reach: 0 });
   assert.equal(values(list).progress, 0);
@@ -32,7 +32,7 @@ test("progress beyond either end lights the gate no further than empty or full",
   assert.equal(values(list).progress, 100);
 });
 
-test("a transfer that has not reported progress yet leaves the gate dark", () => {
+test("a transfer that has not reported progress yet reaches the animation as empty", () => {
   const list = inputs();
   setCastle(list, { mode: "upload", progress: null, still: false, reach: 0 });
   assert.equal(values(list).progress, 0);
