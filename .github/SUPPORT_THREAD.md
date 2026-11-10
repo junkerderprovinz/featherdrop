@@ -9,7 +9,7 @@ Applications support thread. The HTML is what goes into the forum.
 
 # Body
 
-**CastleParcel** is a self-hosted file sharer, a WeTransfer of your own without accounts or a
+**CastleParcel** is a self-hosted file sharer for big files, without accounts or a
 size paywall. Open the page, drop your files, choose how long they stay and how often they can be
 downloaded, and share a short link or a QR code. Everything is encrypted in your browser before
 it uploads, so the server only ever stores ciphertext. It runs as one small container and is set
