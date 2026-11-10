@@ -1,9 +1,9 @@
 <script setup lang="ts">
+// The upload under the castle, which shows it in its gate: how far it got, each
+// file on its way, and the way to stop it.
 import { Button, Card, ListRow, Pill, ProgressBar } from '@glimstone/vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import AppMark from '@/src/components/AppMark.vue';
 import { confirm } from '@/src/confirm';
-import { config } from '@/src/config';
 import { duration, size } from '@/src/format';
 import { G, fileGlyph } from '@/src/glyphs';
 import { num, t } from '@/src/i18n';
@@ -36,12 +36,11 @@ async function cancel() {
 <template>
   <section class="cp-column">
     <div class="cp-stage">
-      <AppMark :size="220" mode="upload" :progress="p" />
       <div class="cp-stage-text" aria-live="polite">
         <span class="cp-phase">{{ phase }}</span>
         <span class="cp-percent glim-num">{{ num(p, { style: 'percent' }) }}</span>
       </div>
-      <ProgressBar v-if="config.branding.logoUrl" class="cp-stage-bar" :value="p" :label="phase" />
+      <ProgressBar class="cp-stage-bar" :value="p" :label="phase" data-cp="progress" />
       <p class="cp-sub glim-num">{{ counted }}<template v-if="left"> · {{ left }}</template></p>
       <p v-if="!resumable" class="cp-sub" data-cp="no-resume">{{ t('upload.noResume') }}</p>
     </div>

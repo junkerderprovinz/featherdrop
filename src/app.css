@@ -1,5 +1,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
+/* A scrollbar that comes or goes as a panel under the castle grows or shrinks would shift the castle sideways. */
+html { scrollbar-gutter: stable; }
 body { background: var(--carbon-bg); color: var(--carbon-text); font-family: var(--font-sans); font-size: 14px; line-height: 1.4; }
 /* In the layer below GlimStone's components, so these plain defaults never beat one. */
 @layer base {
@@ -21,6 +23,8 @@ svg { display: block; }
 .cp-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem; text-align: center; padding-bottom: 2rem; }
 .cp-hero .gs-drop { margin-bottom: .5rem; }
 .cp-hero-open { justify-content: flex-start; padding-bottom: 0; }
+/* The share page's castle has no drop target around it, so it takes the drop target's room and stands on the same spot. */
+.cp-mark-still { display: grid; place-items: center; padding: 1.5rem 2.5rem; margin-bottom: .5rem; }
 .cp-panel { width: min(44rem, 100%); text-align: start; }
 .cp-panel > .cp-column { padding-top: 0; }
 .cp-claim { margin: 0; font-size: 28px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2; text-wrap: balance; }
@@ -59,7 +63,6 @@ svg { display: block; }
 @media (max-width: 640px) { .cp-done { grid-template-columns: 1fr; justify-items: center; } .cp-summary { width: 100%; } }
 
 .cp-parcel { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.cp-parcel-mark { flex: none; }
 .cp-parcel-text { flex: 1 1 8rem; display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
 .cp-parcel-name { font-size: 16px; font-weight: 600; }
 

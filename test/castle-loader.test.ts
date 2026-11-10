@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { castleReach, setCastle, stillCastle, type CastleInput } from "../lib/castle-loader";
+import { castleReach, castleStage, logoHeight, setCastle, stillCastle, type CastleInput } from "../lib/castle-loader";
 
 const inputs = (): CastleInput[] => [
   { name: "mode", value: -1 },
@@ -80,4 +80,21 @@ test("motion off in the settings rests the letter at the gate", () => {
 test("subtle and wild motion let the letters fly", () => {
   assert.equal(stillCastle("subtle", false), false);
   assert.equal(stillCastle("wild", false), false);
+});
+
+test("the animated tower stands as tall as the logo and on the same spot", () => {
+  for (const size of [96, 280]) {
+    const stage = castleStage(size);
+    const art = stage.width / 1520;
+    // The tower spans 355.2 to 754.8 of the artboard, and the stage starts at 175.
+    assert.ok(Math.abs(stage.top + (355.2 - 175) * art) < 1e-9, `${size}: top`);
+    assert.ok(Math.abs(399.6 * art - logoHeight(size)) < 1e-9, `${size}: height`);
+    const towerLeft = (74.71 / 729.19) * size;
+    assert.ok(Math.abs(stage.left + 610.174 * art - towerLeft) < 1e-9, `${size}: left`);
+  }
+});
+
+test("the stage holds the letters' band at 2 to 1", () => {
+  const stage = castleStage(280);
+  assert.ok(Math.abs(stage.width / stage.height - 2) < 1e-9);
 });

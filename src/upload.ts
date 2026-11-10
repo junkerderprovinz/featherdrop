@@ -118,11 +118,17 @@ function startOptions() {
   });
 }
 
+/** Opens the options of a new parcel, before any file is picked for it. */
+export function openOptions() {
+  if (send.stage === "options") return;
+  startOptions();
+  send.stage = "options";
+}
+
 export function addFiles(files: File[]) {
-  if (!send.items.length) startOptions();
+  openOptions();
   send.items.push(...files.map((file) => ({ id: ids++, file, done: 0 })));
   send.error = "";
-  send.stage = "options";
 }
 
 export function removeFile(id: number) {

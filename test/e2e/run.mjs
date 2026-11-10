@@ -625,9 +625,9 @@ async function limitedShareListsBeforeDownload() {
   console.log("limited share: name shown before the download, nothing spent ✓");
 }
 
-// The ways in and out of the start page that need no upload: a note or a
-// request opening under the castle and Back closing it, text pasted outside a
-// field, and files dropped away from the castle.
+// The ways in and out of the start page that need no upload: a note, a
+// request or the file options opening under the castle and Back closing them,
+// text pasted outside a field, and files dropped away from the castle.
 async function startPageShortcuts() {
   const page = await open("shortcuts", BASE);
   // Tall enough that the start page stands centred with room above the castle.
@@ -651,6 +651,25 @@ async function startPageShortcuts() {
     await page.locator(".cp-claim").waitFor(WAIT);
   }
 
+  // Choose glides the castle up and opens the options first, then the picker. A picker closed without a file
+  // leaves the empty options, and Back closes them.
+  await page.evaluate(() => {
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function () {
+      globalThis.__pickedOver = document.querySelector("[data-cp=panel-files]") ? "options" : "start";
+      return click.call(this);
+    };
+  });
+  await Promise.all([page.waitForEvent("filechooser", WAIT), page.locator("[data-cp=choose]").click()]);
+  if ((await page.evaluate(() => globalThis.__pickedOver)) !== "options") fail("choose: the picker opened before the options");
+  const chosen = await settled();
+  if (Math.round(chosen.width) !== Math.round(home.width) || Math.round(chosen.height) !== Math.round(home.height)) fail("choose: the castle changed its size");
+  if (chosen.y >= home.y) fail("choose: the castle did not move up");
+  await page.locator("[data-cp=panel-files]").getByText(/no files/i).waitFor(WAIT);
+  if (await page.locator("[data-cp=upload]").isEnabled()) fail("choose: the upload starts without files");
+  await page.locator("[data-cp=back]").click();
+  await page.locator(".cp-claim").waitFor(WAIT);
+
   const text = "pasted on the start page\nsecond line";
   await page.evaluate((t) => {
     const data = new DataTransfer();
@@ -673,7 +692,7 @@ async function startPageShortcuts() {
   await page.getByText("dropped-anywhere.txt", { exact: true }).waitFor(WAIT);
   if (await page.locator("[data-cp=dropzone]").count()) fail("the drop zone stayed after the drop");
   await page.close();
-  console.log("start page: a note and a request open under the castle, Back returns home, pasted text opens a note, a drop anywhere adds files ✓");
+  console.log("start page: a note, a request and the file options open under the castle, the picker once they show, Back returns home, pasted text opens a note, a drop anywhere adds files ✓");
 }
 
 // Options and the finished link lead out from the same spot as every other
@@ -684,8 +703,11 @@ async function wayOutSitsInTheHead() {
     const head = page.locator(`.cp-head [data-cp=${cp}]`);
     await head.waitFor(WAIT);
     if ((await page.locator(`[data-cp=${cp}]`).count()) !== 1) fail(`${cp}: a second ${cp} button outside the head`);
-    const box = await head.boundingBox();
-    return `${Math.round(box.x)},${Math.round(box.y)}`;
+    // In page coordinates, since the page may still be scrolling up to the castle.
+    return head.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return `${Math.round(box.x)},${Math.round(box.y + scrollY)}`;
+    });
   };
   const noteBack = await spot("back");
   await page.locator("[data-cp=back]").click();
@@ -729,7 +751,10 @@ async function infoTabStaysInSettings() {
 
 // The castle loader plays while a transfer runs. A slow network keeps the
 // upload and the download on screen, and a CSP refusal of the WebAssembly the
-// main script carries would land in the console errors the run fails on.
+// main script carries would land in the console errors the run fails on. The
+// whole way runs on one page each, and the castle keeps its box throughout:
+// from the options through the upload to the link, and on the share page from
+// the file list through the download and back, both at the same spot.
 async function castleLoaderPlays() {
   const throttle = async (page, bytesPerSecond) => {
     const cdp = await ctx.newCDPSession(page);
@@ -748,28 +773,58 @@ async function castleLoaderPlays() {
       for (let i = 3; i < alpha.length; i += 4) if (alpha[i] > 0) return true;
       return false;
     }, mode, WAIT);
-    const bar = await page.locator(".castle [role=progressbar]").getAttribute("aria-valuenow");
+    await page.locator(".cp-mark .castle.live").waitFor(WAIT);
+    const bar = await page.locator("[data-cp=progress]").getAttribute("aria-valuenow");
     if (bar === null) fail(`castle ${mode}: the progress bar has no value`);
   };
+  // In page coordinates, once neither the page coming in nor the castle's glide moves it.
+  const boxes = [];
+  const measure = async (page, label) => {
+    await page.waitForFunction(() => {
+      const castle = document.querySelector(".cp-mark .castle");
+      return !document.getAnimations().some((a) => a.playState === "running" && a.effect?.target?.contains(castle));
+    }, null, WAIT);
+    const box = await page.evaluate(() => {
+      const r = document.querySelector(".cp-mark .castle").getBoundingClientRect();
+      return [r.x, r.y + scrollY, r.width, r.height].map((n) => n.toFixed(2)).join(" ");
+    });
+    boxes.push(`${label} ${box}`);
+    if (box !== boxes[0].split(" ").slice(1).join(" ")) fail(`castle: the box moved or changed its size: ${boxes.join(" | ")}`);
+  };
+  const resting = (page) => page.locator(".cp-mark .castle-stage").waitFor({ state: "detached", ...WAIT });
 
   const payload = randomBytes(2 * 1024 * 1024);
   const up = await open("castle up", BASE);
+  await up.setViewportSize({ width: 1908, height: 1000 });
   await up.setInputFiles('input[type="file"]', { name: "castle.bin", mimeType: "application/octet-stream", buffer: payload });
+  await up.locator("[data-cp=upload]").waitFor(WAIT);
+  // The options remember the once-only limit of an earlier step, and the share page has to stay after the download.
+  await up.locator("[data-cp=limit-none]").click();
+  await measure(up, "options");
   const fastUp = await throttle(up, 256 * 1024);
   await up.locator("[data-cp=upload]").click();
   await drawn(up, "upload");
+  await measure(up, "upload");
   await fastUp();
   const shareUrl = await waitForLink(up, "/d/");
+  await resting(up);
+  await measure(up, "link");
 
   const dl = await open("castle dl", shareUrl);
+  await dl.setViewportSize({ width: 1908, height: 1000 });
   await dl.getByText("castle.bin", { exact: true }).waitFor(WAIT);
+  await measure(dl, "share");
   const fastDown = await throttle(dl, 256 * 1024);
   const saved = dl.waitForEvent("download", WAIT);
   await dl.locator("[data-cp=download-all]").click();
   await drawn(dl, "download");
+  await measure(dl, "download");
   await fastDown();
   if (!readFileSync(await (await saved).path()).equals(payload)) fail("castle: the download does not match the upload");
+  await dl.locator("[data-cp=download-all]").waitFor(WAIT);
+  await resting(dl);
+  await measure(dl, "downloaded");
   await up.close();
   await dl.close();
-  console.log("castle loader: drawn on its canvas during the upload and the download ✓");
+  console.log("castle loader: drawn on its canvas during the upload and the download, in the castle's own box all along ✓");
 }
