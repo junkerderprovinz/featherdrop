@@ -1,20 +1,22 @@
 name: Build & Push Docker Image
 
-# Builds the multi-arch image and pushes :latest and :sha-<short> to GHCR on
-# every push to main. With the DOCKERHUB_USERNAME variable and DOCKERHUB_TOKEN
-# secret set it also pushes to docker.io/<DOCKERHUB_USERNAME>/castleparcel. The
-# weekly cron and a manual run build without the layer cache, so :latest picks
-# up base image updates.
+# Builds the multi-arch image and pushes it to GHCR. With the DOCKERHUB_USERNAME
+# variable and DOCKERHUB_TOKEN secret set it also pushes to
+# docker.io/<DOCKERHUB_USERNAME>/castleparcel. A push to main gets :edge and
+# :sha-<short>. A vX.Y.Z tag gets :X.Y.Z, :X.Y, :X and :sha-<short>, plus :latest
+# when it is the newest tag. The weekly cron and a manual run rebuild the newest
+# release without the layer cache, under its version tags and :latest.
 
 on:
   push:
     branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
     paths-ignore:
       - "**.md"
       - "LICENSE"
       - "templates/**"
       - ".github/release-notes/**"
-  # Weekly, to rebuild latest on fresh base images and packages.
+  # Weekly, to rebuild the newest release on fresh base images and packages.
   schedule:
     - cron: '0 8 * * 0'
   workflow_dispatch:
@@ -31,12 +33,37 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # Rebuilds refresh the newest release, which is what people run, not the
+  # tip of main.
+  release:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.newest.outputs.tag }}
+      sha: ${{ steps.newest.outputs.sha }}
+    steps:
+      - name: Find the newest release
+        id: newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          echo "rebuilding $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$tag" --jq .sha)" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: release
+    if: ${{ !failure() && !cancelled() }}
     name: Build & Push
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
@@ -58,6 +85,26 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # latest moves only for the newest tag, so re-cutting an older version
+      # cannot drag it backwards. checkout fetches no tags, and sort -V puts
+      # v8.10.0 after v8.9.0, but also v8.10.0-rc1 after v8.10.0, so only tags
+      # this workflow builds count.
+      - name: Is this the newest release tag?
+        id: newest
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch --tags --force --quiet
+          newest=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          echo "this tag: ${GITHUB_REF_NAME}"
+          echo "newest:   ${newest}"
+          if [ "$newest" = "${GITHUB_REF_NAME}" ]; then
+            echo "is_newest=true" >> "$GITHUB_OUTPUT"
+            echo "-> this build moves :latest"
+          else
+            echo "is_newest=false" >> "$GITHUB_OUTPUT"
+            echo "-> this build leaves :latest where it is"
+          fi
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
@@ -65,9 +112,26 @@ jobs:
           images: |
             ${{ env.IMAGE_NAME }}
             name=docker.io/${{ vars.DOCKERHUB_USERNAME }}/castleparcel,enable=${{ vars.DOCKERHUB_USERNAME != '' }}
+          # latest is the newest release, so an unreleased merge never reaches
+          # people who pull it, and a rebuild of that release moves it too. The
+          # tip of main goes to edge. The action adds latest on its own for any
+          # semver tag unless the flavor turns that off.
+          #
+          # {{major}} and {{major}}.{{minor}} follow whichever tag built last, so
+          # re-cutting an old version moves them back. After that, re-run the
+          # newest tag's build.
+          flavor: |
+            latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-,format=short
+            type=sha,prefix=sha-,format=short,enable=${{ needs.release.outputs.tag == '' }}
+            type=raw,value=edge,enable=${{ github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch && needs.release.outputs.tag == '' }}
+            type=raw,value=latest,enable=${{ (github.ref_type == 'tag' && steps.newest.outputs.is_newest == 'true') || needs.release.outputs.tag != '' }}
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.tag }}
+          # A rebuild of the newest release carries the release's commit, not main's.
+          labels: |
+            ${{ needs.release.outputs.tag != '' && format('org.opencontainers.image.revision={0}', needs.release.outputs.sha) || '' }}
 
       # A green build only proves the image builds; the smoke test below proves
       # it starts before anything is pushed.
@@ -81,7 +145,7 @@ jobs:
           tags: castleparcel:smoke-amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+          no-cache: ${{ needs.release.outputs.tag != '' }}
 
       - name: Build arm64 image for smoke test
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
@@ -93,7 +157,7 @@ jobs:
           tags: castleparcel:smoke-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+          no-cache: ${{ needs.release.outputs.tag != '' }}
 
       # :latest is multi-arch, so a green amd64 alone could still ship a broken
       # arm64 image. arm64 runs under QEMU and gets a larger boot budget.
@@ -154,7 +218,7 @@ jobs:
           sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+          no-cache: ${{ needs.release.outputs.tag != '' }}
 
       # Mirrors the README to the Docker Hub overview. An access token with read,
       # write and delete scope can edit the description, while the account
