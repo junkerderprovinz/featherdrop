@@ -115,6 +115,7 @@ try {
   console.log("crypto workers:", workerUrls.length, "all from blob: URLs");
   await limitedShareListsBeforeDownload();
   await startPageShortcuts();
+  await wayOutSitsInTheHead();
   await infoTabStaysInSettings();
   await castleLoaderPlays();
   if (errors.length) fail("page/console errors occurred");
@@ -659,6 +660,39 @@ async function startPageShortcuts() {
   if (await page.locator("[data-cp=dropzone]").count()) fail("the drop zone stayed after the drop");
   await page.close();
   console.log("start page: Back returns home, pasted text opens a note, a drop anywhere adds files ✓");
+}
+
+// Options and the finished link lead out from the same spot as every other
+// page: Back on the options, Leave on the link, both back to the start page.
+async function wayOutSitsInTheHead() {
+  const page = await open("way out", `${BASE}/note`);
+  const spot = async (cp) => {
+    const head = page.locator(`.cp-head [data-cp=${cp}]`);
+    await head.waitFor(WAIT);
+    if ((await page.locator(`[data-cp=${cp}]`).count()) !== 1) fail(`${cp}: a second ${cp} button outside the head`);
+    const box = await head.boundingBox();
+    return `${Math.round(box.x)},${Math.round(box.y)}`;
+  };
+  const noteBack = await spot("back");
+  await page.locator("[data-cp=back]").click();
+  await page.waitForURL(`${BASE}/`, WAIT);
+
+  await page.setInputFiles('input[type="file"]', { name: "way-out.txt", mimeType: "text/plain", buffer: Buffer.from("way out") });
+  await page.locator("[data-cp=upload]").waitFor(WAIT);
+  if ((await spot("back")) !== noteBack) fail("options: Back is not where it is on the note page");
+  await page.locator("[data-cp=back]").click();
+  await page.locator("[data-cp=choose]").waitFor(WAIT);
+  if (await page.getByText("way-out.txt", { exact: true }).count()) fail("options: Back kept the file");
+
+  await page.setInputFiles('input[type="file"]', { name: "way-out.txt", mimeType: "text/plain", buffer: Buffer.from("way out") });
+  await page.locator("[data-cp=upload]").click();
+  await waitForLink(page, "/d/");
+  if ((await spot("leave")) !== noteBack) fail("link: Leave is not where Back is on the note page");
+  await page.locator("[data-cp=leave]").click();
+  await page.locator("[data-cp=choose]").waitFor(WAIT);
+  if (await page.locator("[data-cp=leave]").count()) fail("link: Leave stayed on the start page");
+  await page.close();
+  console.log("way out: Back on the options and Leave on the link sit where Back sits everywhere ✓");
 }
 
 // Every settings tile opens inside Settings, and none of them opens a window.

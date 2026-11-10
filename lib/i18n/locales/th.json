@@ -3,6 +3,7 @@
     "name": "CastleParcel",
     "settings": "การตั้งค่า",
     "back": "กลับ",
+    "leave": "ออก",
     "home": "ส่งไฟล์",
     "loading": "กำลังโหลด"
   },

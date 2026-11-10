@@ -25,11 +25,17 @@ export const vueSfc: Plugin = {
 };
 
 // The client's own modules are bundled; every package stays a plain import,
-// unless stubs names a module of the repo to take its place.
+// unless stubs names a module of the repo to take its place. A stub for a
+// client module, keyed by its @/ path, is imported rather than bundled, so the
+// test that imports it too shares its state with the component.
 const ownModules = (stubs: Record<string, string>): Plugin => ({
   name: "own-modules",
   setup(b) {
-    b.onResolve({ filter: /^@\// }, (args) => b.resolve("./" + args.path.slice(2), { resolveDir: root, kind: args.kind }));
+    b.onResolve({ filter: /^@\// }, (args) =>
+      stubs[args.path]
+        ? { path: pathToFileURL(join(root, stubs[args.path])).href, external: true }
+        : b.resolve("./" + args.path.slice(2), { resolveDir: root, kind: args.kind }),
+    );
     b.onResolve({ filter: /^[^./]/ }, (args) => {
       if (args.kind === "entry-point") return undefined;
       return stubs[args.path] ? { path: join(root, stubs[args.path]) } : { path: args.path, external: true };

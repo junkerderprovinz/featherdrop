@@ -61,7 +61,6 @@ const count = computed({ get: () => send.count, set: (v: number | null) => { sen
 
     <p v-if="send.error" class="cp-error" role="alert">{{ send.error }}</p>
     <div class="cp-actions">
-      <Button :label="t('app.back')" label-key="IconBack" @click="resetSend" />
       <Button size="key" tone="accent" :label="t('options.upload')" label-key="IconUpload" :disabled="!send.items.length || short" data-cp="upload" @click="startUpload" />
     </div>
   </section>
