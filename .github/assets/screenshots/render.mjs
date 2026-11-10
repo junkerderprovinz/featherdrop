@@ -24,16 +24,22 @@ const root = join(here, "..", "..", "..");
 const base = process.argv[2];
 if (!base) throw new Error("usage: node .github/assets/screenshots/render.mjs <server url>");
 
-const VIEW_W = 1280;
-const VIEW_H = 780;
+// The castle stands above everything the page shows, so the window holds a
+// taller page than a usual screen and draws it smaller to fit both.
+const VIEW_W = 1440;
+const WIN_W = 1140;
+const BARS_H = 88;
 const WAIT = { timeout: 120_000 };
 
-// The bar prints a made-up address instead of the demo server's own.
+// The bar prints a made-up address instead of the demo server's own. Each
+// window ends under one card of the page, `upTo`, counted from the end when
+// negative, so the picture stays on its subject and cuts nothing in half.
 const SHOTS = [
   {
     file: "castleparcel-1.png",
     capture: "options",
     shown: "castle.local/",
+    upTo: -1,
     caption: "Drop it, <em>set how long it lives</em>",
     sub: "Expiry, download limit and password before anything leaves your browser",
   },
@@ -41,6 +47,7 @@ const SHOTS = [
     file: "castleparcel-2.png",
     capture: "link",
     shown: "castle.local/",
+    upTo: 0,
     caption: "One link, <em>one QR code</em>",
     sub: "The key sits in the link, so your server never sees the files",
   },
@@ -48,6 +55,7 @@ const SHOTS = [
     file: "castleparcel-3.png",
     capture: "received",
     shown: "castle.local/d/k7Mx9qT2",
+    upTo: -1,
     caption: "What your friend <em>gets</em>",
     sub: "No account, no app, and the files are gone when the time is up",
   },
@@ -160,12 +168,23 @@ async function demoFiles(browser) {
   return { dir, files };
 }
 
-async function still(page) {
+// Frames the page from the top of the castle to just below the card the
+// picture is about. The castle brings its own space above it, and the margin
+// below stays short of the next card's notch or button.
+async function still(page, upTo) {
   await page.evaluate(() => document.fonts.ready);
+  const { top, bottom } = await page.evaluate((at) => {
+    const mark = document.querySelector(".cp-mark").getBoundingClientRect();
+    const card = [...document.querySelectorAll(".cp-panel .cp-column > .glim-panel")].at(at).getBoundingClientRect();
+    return { top: mark.top + scrollY, bottom: card.bottom + scrollY };
+  }, upTo);
+  const height = Math.round(bottom - top) + 24;
+  await page.setViewportSize({ width: VIEW_W, height });
+  await page.evaluate((y) => scrollTo(0, y), top);
   // Nothing should light up under the pointer of the last click.
-  await page.mouse.move(VIEW_W - 1, VIEW_H - 1);
+  await page.mouse.move(VIEW_W - 1, height - 1);
   await page.waitForTimeout(800);
-  return page.screenshot();
+  return { png: await page.screenshot(), height };
 }
 
 const linkOf = async (page, part) => {
@@ -177,7 +196,7 @@ const linkOf = async (page, part) => {
 // into the next.
 async function share(browser, files, choose) {
   const ctx = await browser.newContext({
-    viewport: { width: VIEW_W, height: VIEW_H },
+    viewport: { width: VIEW_W, height: 1200 },
     deviceScaleFactor: 2,
     colorScheme: "dark",
     reducedMotion: "reduce",
@@ -194,19 +213,20 @@ async function share(browser, files, choose) {
 
 async function captures(browser, files) {
   const trip = [files.jpg, files.pdf, files.txt];
+  const upTo = Object.fromEntries(SHOTS.map((s) => [s.capture, s.upTo]));
   const shots = {};
 
   const options = await share(browser, trip, async (page) => {
     await page.locator("[data-cp=limit-count]").click();
     await page.locator("[data-cp=max-downloads]").waitFor(WAIT);
   });
-  shots.options = await still(options.page);
+  shots.options = await still(options.page, upTo.options);
   await options.ctx.close();
 
   const solo = await share(browser, [files.jpg]);
   await solo.page.locator("[data-cp=upload]").click();
   await linkOf(solo.page, "/m/");
-  shots.link = await still(solo.page);
+  shots.link = await still(solo.page, upTo.link);
   await solo.ctx.close();
 
   // Without a download limit the page may show the photo as its own
@@ -217,7 +237,7 @@ async function captures(browser, files) {
   const link = new URL(await linkOf(sent.page, "/d/"));
   await received.goto(new URL(link.pathname + link.hash, base).href, WAIT);
   await received.locator(".cp-thumb").waitFor(WAIT);
-  shots.received = await still(received);
+  shots.received = await still(received, upTo.received);
   await sent.ctx.close();
 
   return shots;
@@ -237,11 +257,11 @@ body { position: relative; width: 1920px; height: 1000px; overflow: hidden; font
 h1 { font: 400 64px/1.12 "Bree Serif", serif; color: #f4f4f4; text-wrap: balance; }
 h1 em { font-style: normal; color: #FCC419; }
 .sub { font-size: 28px; line-height: 1.35; color: #9d9481; }
-.stage { position: absolute; left: 665px; top: 96px; width: 1220px; perspective: 2400px; }
+.stage { position: absolute; left: 700px; width: ${WIN_W}px; perspective: 2400px; }
 .floor { position: absolute; left: 12%; right: 12%; bottom: -4%; height: 8%; border-radius: 50%; background: rgba(0,0,0,.8); filter: blur(30px); }
 .win { position: relative; transform: rotateY(-8deg) rotateX(2deg); border-radius: 14px; overflow: hidden; background: #161616;
   box-shadow: 0 0 0 1px #3c3c3c, 0 2px 4px rgba(0,0,0,.35), 0 18px 36px rgba(0,0,0,.45), 0 52px 100px rgba(0,0,0,.55); }
-.win > img { display: block; width: 1220px; height: ${Math.round((VIEW_H * 1220) / VIEW_W)}px; }
+.win > img { display: block; width: ${WIN_W}px; }
 .bar { position: relative; display: flex; align-items: center; color: #d6d6d6; font: 400 17px/1 Lato, sans-serif; }
 .tabs { height: 42px; padding: 7px 0 0 12px; background: #1c1c1c; align-items: flex-end; }
 .tab { display: flex; align-items: center; gap: 10px; height: 35px; padding: 0 70px 0 14px; border-radius: 10px 10px 0 0; background: #2c2c2c; font-size: 15px; }
@@ -252,15 +272,21 @@ h1 em { font-style: normal; color: #FCC419; }
   background: linear-gradient(118deg, rgba(255,255,255,.09) 0%, rgba(255,255,255,.03) 28%, rgba(255,255,255,0) 42%); }
 `;
 
-const frame = ({ shown, caption, sub }, png) => `<!doctype html><html><head><meta charset="utf-8"><style>${STYLE}</style></head><body>
+// The windows differ in height, and each sits in the middle of the picture,
+// a little high so its shadow has room below.
+function frame({ shown, caption, sub }, { png, height }) {
+  const page = Math.round((height * WIN_W) / VIEW_W);
+  const top = Math.round((1000 - BARS_H - page) / 2) - 8;
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${STYLE}</style></head><body>
 <div class="wall"></div><img class="relief" src="${logo}"><div class="vignette"></div>
 <div class="copy"><img src="${logo}"><h1>${caption}</h1><p class="sub">${sub}</p></div>
-<div class="stage"><div class="floor"></div><div class="win">
+<div class="stage" style="top: ${top}px"><div class="floor"></div><div class="win">
   <div class="bar tabs"><div class="tab"><img src="${logo}"><span>CastleParcel</span></div></div>
   <div class="bar address"><div class="url">${shown}</div></div>
-  <img src="${dataUrl(png, "image/png")}"><div class="glare"></div>
+  <img src="${dataUrl(png, "image/png")}" style="height: ${page}px"><div class="glare"></div>
 </div></div>
 </body></html>`;
+}
 
 const browser = await chromium.launch();
 const { dir, files } = await demoFiles(browser);
