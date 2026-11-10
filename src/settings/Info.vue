@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { COFFEE_BUTTON_SVG, GLIMSTONE_VERSION, MAIL_SVG, openInBrowser, type VersionRow } from '@glimstone/core';
+import { COFFEE_BUTTON_SVG, GLIMSTONE_VERSION, MAIL_SVG, type VersionRow } from '@glimstone/core';
 import { BrandMark, InfoAboutCard, InfoHelpCard, InfoVersionCard } from '@glimstone/vue';
 import { computed, h, ref, type FunctionalComponent } from 'vue';
 import { glyph } from '@/src/glyphs';
@@ -41,9 +41,8 @@ function bugReport() {
 </script>
 
 <template>
-  <!-- These cards declare their opener without a type, so without one passed Vue takes the default for a factory and calls it on mount, which opens a blank tab. -->
-  <InfoVersionCard :rows="versions" :text="{ title: t('info.version'), hint: t('info.versionHint'), unreleased: (v) => t('info.unreleased', { v }), releaseNotes: t('info.releaseNotes') }" :on-release-notes="releaseNotes" :open-url="openInBrowser" />
-  <InfoHelpCard :repo-url="REPO" :repo-glyph="glyph('IconGithub')" mail-address="hello@halleluja.design" :mail-glyph="mailGlyph" :bug-glyph="glyph('IconDiagnostics')" :on-bug-report="bugReport" :open-url="openInBrowser"
+  <InfoVersionCard :rows="versions" :text="{ title: t('info.version'), hint: t('info.versionHint'), unreleased: (v) => t('info.unreleased', { v }), releaseNotes: t('info.releaseNotes') }" :on-release-notes="releaseNotes" />
+  <InfoHelpCard :repo-url="REPO" :repo-glyph="glyph('IconGithub')" mail-address="hello@halleluja.design" :mail-glyph="mailGlyph" :bug-glyph="glyph('IconDiagnostics')" :on-bug-report="bugReport"
     :text="{ title: t('info.help'), report: t('info.report'), repoButton: t('info.repo'), mailButton: t('info.mail'), mailSubject: t('info.mailSubject'), bugReport: t('info.bug'), bugReportSub: t('info.bugSub') }" />
   <InfoAboutCard :coffee-art="coffeeArt" :paypal-glyph="glyph('IconPayPal')" :crypto-glyph="glyph('IconBitcoin')"
     :on-coffee="() => (giving = 'coffee')" :on-paypal="() => (giving = 'paypal')" :on-crypto="() => (giving = 'crypto')"
