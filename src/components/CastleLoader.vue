@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The castle that stands for the app. While a transfer runs, the logo turns into the animation in place: letters
-// fly into its gate on upload and out of it on download, and the dark gate flares as each one passes. The page
+// fly into its gate on upload and out of it on download, and the gate flares as each one passes. The page
 // around it shows the progress in a bar.
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { castleReach, castleStage, logoHeight, setCastle, stillCastle, type CastleInput, type CastleMode } from '@/lib/castle-loader';
