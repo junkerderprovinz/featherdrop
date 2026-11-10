@@ -6,10 +6,11 @@
 // Point it at a throwaway server with an empty data directory, never at a real
 // one: the shares are made through the real pages, with invented files.
 //
-//   RATE_LIMIT=false DATA_DIR=<empty dir> PORT=3501 BASE_URL=http://localhost:3501 ./castleparcel
+//   RATE_LIMIT=false DATA_DIR=<empty dir> PORT=3501 BASE_URL=http://castle.local ./castleparcel
 //   node .github/assets/screenshots/render.mjs http://localhost:3501
 //
-// The links in the second picture show the port, so it stays at 3501.
+// BASE_URL makes the links match the address the window's bar prints, while
+// the pages stay on localhost, which the browser counts as a secure context.
 // Every layer is rendered at twice the size, which keeps the text sharp
 // through the window's tilt.
 import { chromium } from "playwright";
@@ -213,7 +214,8 @@ async function captures(browser, files) {
   const sent = await share(browser, trip);
   await sent.page.locator("[data-cp=upload]").click();
   const received = await sent.ctx.newPage();
-  await received.goto(await linkOf(sent.page, "/d/"), WAIT);
+  const link = new URL(await linkOf(sent.page, "/d/"));
+  await received.goto(new URL(link.pathname + link.hash, base).href, WAIT);
   await received.locator(".cp-thumb").waitFor(WAIT);
   shots.received = await still(received);
   await sent.ctx.close();
