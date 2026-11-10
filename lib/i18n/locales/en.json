@@ -34,11 +34,11 @@
     "text": "Over plain HTTP, downloads are held in memory instead of streaming to disk, and an upload that breaks off cannot resume. Open this page over HTTPS for large files."
   },
   "home": {
-    "claim": "Send files only the recipient can open",
-    "drop": "Drop files anywhere on the page, paste them, or choose them",
+    "claim": "Share your files encrypted and private. Only the recipient can see them.",
+    "drop": "Drag files in, paste or pick them. We're not fussy.",
     "choose": "Choose files",
     "dropping": "Let go to add them",
-    "trust": "Encrypted in your browser. Gone when you say. No account.",
+    "trust": "Nobody can peek into your files. Pinky promise, backed by maths.",
     "dropTarget": "Choose files to send",
     "note": "Write a note",
     "request": "Ask for files"

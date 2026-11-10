@@ -34,11 +34,11 @@
     "text": "Düz HTTP üzerinden indirmeler diske akmak yerine bellekte tutulur ve yarıda kesilen bir yükleme devam edemez. Büyük dosyalar için bu sayfayı HTTPS üzerinden aç."
   },
   "home": {
-    "claim": "Yalnızca alıcının açabileceği dosyalar gönder",
-    "drop": "Dosyaları sayfanın herhangi bir yerine bırak, yapıştır ya da seç",
+    "claim": "Dosyalarını şifreli ve gizli paylaş. Onları yalnızca alıcı görebilir.",
+    "drop": "Dosyaları sürükle, yapıştır ya da seç. Hiç nazlı değiliz.",
     "choose": "Dosya seç",
     "dropping": "Eklemek için bırak",
-    "trust": "Tarayıcında şifrelenir. Sen ne zaman dersen silinir. Hesap yok.",
+    "trust": "Kimse dosyalarına gizlice bakamaz. Serçe parmak sözü, matematik de kefil.",
     "dropTarget": "Gönderilecek dosyaları seç",
     "note": "Not yaz",
     "request": "Dosya iste"

@@ -34,11 +34,11 @@
     "text": "Sima HTTP-n a letöltések a memóriában maradnak, nem közvetlenül a lemezre íródnak, és a megszakadt feltöltés nem folytatható. Nagy fájlokhoz nyisd meg az oldalt HTTPS-en."
   },
   "home": {
-    "claim": "Küldj fájlokat, amelyeket csak a címzett nyithat meg",
-    "drop": "Dobd a fájlokat bárhová az oldalon, illeszd be, vagy válaszd ki őket",
+    "claim": "Oszd meg a fájljaidat titkosítva és bizalmasan. Csak a címzett láthatja őket.",
+    "drop": "Húzd be, illeszd be vagy válaszd ki a fájlokat. Nem vagyunk válogatósak.",
     "choose": "Fájlok kiválasztása",
     "dropping": "Engedd el, és bekerülnek",
-    "trust": "Titkosítás a böngésződben. Akkor tűnik el, amikor mondod. Fiók nélkül.",
+    "trust": "Senki sem kukucskálhat bele a fájljaidba. Becsszó, a matek garantálja.",
     "dropTarget": "Válaszd ki a küldendő fájlokat",
     "note": "Jegyzet írása",
     "request": "Fájlok kérése"

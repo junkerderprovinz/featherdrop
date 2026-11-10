@@ -113,7 +113,7 @@ The files and links in these pictures are made up.
 - **Notes and file requests.** Share a text note with the same encryption and limits as a file. Or ask someone for files: they get a link to send you files without an account, and only your private collect link can open what arrives.
 - **Big files are fine.** Uploads go in resumable 64 MiB chunks, so a dropped connection picks up where it stopped and a size-capped CDN such as Cloudflare does not get in the way.
 - **Photos travel light.** JPEGs lose their EXIF and GPS data in the browser before encryption, unless you switch it off.
-- **Pleasant to use.** Paste a screenshot with Ctrl+V, install it as an app and share to it from Android, preview images, video, audio, text and PDF before downloading, and read it all in 26 languages.
+- **Pleasant to use.** Paste a screenshot with Ctrl+V, install it as an app and share to it from Android, preview images, video, audio, text and PDF before downloading, and read it all in 42 languages.
 - **Safe to put online.** Per-IP rate limits, an optional daily upload cap per visitor, a storage quota, an expiry cap and an optional upload password. A strict Content-Security-Policy keeps foreign scripts off the page, and share pages tell search engines to stay away.
 - **One small container.** A static Go binary on a distroless base with a single SQLite file, for amd64 and arm64, with SBOM and provenance attestations and a CVE scan on every build.
 

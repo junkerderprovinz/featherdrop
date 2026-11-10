@@ -35,11 +35,11 @@
     "text": "Com HTTP simples, as transferências ficam na memória em vez de irem diretamente para o disco, e um carregamento interrompido não pode continuar. Abre esta página por HTTPS para ficheiros grandes."
   },
   "home": {
-    "claim": "Envia ficheiros que só o destinatário consegue abrir",
-    "drop": "Larga ficheiros em qualquer parte da página, cola-os ou escolhe-os",
+    "claim": "Partilha os teus ficheiros encriptados e em privado. Só o destinatário os consegue ver.",
+    "drop": "Arrasta ficheiros, cola-os ou escolhe-os. Não somos esquisitos.",
     "choose": "Escolher ficheiros",
     "dropping": "Larga para os adicionar",
-    "trust": "Encriptado no teu navegador. Desaparece quando quiseres. Sem conta.",
+    "trust": "Ninguém consegue espreitar os teus ficheiros. Palavra de escuteiro, garantida pela matemática.",
     "dropTarget": "Escolher ficheiros para enviar",
     "note": "Escrever uma nota",
     "request": "Pedir ficheiros"

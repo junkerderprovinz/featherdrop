@@ -26,14 +26,14 @@ function leaves(table: Table, prefix = ""): Map<string, string | Table> {
 const texts = (v: string | Table) => (typeof v === "string" ? [v] : (Object.values(v) as string[]));
 const english = leaves(tables.en);
 
-test("all 26 languages ship, each with a table", () => {
-  assert.equal(codes.length, 26);
+test("all 42 languages ship, each with a table", () => {
+  assert.equal(codes.length, 42);
   assert.equal(new Set(codes).size, codes.length);
   for (const code of codes) assert.ok(tables[code], `no table for ${code}`);
 });
 
-test("only Arabic and Hebrew are written right to left", () => {
-  assert.deepEqual(LANGUAGES.filter((l) => l.rtl).map((l) => l.code).sort(), ["ar", "he"]);
+test("only Arabic, Persian and Hebrew are written right to left", () => {
+  assert.deepEqual(LANGUAGES.filter((l) => l.rtl).map((l) => l.code).sort(), ["ar", "fa", "he"]);
 });
 
 test("every language has exactly the English keys, none empty", () => {

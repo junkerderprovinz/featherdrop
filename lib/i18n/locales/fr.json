@@ -35,11 +35,11 @@
     "text": "En HTTP simple, les téléchargements restent en mémoire au lieu d’aller directement sur le disque, et un envoi interrompu ne peut pas reprendre. Ouvrez cette page en HTTPS pour les gros fichiers."
   },
   "home": {
-    "claim": "Envoyez des fichiers que seul le destinataire peut ouvrir",
-    "drop": "Déposez vos fichiers n’importe où sur la page, collez-les ou choisissez-les",
+    "claim": "Partagez vos fichiers chiffrés, en toute confidentialité. Seul le destinataire peut les voir.",
+    "drop": "Glissez vos fichiers, collez-les ou choisissez-les. On n’est pas difficiles.",
     "choose": "Choisir des fichiers",
     "dropping": "Lâchez pour les ajouter",
-    "trust": "Chiffré dans votre navigateur. Supprimé quand vous voulez. Sans compte.",
+    "trust": "Personne ne peut jeter un œil à vos fichiers. Promis juré, et c’est mathématique.",
     "dropTarget": "Choisir les fichiers à envoyer",
     "note": "Écrire une note",
     "request": "Demander des fichiers"

@@ -33,11 +33,11 @@
     "text": "Qua HTTP thường, tệp tải xuống được giữ trong bộ nhớ thay vì ghi thẳng ra ổ đĩa, và lượt tải lên bị ngắt giữa chừng không thể tiếp tục. Với tệp lớn, hãy mở trang này qua HTTPS."
   },
   "home": {
-    "claim": "Gửi tệp mà chỉ người nhận mới mở được",
-    "drop": "Thả tệp vào bất cứ đâu trên trang, dán vào, hoặc chọn tệp",
+    "claim": "Chia sẻ tệp của bạn, được mã hóa và riêng tư. Chỉ người nhận mới xem được.",
+    "drop": "Kéo tệp vào, dán hoặc chọn tệp. Chúng tôi không kén chọn đâu.",
     "choose": "Chọn tệp",
     "dropping": "Thả ra để thêm vào",
-    "trust": "Mã hóa ngay trong trình duyệt. Xóa khi bạn muốn. Không cần tài khoản.",
+    "trust": "Không ai có thể nhìn trộm tệp của bạn. Hứa móc ngoéo, có toán học bảo đảm.",
     "dropTarget": "Chọn tệp để gửi",
     "note": "Viết ghi chú",
     "request": "Yêu cầu tệp"

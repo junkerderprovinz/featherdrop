@@ -8,7 +8,7 @@ import { glyph } from '@/src/glyphs';
 import { language, languages, setLanguage, t } from '@/src/i18n';
 import { prefs } from '@/src/prefs';
 
-const FLAGS = import.meta.glob<string>('../../node_modules/flag-icons/flags/4x3/{cz,dk,de,gb,es,fr,it,hu,nl,no,pl,pt,ro,fi,se,vn,tr,gr,ru,ua,il,sa,th,kr,cn,jp}.svg', { eager: true, query: '?url', import: 'default' });
+const FLAGS = import.meta.glob<string>('../../node_modules/flag-icons/flags/4x3/{cz,dk,de,gb,es,fr,it,hu,nl,no,pl,pt,ro,fi,se,vn,tr,gr,ru,ua,il,sa,th,kr,cn,jp,id,my,es-ct,ee,es-pv,es-ga,hr,is,lv,lt,sk,si,bg,rs,ir,in}.svg', { eager: true, query: '?url', import: 'default' });
 const flagOf = (code: string) => Object.entries(FLAGS).find(([path]) => path.endsWith(`/${code}.svg`))?.[1];
 const flag = (code: string): FunctionalComponent => () => h('img', { class: 'cp-flag', src: flagOf(code), alt: '' });
 

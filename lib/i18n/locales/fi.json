@@ -34,11 +34,11 @@
     "text": "Tavallisen HTTP:n kautta lataukset pidetään muistissa sen sijaan, että ne tallentuisivat suoraan levylle, eikä katkennutta lähetystä voi jatkaa. Avaa sivu HTTPS:n kautta, kun lähetät suuria tiedostoja."
   },
   "home": {
-    "claim": "Lähetä tiedostoja, jotka vain vastaanottaja voi avata",
-    "drop": "Pudota tiedostot mihin tahansa sivulle, liitä ne tai valitse ne",
+    "claim": "Jaa tiedostosi salattuina ja yksityisesti. Vain vastaanottaja näkee ne.",
+    "drop": "Vedä tiedostot tähän, liitä tai valitse ne. Emme ole nirsoja.",
     "choose": "Valitse tiedostot",
     "dropping": "Päästä irti, niin ne lisätään",
-    "trust": "Salattu selaimessasi. Poissa, kun niin päätät. Ei tiliä.",
+    "trust": "Kukaan ei pääse kurkkimaan tiedostoihisi. Kunniasana, ja matematiikka takaa sen.",
     "dropTarget": "Valitse lähetettävät tiedostot",
     "note": "Kirjoita muistiinpano",
     "request": "Pyydä tiedostoja"

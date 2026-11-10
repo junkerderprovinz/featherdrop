@@ -34,11 +34,11 @@
     "text": "Über einfaches HTTP bleiben Downloads im Speicher, statt direkt auf die Platte zu laufen, und ein abgebrochener Upload kann nicht weitermachen. Öffne die Seite für große Dateien über HTTPS."
   },
   "home": {
-    "claim": "Dateien senden, die nur der Empfänger öffnen kann",
-    "drop": "Zieh Dateien irgendwohin auf die Seite, füg sie ein oder wähl sie aus",
+    "claim": "Teile deine Dateien verschlüsselt und privat. Nur der Empfänger kann sie sehen.",
+    "drop": "Dateien reinziehen, einfügen oder auswählen. Wir sind da nicht wählerisch.",
     "choose": "Dateien auswählen",
     "dropping": "Loslassen, dann sind sie dabei",
-    "trust": "Im Browser verschlüsselt. Weg, wann du willst. Ohne Konto.",
+    "trust": "Niemand kann in deine Dateien reinschauen. Ehrenwort, mit Mathe abgesichert.",
     "dropTarget": "Dateien zum Senden auswählen",
     "note": "Notiz schreiben",
     "request": "Dateien anfordern"

@@ -29,7 +29,7 @@ they are. Your shares and every link you sent keep working.
 - An optional password on top of the link, to send over a second channel
 - Expiry from one hour to 30 days or never, and an optional download limit
 - Several files under one link, saved as one ZIP, plus encrypted text notes and file requests
-- Resumable uploads, previews, 26 languages, light and dark, your own name, logo and accent colour
+- Resumable uploads, previews, 42 languages, light and dark, your own name, logo and accent colour
 - A client you can check against the hashes of every release
 
 **Requirements**

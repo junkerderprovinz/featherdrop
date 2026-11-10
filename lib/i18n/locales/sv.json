@@ -34,11 +34,11 @@
     "text": "Via vanlig HTTP hålls nedladdningar i minnet i stället för att strömmas till disken, och en uppladdning som avbryts kan inte fortsätta. Öppna sidan via HTTPS för stora filer."
   },
   "home": {
-    "claim": "Skicka filer som bara mottagaren kan öppna",
-    "drop": "Släpp filer var som helst på sidan, klistra in dem eller välj dem",
+    "claim": "Dela dina filer krypterat och privat. Bara mottagaren kan se dem.",
+    "drop": "Dra in filer, klistra in dem eller välj dem. Vi är inte kräsna.",
     "choose": "Välj filer",
     "dropping": "Släpp för att lägga till dem",
-    "trust": "Krypterat i din webbläsare. Borta när du vill. Inget konto.",
+    "trust": "Ingen kan tjuvkika i dina filer. Hand på hjärtat, med matematiken i ryggen.",
     "dropTarget": "Välj filer att skicka",
     "note": "Skriv en anteckning",
     "request": "Be om filer"

@@ -34,11 +34,11 @@
     "text": "Over vanlig HTTP holdes nedlastinger i minnet i stedet for å strømme til disken, og en opplasting som brytes, kan ikke fortsette. Åpne siden over HTTPS for store filer."
   },
   "home": {
-    "claim": "Send filer som bare mottakeren kan åpne",
-    "drop": "Slipp filer hvor som helst på siden, lim dem inn eller velg dem",
+    "claim": "Del filene dine kryptert og privat. Bare mottakeren kan se dem.",
+    "drop": "Dra inn filer, lim dem inn eller velg dem. Vi er ikke kresne.",
     "choose": "Velg filer",
     "dropping": "Slipp for å legge dem til",
-    "trust": "Kryptert i nettleseren din. Borte når du sier det. Ingen konto.",
+    "trust": "Ingen kan kikke i filene dine. Æresord, med matematikken i ryggen.",
     "dropTarget": "Velg filer å sende",
     "note": "Skriv et notat",
     "request": "Be om filer"

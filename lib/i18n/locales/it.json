@@ -35,11 +35,11 @@
     "text": "Con il semplice HTTP i download restano in memoria invece di finire dritti sul disco, e un caricamento interrotto non può riprendere. Apri questa pagina tramite HTTPS per i file grandi."
   },
   "home": {
-    "claim": "Invia file che solo il destinatario può aprire",
-    "drop": "Trascina i file in un punto qualsiasi della pagina, incollali o sceglili",
+    "claim": "Condividi i tuoi file cifrati e in privato. Solo il destinatario può vederli.",
+    "drop": "Trascina i file, incollali o sceglili. Non siamo schizzinosi.",
     "choose": "Scegli file",
     "dropping": "Rilascia per aggiungerli",
-    "trust": "Cifrati nel tuo browser. Spariscono quando vuoi tu. Senza account.",
+    "trust": "Nessuno può sbirciare nei tuoi file. Parola di lupetto, garantita dalla matematica.",
     "dropTarget": "Scegli i file da inviare",
     "note": "Scrivi una nota",
     "request": "Richiedi file"
