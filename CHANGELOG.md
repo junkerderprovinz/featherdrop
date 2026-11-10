@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-11
+
+### Added
+
+- **42 languages.** Bulgarian, Catalan, Estonian, Basque, Persian, Galician, Hindi, Croatian, Indonesian, Icelandic, Lithuanian, Latvian, Malay, Slovak, Slovenian and Serbian join the 26. Persian is written right to left.
+- **Back and Forward walk the steps.** The options, the upload and the link each hold an entry in the browser's history on the start page's address, so the browser's buttons and a mouse's side buttons move between them as between pages, along with a note, a request and the settings. Going back during an upload asks before it stops.
+- **MOS, ZimaOS and Umbrel** in the App tab of the settings, next to Unraid and Docker, with the same links as the README.
+
+### Changed
+
+- **One page under the castle.** Choosing files, writing a note or opening a request slides the castle up at its size and opens the form under it, and the upload and the link show there too. The share page a recipient opens has the castle at the top and the files below.
+- **The castle becomes the animation.** During a transfer the logo turns into the transfer animation in place, at the logo's exact size and spot, and back once the transfer is done. The letters fly in from the edge of the window and out past it, the gate stays as dark as the logo's and lights up only while a letter passes.
+- **Quieter start page.** The glow behind the castle shows only under the pointer or while files are dragged over the page, and the lines under it read "Into the castle it goes. Only the recipient gets in." and "Pinky promise, encrypted with maths."
+- Confirm dialogs offer Back instead of a second Cancel, the management row says it also deletes the files, an empty file list says there are no files in it yet, and the settings no longer show placeholders for a phone app.
+- Built on GlimStone 4.3.4.
+
 ## [2.0.0] - 2026-11-10
 
 ### Added
