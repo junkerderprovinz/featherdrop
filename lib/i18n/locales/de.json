@@ -134,7 +134,7 @@
     "manage": "Verwaltungslink",
     "manageHint": "Behalt ihn für dich. Mit ihm löschst du die Freigabe, bevor sie abläuft.",
     "manageField": "Verwaltungslink",
-    "manageRow": "Diese Freigabe verwalten",
+    "manageRow": "Freigabe verwalten und Dateien löschen",
     "openManage": "Öffnen",
     "more": "Mehr senden",
     "linkCopied": "Link kopiert"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel läuft als ein kleiner Container auf deinem eigenen Server.",
-    "phone": "Handy-App",
-    "phoneHint": "Eine Handy-App ist geplant. Bis dahin lässt sich die Seite im Browser als App installieren.",
     "source": "Quellcode",
     "soon": "Bald"
   },

@@ -136,7 +136,7 @@
     "manage": "Poveznica za upravljanje",
     "manageHint": "Ovu zadrži za sebe. Njome brišeš dijeljenje prije nego što istekne.",
     "manageField": "Poveznica za upravljanje",
-    "manageRow": "Upravljaj ovim dijeljenjem",
+    "manageRow": "Upravljaj dijeljenjem i izbriši njegove datoteke",
     "openManage": "Otvori",
     "more": "Pošalji još",
     "linkCopied": "Poveznica kopirana"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Poslužitelj",
     "serverHint": "CastleParcel radi kao jedan mali kontejner na tvom vlastitom poslužitelju.",
-    "phone": "Mobitel",
-    "phoneHint": "Aplikacija za mobitel je u planu. Dotad se stranica može instalirati kao aplikacija iz preglednika.",
     "source": "Izvorni kod",
     "soon": "Uskoro"
   },

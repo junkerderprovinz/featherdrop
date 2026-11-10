@@ -134,7 +134,7 @@
     "manage": "Hallintalinkki",
     "manageHint": "Pidä tämä itselläsi. Sillä voit poistaa jaon ennen kuin se vanhenee.",
     "manageField": "Hallintalinkki",
-    "manageRow": "Hallitse tätä jakoa",
+    "manageRow": "Hallitse jakoa ja poista sen tiedostot",
     "openManage": "Avaa",
     "more": "Lähetä lisää",
     "linkCopied": "Linkki kopioitu"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Palvelin",
     "serverHint": "CastleParcel toimii yhtenä pienenä konttina omalla palvelimellasi.",
-    "phone": "Puhelin",
-    "phoneHint": "Puhelinsovellus on suunnitteilla. Siihen asti sivun voi asentaa sovellukseksi selaimesta.",
     "source": "Lähdekoodi",
     "soon": "Tulossa pian"
   },

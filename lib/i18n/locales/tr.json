@@ -134,7 +134,7 @@
     "manage": "Yönetim bağlantısı",
     "manageHint": "Bunu kendine sakla. Paylaşımı süresi dolmadan silmeye yarar.",
     "manageField": "Yönetim bağlantısı",
-    "manageRow": "Bu paylaşımı yönet",
+    "manageRow": "Paylaşımı yönet ve dosyalarını sil",
     "openManage": "Aç",
     "more": "Daha fazla gönder",
     "linkCopied": "Bağlantı kopyalandı"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Sunucu",
     "serverHint": "CastleParcel, kendi sunucunda tek bir küçük konteyner olarak çalışır.",
-    "phone": "Telefon",
-    "phoneHint": "Bir telefon uygulaması planlanıyor. O zamana kadar sayfa, tarayıcıdan uygulama olarak yüklenebilir.",
     "source": "Kaynak kod",
     "soon": "Yakında"
   },

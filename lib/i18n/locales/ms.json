@@ -132,7 +132,7 @@
     "manage": "Pautan pengurusan",
     "manageHint": "Simpan pautan ini untuk diri anda sahaja. Ia boleh memadam kiriman sebelum tamat tempoh.",
     "manageField": "Pautan pengurusan",
-    "manageRow": "Urus kiriman ini",
+    "manageRow": "Urus kiriman dan padam failnya",
     "openManage": "Buka",
     "more": "Hantar lagi",
     "linkCopied": "Pautan disalin"
@@ -333,8 +333,6 @@
   "builds": {
     "server": "Pelayan",
     "serverHint": "CastleParcel berjalan sebagai satu kontena kecil pada pelayan anda sendiri.",
-    "phone": "Telefon",
-    "phoneHint": "Aplikasi telefon sedang dirancang. Sementara itu, halaman ini boleh dipasang sebagai aplikasi daripada pelayar.",
     "source": "Kod sumber",
     "soon": "Akan datang"
   },

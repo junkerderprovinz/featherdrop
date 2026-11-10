@@ -136,7 +136,7 @@
     "manage": "Link di gestione",
     "manageHint": "Tienilo per te. Serve a eliminare la condivisione prima della scadenza.",
     "manageField": "Link di gestione",
-    "manageRow": "Gestisci questa condivisione",
+    "manageRow": "Gestisci la condivisione ed elimina i suoi file",
     "openManage": "Apri",
     "more": "Invia altro",
     "linkCopied": "Link copiato"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel gira come un piccolo container sul tuo server.",
-    "phone": "Telefono",
-    "phoneHint": "È prevista un’app per telefono. Fino ad allora la pagina si installa come app dal browser.",
     "source": "Codice sorgente",
     "soon": "In arrivo"
   },

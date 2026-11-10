@@ -132,7 +132,7 @@
     "manage": "Tautan kelola",
     "manageHint": "Simpan tautan ini untukmu sendiri. Dengan tautan ini kamu bisa menghapus kiriman sebelum kedaluwarsa.",
     "manageField": "Tautan kelola",
-    "manageRow": "Kelola kiriman ini",
+    "manageRow": "Kelola kiriman dan hapus file di dalamnya",
     "openManage": "Buka",
     "more": "Kirim lagi",
     "linkCopied": "Tautan tersalin"
@@ -333,8 +333,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel berjalan sebagai satu container kecil di server milikmu sendiri.",
-    "phone": "Ponsel",
-    "phoneHint": "Aplikasi ponsel sedang direncanakan. Sementara itu, halaman ini bisa dipasang sebagai aplikasi dari browser.",
     "source": "Kode sumber",
     "soon": "Segera hadir"
   },

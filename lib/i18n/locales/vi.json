@@ -132,7 +132,7 @@
     "manage": "Liên kết quản lý",
     "manageHint": "Hãy giữ liên kết này cho riêng bạn. Nó dùng để xóa chia sẻ trước khi hết hạn.",
     "manageField": "Liên kết quản lý",
-    "manageRow": "Quản lý chia sẻ này",
+    "manageRow": "Quản lý chia sẻ và xóa các tệp",
     "openManage": "Mở",
     "more": "Gửi thêm",
     "linkCopied": "Đã sao chép liên kết"
@@ -333,8 +333,6 @@
   "builds": {
     "server": "Máy chủ",
     "serverHint": "CastleParcel chạy như một container nhỏ trên máy chủ của riêng bạn.",
-    "phone": "Điện thoại",
-    "phoneHint": "Ứng dụng điện thoại đang được lên kế hoạch. Trong lúc chờ, bạn có thể cài trang này như một ứng dụng từ trình duyệt.",
     "source": "Mã nguồn",
     "soon": "Sắp ra mắt"
   },

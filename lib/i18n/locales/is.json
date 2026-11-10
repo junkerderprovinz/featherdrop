@@ -134,7 +134,7 @@
     "manage": "Umsjónarhlekkur",
     "manageHint": "Hafðu hann út af fyrir þig. Með honum eyðir þú deilingunni áður en hún rennur út.",
     "manageField": "Umsjónarhlekkur",
-    "manageRow": "Sjá um þessa deilingu",
+    "manageRow": "Sjá um deilinguna og eyða skránum hennar",
     "openManage": "Opna",
     "more": "Senda meira",
     "linkCopied": "Hlekkur afritaður"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Þjónn",
     "serverHint": "CastleParcel keyrir sem einn lítill gámur á þínum eigin þjóni.",
-    "phone": "Sími",
-    "phoneHint": "Símaforrit er á teikniborðinu. Þangað til er hægt að setja síðuna upp sem forrit úr vafranum.",
     "source": "Frumkóði",
     "soon": "Væntanlegt"
   },

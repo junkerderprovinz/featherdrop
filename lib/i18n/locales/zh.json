@@ -132,7 +132,7 @@
     "manage": "管理链接",
     "manageHint": "这个链接请自己保管。用它可以在到期前删除分享。",
     "manageField": "管理链接",
-    "manageRow": "管理此分享",
+    "manageRow": "管理分享并删除其文件",
     "openManage": "打开",
     "more": "继续发送",
     "linkCopied": "链接已复制"
@@ -333,8 +333,6 @@
   "builds": {
     "server": "服务器",
     "serverHint": "CastleParcel 以一个小容器的形式运行在你自己的服务器上。",
-    "phone": "手机",
-    "phoneHint": "手机应用正在计划中。在此之前，可以从浏览器把这个页面安装成应用。",
     "source": "源代码",
     "soon": "即将推出"
   },

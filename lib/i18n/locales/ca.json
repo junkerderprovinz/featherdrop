@@ -136,7 +136,7 @@
     "manage": "Enllaç de gestió",
     "manageHint": "Guarda'l només per a tu. Amb ell pots esborrar l'enviament abans que caduqui.",
     "manageField": "Enllaç de gestió",
-    "manageRow": "Gestiona aquest enviament",
+    "manageRow": "Gestiona l'enviament i esborra'n els fitxers",
     "openManage": "Obre",
     "more": "Envia'n més",
     "linkCopied": "Enllaç copiat"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Servidor",
     "serverHint": "CastleParcel funciona com un petit contenidor al teu propi servidor.",
-    "phone": "Mòbil",
-    "phoneHint": "Hi ha una app per a mòbil en camí. Mentrestant, la pàgina s'instal·la com a app des del navegador.",
     "source": "Codi font",
     "soon": "Aviat"
   },

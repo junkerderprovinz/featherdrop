@@ -134,7 +134,7 @@
     "manage": "Ligazón de xestión",
     "manageHint": "Gárdaa só para ti. Con ela borras o envío antes de que caduque.",
     "manageField": "Ligazón de xestión",
-    "manageRow": "Xestionar este envío",
+    "manageRow": "Xestionar o envío e borrar os seus ficheiros",
     "openManage": "Abrir",
     "more": "Enviar máis",
     "linkCopied": "Ligazón copiada"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Servidor",
     "serverHint": "CastleParcel funciona como un pequeno contedor no teu propio servidor.",
-    "phone": "Móbil",
-    "phoneHint": "Hai unha app para móbil en camiño. Mentres tanto, a páxina instálase como app desde o navegador.",
     "source": "Código fonte",
     "soon": "Moi pronto"
   },

@@ -138,7 +138,7 @@
     "manage": "Odkaz pro správu",
     "manageHint": "Tento si nechte pro sebe. Smaže sdílení dřív, než vyprší.",
     "manageField": "Odkaz pro správu",
-    "manageRow": "Spravovat toto sdílení",
+    "manageRow": "Spravovat sdílení a smazat jeho soubory",
     "openManage": "Otevřít",
     "more": "Poslat další",
     "linkCopied": "Odkaz zkopírován"
@@ -345,8 +345,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel běží jako jeden malý kontejner na vašem vlastním serveru.",
-    "phone": "Telefon",
-    "phoneHint": "Aplikace pro telefon se chystá. Do té doby se stránka dá nainstalovat jako aplikace z prohlížeče.",
     "source": "Zdrojový kód",
     "soon": "Již brzy"
   },

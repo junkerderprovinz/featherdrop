@@ -134,7 +134,7 @@
     "manage": "Halduslink",
     "manageHint": "Hoia see enda teada. Sellega saad jagamise enne aegumist kustutada.",
     "manageField": "Halduslink",
-    "manageRow": "Halda seda jagamist",
+    "manageRow": "Halda jagamist ja kustuta selle failid",
     "openManage": "Ava",
     "more": "Saada veel",
     "linkCopied": "Link kopeeritud"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel töötab ühe väikese konteinerina sinu enda serveris.",
-    "phone": "Telefon",
-    "phoneHint": "Telefonirakendus on plaanis. Seni saab lehe brauserist rakendusena paigaldada.",
     "source": "Lähtekood",
     "soon": "Varsti"
   },

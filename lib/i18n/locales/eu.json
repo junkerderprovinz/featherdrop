@@ -134,7 +134,7 @@
     "manage": "Kudeatzeko esteka",
     "manageHint": "Gorde zuretzat bakarrik. Honekin partekatzea ezaba dezakezu iraungi aurretik.",
     "manageField": "Kudeatzeko esteka",
-    "manageRow": "Kudeatu partekatze hau",
+    "manageRow": "Kudeatu partekatzea eta ezabatu haren fitxategiak",
     "openManage": "Ireki",
     "more": "Bidali gehiago",
     "linkCopied": "Esteka kopiatuta"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Zerbitzaria",
     "serverHint": "CastleParcel edukiontzi txiki bakar gisa dabil zure zerbitzarian.",
-    "phone": "Mugikorra",
-    "phoneHint": "Mugikorrerako aplikazio bat dago bidean. Bitartean, orria aplikazio gisa instala daiteke nabigatzailetik.",
     "source": "Iturburu-kodea",
     "soon": "Laster"
   },

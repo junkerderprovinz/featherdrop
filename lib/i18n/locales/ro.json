@@ -136,7 +136,7 @@
     "manage": "Link de gestionare",
     "manageHint": "Păstrează-l doar pentru tine. Cu el ștergi partajarea înainte să expire.",
     "manageField": "Link de gestionare",
-    "manageRow": "Gestionează partajarea",
+    "manageRow": "Gestionează partajarea și șterge fișierele ei",
     "openManage": "Deschide",
     "more": "Trimite mai multe",
     "linkCopied": "Link copiat"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel rulează ca un singur container mic pe propriul tău server.",
-    "phone": "Telefon",
-    "phoneHint": "O aplicație de telefon e în plan. Până atunci, pagina se instalează ca aplicație din browser.",
     "source": "Cod sursă",
     "soon": "În curând"
   },

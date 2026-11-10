@@ -138,7 +138,7 @@
     "manage": "Povezava za upravljanje",
     "manageHint": "To obdrži zase. Z njo izbrišeš deljenje, preden poteče.",
     "manageField": "Povezava za upravljanje",
-    "manageRow": "Upravljaj to deljenje",
+    "manageRow": "Upravljaj deljenje in izbriši njegove datoteke",
     "openManage": "Odpri",
     "more": "Pošlji še",
     "linkCopied": "Povezava kopirana"
@@ -345,8 +345,6 @@
   "builds": {
     "server": "Strežnik",
     "serverHint": "CastleParcel teče kot en majhen vsebnik na tvojem lastnem strežniku.",
-    "phone": "Telefon",
-    "phoneHint": "Aplikacija za telefon je v načrtu. Do takrat lahko stran namestiš kot aplikacijo iz brskalnika.",
     "source": "Izvorna koda",
     "soon": "Kmalu"
   },

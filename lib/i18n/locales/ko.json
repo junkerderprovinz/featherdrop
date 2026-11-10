@@ -132,7 +132,7 @@
     "manage": "관리 링크",
     "manageHint": "이 링크는 혼자만 보관하세요. 만료 전에 공유를 삭제할 수 있어요.",
     "manageField": "관리 링크",
-    "manageRow": "이 공유 관리하기",
+    "manageRow": "공유를 관리하고 파일 삭제하기",
     "openManage": "열기",
     "more": "더 보내기",
     "linkCopied": "링크를 복사했어요"
@@ -333,8 +333,6 @@
   "builds": {
     "server": "서버",
     "serverHint": "CastleParcel은 내 서버에서 작은 컨테이너 하나로 돌아가요.",
-    "phone": "휴대폰",
-    "phoneHint": "휴대폰 앱을 준비하고 있어요. 그때까지는 브라우저에서 이 페이지를 앱으로 설치할 수 있어요.",
     "source": "소스 코드",
     "soon": "곧 나와요"
   },

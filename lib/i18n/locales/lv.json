@@ -136,7 +136,7 @@
     "manage": "Pārvaldības saite",
     "manageHint": "Šo paturi sev. Ar to vari izdzēst kopīgojumu, pirms tam beidzas termiņš.",
     "manageField": "Pārvaldības saite",
-    "manageRow": "Pārvaldīt šo kopīgojumu",
+    "manageRow": "Pārvaldīt kopīgojumu un dzēst tā failus",
     "openManage": "Atvērt",
     "more": "Sūtīt vēl",
     "linkCopied": "Saite nokopēta"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Serveris",
     "serverHint": "CastleParcel darbojas kā viens mazs konteiners tavā personīgajā serverī.",
-    "phone": "Tālrunis",
-    "phoneHint": "Tālruņa lietotne ir plānā. Līdz tam lapu var instalēt kā lietotni no pārlūka.",
     "source": "Pirmkods",
     "soon": "Drīzumā"
   },

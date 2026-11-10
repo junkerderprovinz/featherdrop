@@ -134,7 +134,7 @@
     "manage": "Beheerlink",
     "manageHint": "Houd deze voor jezelf. Hiermee verwijder je de share voordat hij verloopt.",
     "manageField": "Beheerlink",
-    "manageRow": "Deze share beheren",
+    "manageRow": "De share beheren en de bestanden verwijderen",
     "openManage": "Openen",
     "more": "Meer versturen",
     "linkCopied": "Link gekopieerd"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel draait als één kleine container op je eigen server.",
-    "phone": "Telefoon",
-    "phoneHint": "Er komt een telefoonapp. Tot die tijd installeer je de pagina als app vanuit de browser.",
     "source": "Broncode",
     "soon": "Binnenkort"
   },

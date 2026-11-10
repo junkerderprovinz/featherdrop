@@ -134,7 +134,7 @@
     "manage": "Kezelési hivatkozás",
     "manageHint": "Ezt tartsd meg magadnak. Ezzel törölheted a megosztást a lejárat előtt.",
     "manageField": "Kezelési hivatkozás",
-    "manageRow": "Megosztás kezelése",
+    "manageRow": "Megosztás kezelése és fájljainak törlése",
     "openManage": "Megnyitás",
     "more": "Küldj még",
     "linkCopied": "Link másolva"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Szerver",
     "serverHint": "A CastleParcel egyetlen kis konténerként fut a saját szervereden.",
-    "phone": "Telefon",
-    "phoneHint": "Telefonos app is készül. Addig az oldal a böngészőből appként telepíthető.",
     "source": "Forráskód",
     "soon": "Hamarosan"
   },

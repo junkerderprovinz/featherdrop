@@ -134,7 +134,7 @@
     "manage": "Administrationslink",
     "manageHint": "Behold dette for dig selv. Med det kan du slette delingen, før den udløber.",
     "manageField": "Administrationslink",
-    "manageRow": "Administrér denne deling",
+    "manageRow": "Administrér delingen og slet dens filer",
     "openManage": "Åbn",
     "more": "Send flere",
     "linkCopied": "Linket er kopieret"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel kører som én lille container på din egen server.",
-    "phone": "Telefon",
-    "phoneHint": "En app til telefonen er på vej. Indtil da kan siden installeres som app fra browseren.",
     "source": "Kildekode",
     "soon": "Kommer snart"
   },

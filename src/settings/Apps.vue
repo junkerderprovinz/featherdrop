@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// The other forms of CastleParcel as the README's download buttons. The phone app does not exist yet, so its buttons
-// stand as placeholders, as in the other apps of the house.
-import { DOCKER_SVG, FDROID_SVG, PLAY_SVG, ANDROID_SVG, UNRAID_SVG, ZIP_SVG, type ReadmeBrand, type ReadmePart } from '@glimstone/core';
+// The other forms of CastleParcel as the README's download buttons. It is a web page and a server, so there is no
+// phone app to point to.
+import { DOCKER_SVG, UNRAID_SVG, ZIP_SVG, type ReadmeBrand, type ReadmePart } from '@glimstone/core';
 import { BrandMark, Card, ReadmeButton } from '@glimstone/vue';
 import { computed } from 'vue';
 import { t } from '@/src/i18n';
@@ -14,11 +14,6 @@ const cards = computed(() => [
     { brand: 'unraid', svg: UNRAID_SVG, parts: [{ name: 'Unraid', href: 'https://ca.unraid.net/' }] },
     { brand: 'docker', svg: DOCKER_SVG, markClass: 'glim-docker-mark', parts: [{ name: 'Docker', href: 'https://hub.docker.com/r/junkerderprovinz/castleparcel' }] },
     { brand: 'zip', svg: ZIP_SVG, parts: [{ name: t('builds.source'), href: REPO + '/releases/latest' }] },
-  ] as Build[] },
-  { title: 'builds.phone', hint: 'builds.phoneHint', builds: [
-    { brand: 'play', svg: PLAY_SVG, parts: [{ name: 'Google Play' }] },
-    { brand: 'fdroid', svg: FDROID_SVG, parts: [{ name: 'F-Droid' }] },
-    { brand: 'android', svg: ANDROID_SVG, markClass: 'glim-android-mark', parts: [{ name: 'Android' }] },
   ] as Build[] },
 ]);
 </script>

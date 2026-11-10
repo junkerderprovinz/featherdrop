@@ -136,7 +136,7 @@
     "manage": "Enlace de gestión",
     "manageHint": "Guárdalo solo para ti. Con él borras el enlace compartido antes de que caduque.",
     "manageField": "Enlace de gestión",
-    "manageRow": "Gestionar este enlace compartido",
+    "manageRow": "Gestionar el enlace compartido y borrar sus archivos",
     "openManage": "Abrir",
     "more": "Enviar más",
     "linkCopied": "Enlace copiado"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Servidor",
     "serverHint": "CastleParcel funciona como un pequeño contenedor en tu propio servidor.",
-    "phone": "Móvil",
-    "phoneHint": "Hay una app para móvil en camino. Mientras tanto, la página se instala como app desde el navegador.",
     "source": "Código fuente",
     "soon": "Muy pronto"
   },

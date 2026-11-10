@@ -136,7 +136,7 @@
     "manage": "Lien de gestion",
     "manageHint": "Gardez-le pour vous. Il supprime le partage avant son expiration.",
     "manageField": "Lien de gestion",
-    "manageRow": "Gérer ce partage",
+    "manageRow": "Gérer le partage et supprimer ses fichiers",
     "openManage": "Ouvrir",
     "more": "Envoyer autre chose",
     "linkCopied": "Lien copié"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Serveur",
     "serverHint": "CastleParcel tourne dans un petit conteneur sur votre propre serveur.",
-    "phone": "Téléphone",
-    "phoneHint": "Une app mobile est prévue. En attendant, la page s’installe comme une app depuis le navigateur.",
     "source": "Code source",
     "soon": "Bientôt"
   },

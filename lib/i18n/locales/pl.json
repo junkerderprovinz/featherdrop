@@ -138,7 +138,7 @@
     "manage": "Link do zarządzania",
     "manageHint": "Zachowaj go dla siebie. Usuwa udostępnienie przed wygaśnięciem.",
     "manageField": "Link do zarządzania",
-    "manageRow": "Zarządzaj tym udostępnieniem",
+    "manageRow": "Zarządzaj udostępnieniem i usuń jego pliki",
     "openManage": "Otwórz",
     "more": "Wyślij więcej",
     "linkCopied": "Link skopiowany"
@@ -345,8 +345,6 @@
   "builds": {
     "server": "Serwer",
     "serverHint": "CastleParcel działa jako jeden mały kontener na Twoim własnym serwerze.",
-    "phone": "Telefon",
-    "phoneHint": "Aplikacja na telefon jest w planach. Do tego czasu stronę można zainstalować jako aplikację z przeglądarki.",
     "source": "Kod źródłowy",
     "soon": "Wkrótce"
   },

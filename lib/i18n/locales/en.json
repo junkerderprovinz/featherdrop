@@ -134,7 +134,7 @@
     "manage": "Management link",
     "manageHint": "Keep this one to yourself. It deletes the share before it expires.",
     "manageField": "Management link",
-    "manageRow": "Manage this share",
+    "manageRow": "Manage the share and delete its files",
     "openManage": "Open",
     "more": "Send more",
     "linkCopied": "Link copied"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel runs as one small container on your own server.",
-    "phone": "Phone",
-    "phoneHint": "A phone app is planned. Until then the page installs as an app from the browser.",
     "source": "Source code",
     "soon": "Coming soon"
   },

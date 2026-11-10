@@ -138,7 +138,7 @@
     "manage": "Valdymo nuoroda",
     "manageHint": "Šią pasilik sau. Ja gali ištrinti bendrinimą anksčiau, nei jis baigsis.",
     "manageField": "Valdymo nuoroda",
-    "manageRow": "Tvarkyti šį bendrinimą",
+    "manageRow": "Tvarkyti bendrinimą ir ištrinti jo failus",
     "openManage": "Atidaryti",
     "more": "Siųsti daugiau",
     "linkCopied": "Nuoroda nukopijuota"
@@ -345,8 +345,6 @@
   "builds": {
     "server": "Serveris",
     "serverHint": "CastleParcel veikia kaip vienas mažas konteineris tavo nuosavame serveryje.",
-    "phone": "Telefonas",
-    "phoneHint": "Telefono programėlė planuojama. Iki tol puslapį galima įdiegti kaip programėlę iš naršyklės.",
     "source": "Pirminis kodas",
     "soon": "Netrukus"
   },

@@ -136,7 +136,7 @@
     "manage": "Link de gestão",
     "manageHint": "Guarda-o só para ti. Com ele eliminas a partilha antes de expirar.",
     "manageField": "Link de gestão",
-    "manageRow": "Gerir esta partilha",
+    "manageRow": "Gerir a partilha e eliminar os ficheiros",
     "openManage": "Abrir",
     "more": "Enviar mais",
     "linkCopied": "Link copiado"
@@ -341,8 +341,6 @@
   "builds": {
     "server": "Servidor",
     "serverHint": "O CastleParcel corre como um pequeno contentor no teu próprio servidor.",
-    "phone": "Telemóvel",
-    "phoneHint": "Está prevista uma app para telemóvel. Até lá, a página instala-se como app a partir do navegador.",
     "source": "Código-fonte",
     "soon": "Em breve"
   },

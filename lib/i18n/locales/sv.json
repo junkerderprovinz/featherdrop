@@ -134,7 +134,7 @@
     "manage": "Hanteringslänk",
     "manageHint": "Behåll den här för dig själv. Med den raderar du delningen innan den går ut.",
     "manageField": "Hanteringslänk",
-    "manageRow": "Hantera delningen",
+    "manageRow": "Hantera delningen och radera dess filer",
     "openManage": "Öppna",
     "more": "Skicka fler",
     "linkCopied": "Länken är kopierad"
@@ -337,8 +337,6 @@
   "builds": {
     "server": "Server",
     "serverHint": "CastleParcel körs som en liten container på din egen server.",
-    "phone": "Telefon",
-    "phoneHint": "En mobilapp är på gång. Tills dess kan sidan installeras som app från webbläsaren.",
     "source": "Källkod",
     "soon": "Kommer snart"
   },
