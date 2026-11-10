@@ -1,5 +1,5 @@
 // Command server-go is the CastleParcel server, a zero-knowledge file sharer. It
-// serves the React client as embedded static assets plus the tus upload endpoint
+// serves the web client as embedded static assets plus the tus upload endpoint
 // and a small JSON/file API; all encryption happens in the browser.
 package main
 
@@ -97,12 +97,17 @@ func main() {
 		log.Fatalf("hash client: %v", err)
 	}
 
+	webFiles, err := static.NewAssets(assets)
+	if err != nil {
+		log.Fatalf("read client files: %v", err)
+	}
+
 	tusHandler, err := upload.NewHandler(cfg, db)
 	if err != nil {
 		log.Fatalf("build tus handler: %v", err)
 	}
 
-	r := newRouter(cfg, db, tusHandler, assets, shell, client)
+	r := newRouter(cfg, db, tusHandler, webFiles, shell, client)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -138,7 +143,7 @@ func main() {
 
 // newRouter wires every route the server serves. It is separate from main so
 // tests can run the real routing, rate limits included.
-func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs.FS, shell []byte, client clientmanifest.Served) chi.Router {
+func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, webFiles *static.Assets, shell []byte, client clientmanifest.Served) chi.Router {
 	r := chi.NewRouter()
 	r.Use(headers.Middleware(headers.ContentSecurityPolicy(cfg.LogoOrigin())))
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -212,8 +217,8 @@ func newRouter(cfg config.Config, db *sql.DB, tusHandler http.Handler, assets fs
 	// answer 200 with the HTML shell.
 	r.HandleFunc("/api/*", api.NotFoundHandler())
 
-	r.NotFound(spaHandler(assets, shell))
-	r.MethodNotAllowed(spaHandler(assets, shell))
+	r.NotFound(spaHandler(webFiles, shell))
+	r.MethodNotAllowed(spaHandler(webFiles, shell))
 
 	return r
 }
@@ -276,11 +281,10 @@ func renderShell(assets fs.FS, cfg config.Config) ([]byte, error) {
 	return []byte(html), nil
 }
 
-// spaHandler serves files from assets and falls back to the templated shell for
+// spaHandler serves the client files and falls back to the templated shell for
 // "/" and for any path that is not a file, so client-side routes load. The raw
 // index.html with its markers is never served.
-func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
-	fileServer := http.FileServer(http.FS(assets))
+func spaHandler(files *static.Assets, shell []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// A crawled share, management, request or collect link would expose
 		// it to anyone searching.
@@ -289,18 +293,11 @@ func spaHandler(assets fs.FS, shell []byte) http.HandlerFunc {
 			w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		}
 		upath := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
-		if upath == "" || upath == "index.html" {
+		if upath == "" || upath == "index.html" || !files.Has(upath) {
 			serveShell(w, shell)
 			return
 		}
-		info, err := fs.Stat(assets, upath)
-		// http.FileServer would render a listing for a directory and expose
-		// every embedded file name.
-		if errors.Is(err, fs.ErrNotExist) || (err == nil && info.IsDir()) {
-			serveShell(w, shell)
-			return
-		}
-		fileServer.ServeHTTP(w, r)
+		files.ServeHTTP(w, r)
 	}
 }
 

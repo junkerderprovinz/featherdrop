@@ -14,6 +14,7 @@ import (
 
 	"github.com/junkerderprovinz/castleparcel/server-go/internal/clientmanifest"
 	"github.com/junkerderprovinz/castleparcel/server-go/internal/config"
+	"github.com/junkerderprovinz/castleparcel/server-go/internal/static"
 	"github.com/junkerderprovinz/castleparcel/server-go/internal/store"
 	"github.com/junkerderprovinz/castleparcel/server-go/internal/upload"
 )
@@ -25,6 +26,15 @@ func webrootSub(t *testing.T) fs.FS {
 		t.Fatalf("sub fs: %v", err)
 	}
 	return sub
+}
+
+func clientFiles(t *testing.T, assets fs.FS) *static.Assets {
+	t.Helper()
+	files, err := static.NewAssets(assets)
+	if err != nil {
+		t.Fatalf("NewAssets: %v", err)
+	}
+	return files
 }
 
 func TestRenderShell_DefaultBranding(t *testing.T) {
@@ -105,7 +115,7 @@ func newFullRouter(t *testing.T, mutate func(*config.Config)) http.Handler {
 	if err != nil {
 		t.Fatalf("load client manifest: %v", err)
 	}
-	return newRouter(cfg, db, tusHandler, assets, shell, client)
+	return newRouter(cfg, db, tusHandler, clientFiles(t, assets), shell, client)
 }
 
 func get(h http.Handler, path string) *httptest.ResponseRecorder {
@@ -280,7 +290,7 @@ func TestSPAHandler_ServesTemplatedRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("renderShell: %v", err)
 	}
-	h := spaHandler(assets, shell)
+	h := spaHandler(clientFiles(t, assets), shell)
 
 	for _, path := range []string{"/", "/index.html", "/d/some-slug"} {
 		rec := httptest.NewRecorder()

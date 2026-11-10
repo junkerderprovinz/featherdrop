@@ -1,7 +1,8 @@
-// Package static renders the SPA HTML shell. The embedded webroot/index.html
-// carries %%TOKEN%% markers that RenderShell fills once at startup with the
-// operator's branding and generic Open Graph metadata. The metadata never comes
-// from a share, so a shared /d/<slug> link cannot leak a file name.
+// Package static serves the embedded web client and renders its HTML shell.
+// The embedded webroot/index.html carries %%TOKEN%% markers that RenderShell
+// fills once at startup with the operator's branding and generic Open Graph
+// metadata. The metadata never comes from a share, so a shared /d/<slug> link
+// cannot leak a file name.
 package static
 
 import (
