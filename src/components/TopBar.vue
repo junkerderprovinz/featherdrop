@@ -5,7 +5,8 @@ import { Button } from '@glimstone/vue';
 import { computed, ref, watchEffect } from 'vue';
 import { t } from '@/src/i18n';
 import { follow, go, route } from '@/src/router';
-import { resetSend, send } from '@/src/upload';
+import { leaveStep } from '@/src/steps';
+import { send } from '@/src/upload';
 
 const props = defineProps<{ screen: string }>();
 const inSettings = computed(() => props.screen === 'settings');
@@ -21,8 +22,8 @@ const back = computed(() => (inSettings.value ? before.value : '/'));
 <template>
   <header class="cp-head">
     <Button v-if="screen !== 'home'" :label="t('app.back')" label-key="IconBack" :href="back" data-cp="back" @click="follow($event, back)" />
-    <Button v-else-if="send.stage === 'options'" :label="t('app.back')" label-key="IconBack" data-cp="back" @click="resetSend" />
-    <Button v-else-if="send.stage === 'done' && send.sent" :label="t('app.leave')" label-key="IconSignOut" data-cp="leave" @click="resetSend" />
+    <Button v-else-if="send.stage === 'options'" :label="t('app.back')" label-key="IconBack" data-cp="back" @click="leaveStep" />
+    <Button v-else-if="send.stage === 'done' && send.sent" :label="t('app.leave')" label-key="IconSignOut" data-cp="leave" @click="leaveStep" />
     <span class="cp-spacer"></span>
     <Button v-if="!inSettings" variant="icon" :label="t('app.settings')" label-key="IconGear" data-cp="settings" @click="go('/settings/general')" />
   </header>

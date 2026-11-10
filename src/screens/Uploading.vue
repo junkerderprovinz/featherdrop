@@ -3,12 +3,11 @@
 // file on its way, and the way to stop it.
 import { Button, Card, ListRow, Pill, ProgressBar } from '@glimstone/vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { confirm } from '@/src/confirm';
 import { duration, size } from '@/src/format';
 import { G, fileGlyph } from '@/src/glyphs';
 import { num, t } from '@/src/i18n';
-import { toast } from '@/src/toast';
-import { cancelUpload, resumable, send, sizes, total } from '@/src/upload';
+import { askToCancel } from '@/src/steps';
+import { resumable, send, sizes, total } from '@/src/upload';
 
 const p = computed(() => send.progress);
 const phase = computed(() => t('upload.' + send.phase));
@@ -25,12 +24,6 @@ const left = computed(() => {
 });
 const counted = computed(() => t('upload.status', { done: size(total(sizes()) * p.value), total: size(total(sizes())) }));
 
-async function cancel() {
-  if (!(await confirm(t('upload.cancelQuestion'), { confirmLabel: t('upload.cancel'), confirmLabelKey: 'IconStop' }))) return;
-  if (send.stage !== 'uploading') return;
-  await cancelUpload();
-  toast(t('upload.cancelled'), 'warn');
-}
 </script>
 
 <template>
@@ -59,7 +52,7 @@ async function cancel() {
     </Card>
 
     <div class="cp-actions">
-      <Button :label="t('upload.cancel')" label-key="IconStop" data-cp="cancel" @click="cancel" />
+      <Button :label="t('upload.cancel')" label-key="IconStop" data-cp="cancel" @click="askToCancel" />
     </div>
   </section>
 </template>

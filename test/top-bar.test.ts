@@ -17,6 +17,7 @@ before(async () => {
   TopBar = await loadComponent("src/components/TopBar.vue", {
     "@glimstone/vue": "test/glimstone-stub.ts",
     "@/src/upload": "test/upload-stub.ts",
+    "@/src/steps": "test/steps-stub.ts",
   });
 });
 

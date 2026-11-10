@@ -116,6 +116,7 @@ try {
   await limitedShareListsBeforeDownload();
   await startPageShortcuts();
   await wayOutSitsInTheHead();
+  await historyWalksTheSteps();
   await infoTabStaysInSettings();
   await castleLoaderPlays();
   if (errors.length) fail("page/console errors occurred");
@@ -729,6 +730,41 @@ async function wayOutSitsInTheHead() {
   if (await page.locator("[data-cp=leave]").count()) fail("link: Leave stayed on the start page");
   await page.close();
   console.log("way out: Back on the options and Leave on the link sit where Back sits everywhere ✓");
+}
+
+// Back and Forward, which a mouse's side buttons send as well, move between the
+// steps of a parcel like between pages: the options, the link, the note.
+async function historyWalksTheSteps() {
+  const page = await open("history", BASE);
+  const home = () => page.locator(".cp-claim").waitFor(WAIT);
+  await home();
+
+  await page.setInputFiles('input[type="file"]', { name: "history.txt", mimeType: "text/plain", buffer: Buffer.from("history") });
+  await page.locator("[data-cp=upload]").waitFor(WAIT);
+  await page.goBack();
+  await home();
+  if (await page.locator("[data-cp=panel-files]").count()) fail("history: Back left the options open");
+  await page.goForward();
+  await page.locator("[data-cp=panel-files]").waitFor(WAIT);
+  await page.goBack();
+  await home();
+
+  await page.setInputFiles('input[type="file"]', { name: "history.txt", mimeType: "text/plain", buffer: Buffer.from("history") });
+  await page.locator("[data-cp=upload]").click();
+  await waitForLink(page, "/d/");
+  await page.goBack();
+  await home();
+  if (await page.locator("[data-cp=leave]").count()) fail("history: Back left the link open");
+
+  await page.locator("[data-cp=to-note]").click();
+  await page.waitForURL(`${BASE}/note`, WAIT);
+  await page.goBack();
+  await page.waitForURL(`${BASE}/`, WAIT);
+  await home();
+  await page.goForward();
+  await page.locator("[data-cp=panel-note]").waitFor(WAIT);
+  await page.close();
+  console.log("history: Back and Forward open and close the options, leave the link and walk to the note and back ✓");
 }
 
 // Every settings tile opens inside Settings, and none of them opens a window.
