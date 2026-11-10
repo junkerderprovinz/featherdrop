@@ -238,4 +238,5 @@ You do not have to take my word for it. The code is open and every release note 
 
 Questions? Check the [support thread](https://forums.unraid.net/topic/199203-support-junkerderprovinz-castleparcel/). Bugs, ideas or feature requests? Please [open a GitHub issue](https://github.com/junkerderprovinz/castleparcel/issues).
 
-<sub>The name CastleParcel, its logo and its branding are not covered by the AGPL-3.0 licence of the code: a fork needs its own name and look.</sub>
+<sub>The name CastleParcel, its logo and its branding are not covered by the AGPL-3.0 licence of the code: a fork needs its own name and look.</sub><br>
+<sub>The licences of the libraries it ships with: every instance serves those of the web client at `/third-party-licenses.md`, and the image keeps all of them under `/licenses`.</sub>

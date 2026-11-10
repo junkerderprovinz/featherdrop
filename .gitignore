@@ -18,6 +18,7 @@ client-dist/
 /server-go/webroot/*.ico
 /server-go/webroot/*.woff
 /server-go/webroot/*.woff2
+/server-go/webroot/third-party-licenses.md
 /server-go/webroot/vite.svg
 
 # TypeScript / tooling output

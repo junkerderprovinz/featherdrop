@@ -20,7 +20,6 @@ server-go/webroot/assets/
 # Docs not needed inside the image
 README.md
 CHANGELOG.md
-LICENSE
 
 # Runtime data + local env
 data/

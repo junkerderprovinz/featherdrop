@@ -14,6 +14,7 @@ import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { addIntegrity } from "./client-integrity.mjs";
 import { checkSodiumOnce, sodiumWasm } from "./sodium-once.mjs";
+import { completeLicenses, sectionsWithoutText } from "./third-party-licenses.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const clientDist = join(repoRoot, "client-dist");
@@ -35,6 +36,27 @@ const files = readdirSync(webroot, { recursive: true })
   .filter((rel) => statSync(join(webroot, rel)).isFile())
   .map((rel) => rel.split(sep).join("/"));
 const read = (path) => (files.includes(path) ? readFileSync(join(webroot, path)) : undefined);
+
+const pkg = (name) => JSON.parse(readFileSync(join(repoRoot, "node_modules", name, "package.json"), "utf8"));
+const licensed = (name, text) => ({ name, version: pkg(name).version, license: pkg(name).license, text });
+const licensesPath = join(webroot, "third-party-licenses.md");
+const kept = (file) => readFileSync(join(repoRoot, "scripts", "licenses", file), "utf8");
+const shipped = (name) => readFileSync(join(repoRoot, "node_modules", name, "LICENSE"), "utf8");
+// The worker's libsodium, and the packages that ship no LICENSE file, with the text from their repository.
+const licenses = completeLicenses(readFileSync(licensesPath, "utf8"), [
+  licensed("@glimstone/core", kept("glimstone.txt")),
+  licensed("@glimstone/vue", kept("glimstone.txt")),
+  licensed("@rive-app/canvas-lite", kept("rive-app-canvas-lite.txt")),
+  licensed("qrcode-generator", kept("qrcode-generator.txt")),
+  licensed("libsodium-sumo", shipped("libsodium-sumo")),
+  licensed("libsodium-wrappers-sumo", shipped("libsodium-wrappers-sumo")),
+]);
+const unlicensed = sectionsWithoutText(licenses);
+if (unlicensed.length) {
+  console.error(`build:webroot: no license text for ${unlicensed.join(", ")} in third-party-licenses.md`);
+  process.exit(1);
+}
+writeFileSync(licensesPath, licenses);
 
 const indexPath = join(webroot, "index.html");
 writeFileSync(indexPath, addIntegrity(readFileSync(indexPath, "utf8"), files, read));

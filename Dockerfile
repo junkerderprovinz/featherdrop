@@ -7,7 +7,7 @@
 # Stages:
 #   client:  node builds the Vite SPA into server-go/webroot
 #   gobuild: a CGO-free go build that embeds the webroot
-#   runtime: distroless static with only the binary
+#   runtime: distroless static with the binary and the license texts
 ARG NODE_VERSION=24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
 ARG GO_VERSION=1.27@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e
 
@@ -35,6 +35,16 @@ RUN go mod download
 COPY server-go/ ./
 COPY --from=client /app/server-go/webroot ./webroot
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/castleparcel .
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# The binary carries Go's runtime and every module it links, so their license
+# texts go into the image. A module without one stops the build.
+RUN mkdir -p /out/licenses/go && cp "$(go env GOROOT)/LICENSE" /out/licenses/go/ && \
+    CGO_ENABLED=0 GOOS=linux go list -deps -f '{{with .Module}}{{if not .Main}}{{.Path}}|{{.Dir}}{{end}}{{end}}' . | sort -u | \
+    while IFS='|' read -r mod dir; do \
+      mkdir -p "/out/licenses/$mod" && \
+      find "$dir" -maxdepth 1 -type f \( -iname 'LICENSE*' -o -iname 'COPYING*' -o -iname 'NOTICE*' \) -exec cp {} "/out/licenses/$mod/" \; && \
+      { [ -n "$(ls -A "/out/licenses/$mod")" ] || { echo "no license file in $mod" >&2; exit 1; }; }; \
+    done
 
 FROM gcr.io/distroless/static-debian12:latest@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2 AS runtime
 LABEL org.opencontainers.image.title="CastleParcel"
@@ -43,6 +53,9 @@ LABEL org.opencontainers.image.url="https://github.com/junkerderprovinz/castlepa
 LABEL org.opencontainers.image.description="CastleParcel: self-hosted zero-knowledge file sharer (Go backend)"
 LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 COPY --from=gobuild /out/castleparcel /castleparcel
+COPY --from=client /app/LICENSE /licenses/LICENSE
+COPY --from=client /app/server-go/webroot/third-party-licenses.md /licenses/client.md
+COPY --from=gobuild /out/licenses /licenses/server
 # DATA_DIR holds the blobs and the tus uploads in progress, CONFIG_DIR the
 # SQLite database; the defaults match the Unraid template mounts.
 ENV DATA_DIR=/data \

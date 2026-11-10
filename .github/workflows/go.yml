@@ -115,6 +115,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: The image carries the license texts
+        run: |
+          set -euo pipefail
+          id="$(docker create castleparcel-go:smoke)"
+          docker cp "$id:/licenses" "$RUNNER_TEMP/licenses"
+          docker rm "$id" >/dev/null
+          for f in LICENSE client.md server/go/LICENSE server/github.com/go-chi/chi/v5 server/github.com/tus/tusd/v2 server/modernc.org/sqlite; do
+            [ -e "$RUNNER_TEMP/licenses/$f" ] || { echo "❌ /licenses/$f is missing"; exit 1; }
+          done
+          grep -q "^## @rive-app/canvas-lite" "$RUNNER_TEMP/licenses/client.md"
+          echo "✅ /licenses holds the app's, the client's and the server's license texts"
+
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:

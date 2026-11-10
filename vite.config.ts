@@ -18,6 +18,7 @@ export default defineConfig({
   build: {
     outDir: "client-dist",
     emptyOutDir: true,
+    license: { fileName: "third-party-licenses.md" },
     // index.html pins its scripts with integrity attributes, and a chunk
     // loaded by import() could not be pinned, so the client stays one chunk.
     rolldownOptions: {
