@@ -34,11 +34,11 @@
     "text": "Con HTTP simple, as descargas quedan na memoria en vez de ir directas ao disco, e unha subida que se corta non pode continuar. Abre esta páxina por HTTPS para ficheiros grandes."
   },
   "home": {
-    "claim": "Comparte os teus ficheiros cifrados e en privado. Só quen os recibe pode velos.",
+    "claim": "Directo ao castelo. Só entra o destinatario.",
     "drop": "Arrastra ficheiros, pégaos ou escólleos. Non somos nada esixentes.",
     "choose": "Escoller ficheiros",
     "dropping": "Solta para engadilos",
-    "trust": "Ninguén pode fozar nos teus ficheiros. Palabra de honra, avalada polas matemáticas.",
+    "trust": "Ninguén pode fozar nos teus ficheiros. Palabra de honra, cifrada coas matemáticas.",
     "dropTarget": "Escoller ficheiros para enviar",
     "note": "Escribir unha nota",
     "request": "Pedir ficheiros"

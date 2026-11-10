@@ -33,11 +33,11 @@
     "text": "Lewat HTTP biasa, unduhan ditampung di memori alih-alih langsung disimpan ke disk, dan unggahan yang terputus tidak bisa dilanjutkan. Untuk file besar, buka halaman ini lewat HTTPS."
   },
   "home": {
-    "claim": "Bagikan file-mu dalam keadaan terenkripsi dan privat. Hanya penerima yang bisa melihatnya.",
+    "claim": "Langsung masuk kastel. Hanya penerima yang bisa masuk.",
     "drop": "Seret file ke sini, tempel, atau pilih. Kami nggak rewel.",
     "choose": "Pilih file",
     "dropping": "Lepaskan untuk menambahkan",
-    "trust": "Tidak ada yang bisa mengintip file-mu. Janji kelingking, dijamin matematika.",
+    "trust": "Tidak ada yang bisa mengintip file-mu. Janji kelingking, dienkripsi dengan matematika.",
     "dropTarget": "Pilih file untuk dikirim",
     "note": "Tulis catatan",
     "request": "Minta file"

@@ -36,11 +36,11 @@
     "text": "Přes obyčejné HTTP zůstávají stahované soubory v paměti, místo aby se rovnou zapisovaly na disk, a přerušené nahrávání nejde obnovit. U velkých souborů otevřete tuto stránku přes HTTPS."
   },
   "home": {
-    "claim": "Sdílejte své soubory šifrovaně a v soukromí. Uvidí je jen příjemce.",
+    "claim": "Šup s tím do hradu. Dovnitř se dostane jen příjemce.",
     "drop": "Přetáhněte soubory sem, vložte je, nebo je vyberte. Nejsme vybíraví.",
     "choose": "Vybrat soubory",
     "dropping": "Pusťte a přidají se",
-    "trust": "Do vašich souborů nikdo nenakoukne. Čestné slovo, podložené matematikou.",
+    "trust": "Do vašich souborů nikdo nenakoukne. Čestné slovo, zašifrované matematikou.",
     "dropTarget": "Vyberte soubory k odeslání",
     "note": "Napsat poznámku",
     "request": "Požádat o soubory"

@@ -35,11 +35,11 @@
     "text": "Caur parasto HTTP lejupielādes tiek turētas atmiņā, nevis uzreiz rakstītas diskā, un pārtrauktu augšupielādi nevar turpināt. Lieliem failiem atver šo lapu caur HTTPS."
   },
   "home": {
-    "claim": "Kopīgo savus failus šifrētus un privāti. Tos var redzēt tikai saņēmējs.",
+    "claim": "Taisni pilī. Iekšā tiek tikai saņēmējs.",
     "drop": "Ievelc failus, ielīmē vai izvēlies tos. Mēs neesam izvēlīgi.",
     "choose": "Izvēlēties failus",
     "dropping": "Atlaid, lai pievienotu",
-    "trust": "Neviens nevar ielūkoties tavos failos. Goda vārds, un to garantē matemātika.",
+    "trust": "Neviens nevar ielūkoties tavos failos. Goda vārds, šifrēts ar matemātiku.",
     "dropTarget": "Izvēlies failus sūtīšanai",
     "note": "Rakstīt piezīmi",
     "request": "Pieprasīt failus"

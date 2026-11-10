@@ -33,11 +33,11 @@
     "text": "Melalui HTTP biasa, muat turun disimpan dalam memori dan bukan terus ke cakera, dan muat naik yang terputus tidak boleh disambung semula. Untuk fail besar, buka halaman ini melalui HTTPS."
   },
   "home": {
-    "claim": "Kongsi fail anda secara tersulit dan peribadi. Hanya penerima boleh melihatnya.",
+    "claim": "Terus ke dalam istana. Hanya penerima boleh masuk.",
     "drop": "Seret fail ke sini, tampal atau pilih. Kami tak cerewet.",
     "choose": "Pilih fail",
     "dropping": "Lepaskan untuk menambah",
-    "trust": "Tiada siapa boleh mengintai fail anda. Janji jari kelingking, dijamin oleh matematik.",
+    "trust": "Tiada siapa boleh mengintai fail anda. Janji jari kelingking, disulitkan dengan matematik.",
     "dropTarget": "Pilih fail untuk dihantar",
     "note": "Tulis nota",
     "request": "Minta fail"

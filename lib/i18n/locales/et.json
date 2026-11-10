@@ -34,11 +34,11 @@
     "text": "Tavalise HTTP kaudu hoitakse allalaadimisi mälus, selle asemel et neid otse kettale kirjutada, ja katkenud üleslaadimist ei saa jätkata. Suurte failide jaoks ava see leht HTTPS kaudu."
   },
   "home": {
-    "claim": "Jaga oma faile krüpteeritult ja privaatselt. Neid näeb ainult saaja.",
+    "claim": "Otse lossi. Sisse pääseb ainult saaja.",
     "drop": "Lohista failid siia, kleebi või vali need. Me pole pirtsakad.",
     "choose": "Vali failid",
     "dropping": "Lase lahti, et need lisada",
-    "trust": "Keegi ei saa su failidesse piiluda. Ausõna, matemaatikaga kinnitatud.",
+    "trust": "Keegi ei saa su failidesse piiluda. Ausõna, matemaatikaga krüpteeritud.",
     "dropTarget": "Vali saadetavad failid",
     "note": "Kirjuta märge",
     "request": "Küsi faile"

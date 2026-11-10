@@ -34,11 +34,11 @@
     "text": "Via gewone HTTP blijven downloads in het geheugen in plaats van naar schijf te streamen, en een afgebroken upload kan niet verder. Open deze pagina via HTTPS voor grote bestanden."
   },
   "home": {
-    "claim": "Deel je bestanden versleuteld en privé. Alleen de ontvanger kan ze zien.",
+    "claim": "Hup, het kasteel in. Alleen de ontvanger komt erin.",
     "drop": "Sleep bestanden hierheen, plak ze of kies ze. We zijn niet kieskeurig.",
     "choose": "Bestanden kiezen",
     "dropping": "Laat los om ze toe te voegen",
-    "trust": "Niemand kan in je bestanden gluren. Erewoord, met de wiskunde als borg.",
+    "trust": "Niemand kan in je bestanden gluren. Erewoord, versleuteld met wiskunde.",
     "dropTarget": "Kies bestanden om te versturen",
     "note": "Notitie schrijven",
     "request": "Bestanden opvragen"

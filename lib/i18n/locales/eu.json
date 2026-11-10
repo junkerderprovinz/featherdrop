@@ -34,11 +34,11 @@
     "text": "HTTP soilarekin, deskargak memorian geratzen dira diskora zuzenean joan beharrean, eta eteten den igoera bat ezin da jarraitu. Fitxategi handietarako, ireki orri hau HTTPS bidez."
   },
   "home": {
-    "claim": "Partekatu zure fitxategiak zifratuta eta pribatuan. Hartzaileak bakarrik ikus ditzake.",
+    "claim": "Gaztelura zuzenean. Hartzailea bakarrik sartzen da.",
     "drop": "Arrastatu fitxategiak, itsatsi edo aukeratu. Ez gara mizkinak.",
     "choose": "Aukeratu fitxategiak",
     "dropping": "Askatu gehitzeko",
-    "trust": "Inork ezin ditu zure fitxategiak zelatatu. Hitza ematen dizugu, eta matematikak bermatzen du.",
+    "trust": "Inork ezin ditu zure fitxategiak zelatatu. Hitza ematen dizugu, matematikaz zifratuta.",
     "dropTarget": "Aukeratu bidaltzeko fitxategiak",
     "note": "Idatzi ohar bat",
     "request": "Eskatu fitxategiak"

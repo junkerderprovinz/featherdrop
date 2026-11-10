@@ -35,11 +35,11 @@
     "text": "Prin HTTP simplu, descărcările sunt ținute în memorie în loc să fie scrise direct pe disc, iar o încărcare întreruptă nu poate fi reluată. Pentru fișiere mari, deschide pagina prin HTTPS."
   },
   "home": {
-    "claim": "Partajează-ți fișierele criptate și private. Doar destinatarul le poate vedea.",
+    "claim": "Direct în castel. Doar destinatarul intră.",
     "drop": "Trage fișierele aici, lipește-le sau alege-le. Nu suntem pretențioși.",
     "choose": "Alege fișiere",
     "dropping": "Dă drumul ca să le adaugi",
-    "trust": "Nimeni nu poate trage cu ochiul la fișierele tale. Pe cuvânt, cu matematica drept garanție.",
+    "trust": "Nimeni nu poate trage cu ochiul la fișierele tale. Pe cuvânt, criptat cu matematică.",
     "dropTarget": "Alege fișierele de trimis",
     "note": "Scrie o notă",
     "request": "Cere fișiere"

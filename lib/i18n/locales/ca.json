@@ -35,11 +35,11 @@
     "text": "Amb HTTP simple, les baixades es queden a la memòria en lloc d'anar directament al disc, i una pujada que es talla no es pot reprendre. Obre aquesta pàgina amb HTTPS per a fitxers grans."
   },
   "home": {
-    "claim": "Comparteix els teus fitxers xifrats i en privat. Només qui els rep els pot veure.",
+    "claim": "Directe al castell. Només hi entra el destinatari.",
     "drop": "Arrossega fitxers, enganxa'ls o tria'ls. No som gens primmirats.",
     "choose": "Tria fitxers",
     "dropping": "Deixa'ls anar per afegir-los",
-    "trust": "Ningú no pot tafanejar els teus fitxers. Paraula d'honor, i les matemàtiques ho avalen.",
+    "trust": "Ningú no pot tafanejar els teus fitxers. Paraula d'honor, xifrada amb matemàtiques.",
     "dropTarget": "Tria fitxers per enviar",
     "note": "Escriu una nota",
     "request": "Demana fitxers"

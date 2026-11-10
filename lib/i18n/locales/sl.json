@@ -36,11 +36,11 @@
     "text": "Prek navadnega HTTP prenosi ostanejo v pomnilniku, namesto da bi se sproti zapisovali na disk, prekinjenega nalaganja pa ni mogoče nadaljevati. Za velike datoteke odpri to stran prek HTTPS."
   },
   "home": {
-    "claim": "Deli svoje datoteke šifrirano in zasebno. Vidi jih lahko samo prejemnik.",
+    "claim": "Naravnost v grad. Noter pride samo prejemnik.",
     "drop": "Povleci datoteke sem, jih prilepi ali izberi. Nismo izbirčni.",
     "choose": "Izberi datoteke",
     "dropping": "Spusti in dodane bodo",
-    "trust": "Nihče ne more pokukati v tvoje datoteke. Častna beseda, podprta z matematiko.",
+    "trust": "Nihče ne more pokukati v tvoje datoteke. Častna beseda, šifrirana z matematiko.",
     "dropTarget": "Izberi datoteke za pošiljanje",
     "note": "Napiši zapisek",
     "request": "Prosi za datoteke"

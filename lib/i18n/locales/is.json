@@ -34,11 +34,11 @@
     "text": "Yfir venjulegt HTTP eru niðurhöl geymd í minni í stað þess að streyma beint á diskinn, og upphleðsla sem rofnar getur ekki haldið áfram. Opnaðu síðuna yfir HTTPS fyrir stórar skrár."
   },
   "home": {
-    "claim": "Deildu skránum þínum dulkóðuðum og í trúnaði. Aðeins viðtakandinn getur séð þær.",
+    "claim": "Beint inn í kastalann. Aðeins viðtakandinn kemst inn.",
     "drop": "Dragðu skrár hingað, límdu þær inn eða veldu þær. Við erum ekki matvönd.",
     "choose": "Velja skrár",
     "dropping": "Slepptu til að bæta þeim við",
-    "trust": "Enginn getur kíkt í skrárnar þínar. Heiðursorð, og stærðfræðin stendur á bak við það.",
+    "trust": "Enginn getur kíkt í skrárnar þínar. Heiðursorð, dulkóðað með stærðfræði.",
     "dropTarget": "Velja skrár til að senda",
     "note": "Skrifa miða",
     "request": "Biðja um skrár"

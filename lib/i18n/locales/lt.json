@@ -36,11 +36,11 @@
     "text": "Per paprastą HTTP atsisiuntimai laikomi atmintyje, užuot iškart keliavę į diską, o nutrūkusio įkėlimo nebegalima pratęsti. Dideliems failams atidaryk šį puslapį per HTTPS."
   },
   "home": {
-    "claim": "Dalinkis failais šifruotai ir privačiai. Juos matys tik gavėjas.",
+    "claim": "Tiesiai į pilį. Įeiti gali tik gavėjas.",
     "drop": "Įtempk failus, įklijuok arba pasirink. Mes neišrankūs.",
     "choose": "Pasirinkti failus",
     "dropping": "Paleisk, kad pridėtum",
-    "trust": "Niekas negali žvilgtelėti į tavo failus. Garbės žodis, ir tai garantuoja matematika.",
+    "trust": "Niekas negali žvilgtelėti į tavo failus. Garbės žodis, užšifruotas matematika.",
     "dropTarget": "Pasirink failus siuntimui",
     "note": "Rašyti užrašą",
     "request": "Paprašyti failų"

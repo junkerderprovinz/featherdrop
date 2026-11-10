@@ -36,11 +36,11 @@
     "text": "Przez zwykłe HTTP pobrane pliki trzymane są w pamięci, zamiast trafiać od razu na dysk, a przerwanego przesyłania nie da się wznowić. Przy dużych plikach otwórz tę stronę przez HTTPS."
   },
   "home": {
-    "claim": "Udostępniaj pliki zaszyfrowane i prywatne. Zobaczy je tylko odbiorca.",
+    "claim": "Prosto do zamku. Wejdzie tylko odbiorca.",
     "drop": "Przeciągnij pliki, wklej je albo wybierz. Nie jesteśmy wybredni.",
     "choose": "Wybierz pliki",
     "dropping": "Puść, aby je dodać",
-    "trust": "Nikt nie zajrzy do Twoich plików. Słowo harcerza, poparte matematyką.",
+    "trust": "Nikt nie zajrzy do Twoich plików. Słowo harcerza, zaszyfrowane matematyką.",
     "dropTarget": "Wybierz pliki do wysłania",
     "note": "Napisz notatkę",
     "request": "Poproś o pliki"

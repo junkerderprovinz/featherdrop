@@ -35,11 +35,11 @@
     "text": "Por HTTP simple, las descargas se quedan en memoria en vez de ir directas al disco, y una subida que se corta no puede continuar. Abre esta página por HTTPS para archivos grandes."
   },
   "home": {
-    "claim": "Comparte tus archivos cifrados y en privado. Solo el destinatario puede verlos.",
+    "claim": "Directo al castillo. Solo entra el destinatario.",
     "drop": "Arrastra archivos, pégalos o elígelos. No somos quisquillosos.",
     "choose": "Elegir archivos",
     "dropping": "Suelta para añadirlos",
-    "trust": "Nadie puede fisgar en tus archivos. Palabra de honor, avalada por las matemáticas.",
+    "trust": "Nadie puede fisgar en tus archivos. Palabra de honor, cifrada con matemáticas.",
     "dropTarget": "Elegir archivos para enviar",
     "note": "Escribir una nota",
     "request": "Pedir archivos"

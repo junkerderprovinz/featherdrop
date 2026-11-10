@@ -34,11 +34,11 @@
     "text": "Over almindelig HTTP holdes downloads i hukommelsen i stedet for at blive streamet til disken, og en upload, der bliver afbrudt, kan ikke fortsætte. Åbn siden over HTTPS til store filer."
   },
   "home": {
-    "claim": "Del dine filer krypteret og privat. Kun modtageren kan se dem.",
+    "claim": "Ind i borgen med det. Kun modtageren kommer ind.",
     "drop": "Træk filer herind, indsæt dem eller vælg dem. Vi er ikke kræsne.",
     "choose": "Vælg filer",
     "dropping": "Slip for at tilføje dem",
-    "trust": "Ingen kan kigge med i dine filer. Æresord, bakket op af matematik.",
+    "trust": "Ingen kan kigge med i dine filer. Æresord, krypteret med matematik.",
     "dropTarget": "Vælg filer, du vil sende",
     "note": "Skriv en note",
     "request": "Bed om filer"

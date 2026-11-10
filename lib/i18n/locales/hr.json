@@ -35,11 +35,11 @@
     "text": "Preko običnog HTTP-a preuzimanja ostaju u memoriji umjesto da idu ravno na disk, a prekinuti prijenos ne može se nastaviti. Za velike datoteke otvori ovu stranicu preko HTTPS-a."
   },
   "home": {
-    "claim": "Dijeli svoje datoteke šifrirano i privatno. Samo ih primatelj može vidjeti.",
+    "claim": "Ravno u dvorac. Unutra ulazi samo primatelj.",
     "drop": "Povuci datoteke ovamo, zalijepi ih ili ih odaberi. Nismo izbirljivi.",
     "choose": "Odaberi datoteke",
     "dropping": "Pusti i dodat će se",
-    "trust": "Nitko ne može zaviriti u tvoje datoteke. Časna riječ, a matematika to jamči.",
+    "trust": "Nitko ne može zaviriti u tvoje datoteke. Časna riječ, šifrirana matematikom.",
     "dropTarget": "Odaberi datoteke za slanje",
     "note": "Napiši bilješku",
     "request": "Zatraži datoteke"
