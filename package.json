@@ -20,7 +20,7 @@
   "dependencies": {
     "@fontsource-variable/noto-sans": "^5.3.0",
     "@fontsource-variable/noto-sans-arabic": "^5.3.0",
-    "@glimstone/core": "4.3.4",
+    "@glimstone/core": "4.3.5",
     "@glimstone/vue": "4.3.4",
     "@rive-app/canvas-lite": "2.49.4",
     "@zag-js/combobox": "^1.47.0",
