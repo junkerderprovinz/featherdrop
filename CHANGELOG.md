@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.2] - 2026-11-11
+
+### Changed
+
+- The build pins every script and stylesheet in the page with an integrity hash whatever the letter case of its tag, so an uppercase `<SCRIPT>` can't slip past the check.
+- GlimStone 4.3.7, Rive canvas runtime 2.50.0, Node 24.22.3.
+
 ## [2.1.1] - 2026-11-11
 
 ### Security
@@ -318,6 +325,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/render-assets.mjs` renders the banner and icon from the logo SVG (with `@resvg/resvg-js` installed on demand).
 - Unraid Community Applications template, multi-arch image (`ghcr.io/junkerderprovinz/featherdrop`, amd64 and arm64), ASCII init-log banner, CI (ESLint, typecheck, XML template lint) and a release workflow. CI opts JavaScript actions into Node 24 (`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`).
 
+[2.1.2]: https://github.com/junkerderprovinz/castleparcel/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/junkerderprovinz/castleparcel/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/junkerderprovinz/castleparcel/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/junkerderprovinz/castleparcel/compare/v1.9.0...v2.0.0
