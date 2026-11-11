@@ -8,7 +8,7 @@
 #   client:  node builds the Vite SPA into server-go/webroot
 #   gobuild: a CGO-free go build that embeds the webroot
 #   runtime: distroless static with the binary and the license texts
-ARG NODE_VERSION=24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
+ARG NODE_VERSION=24.22.3-slim@sha256:4d897dfbf2bed5e4e09128f8b8da96a2bdf36e3cace084a32c9c4e637ec0ff81
 ARG GO_VERSION=1.27@sha256:01aa404fa56b604b6f48e90c1d6e2c79fe5cd78f9592f78d80303fbe171cdcc0
 
 # The client is the same for every architecture, so it is built once on the
