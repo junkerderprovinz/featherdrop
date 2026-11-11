@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 
 const sri = (data) => "sha384-" + createHash("sha384").update(data).digest("base64");
 
-const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`, "i"))?.[1];
 
 /**
  * @param {string} html the built index.html
@@ -25,8 +25,8 @@ export function addIntegrity(html, assetPaths, read) {
     return tag.replace(/\s*\/?>$/, (end) => ` integrity="${sri(data)}"${end}`);
   };
 
-  const out = html.replace(/<(script|link)\b[^>]*>/g, (tag, name) => {
-    if (name === "script") {
+  const out = html.replace(/<(script|link)\b[^>]*>/gi, (tag, name) => {
+    if (name.toLowerCase() === "script") {
       const src = attr(tag, "src");
       if (src === undefined) {
         throw new Error(`index.html has an inline script, which no hash could pin: ${tag}`);
