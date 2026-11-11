@@ -46,6 +46,14 @@
       "groupName": "Mantine"
     },
     {
+      "description": "Group the GlimStone packages, a lone core bump leaves a second core nested under vue",
+      "matchPackageNames": [
+        "@glimstone/core",
+        "@glimstone/vue"
+      ],
+      "groupName": "GlimStone"
+    },
+    {
       "description": "Group tus packages",
       "matchPackageNames": [
         "tus-js-client"
