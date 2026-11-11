@@ -65,3 +65,8 @@ test("an inline script stops the build, since nothing could pin it", () => {
   const inline = shell.replace("</head>", "<script>alert(1)</script></head>");
   assert.throws(() => addIntegrity(inline, assetPaths, read), /inline/);
 });
+
+test("an inline script in capitals stops the build like any other", () => {
+  const shouting = shell.replace("<body>", "<body><SCRIPT>window.x = 1</SCRIPT>");
+  assert.throws(() => addIntegrity(shouting, assetPaths, read), /inline script/);
+});
