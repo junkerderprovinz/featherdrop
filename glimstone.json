@@ -1,0 +1,10 @@
+{
+  "targets": [
+    {
+      "name": "web",
+      "mode": "npm",
+      "version": "4.3.7",
+      "package": "package.json"
+    }
+  ]
+}

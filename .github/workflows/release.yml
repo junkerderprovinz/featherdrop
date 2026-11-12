@@ -25,7 +25,11 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  glimstone:
+    uses: junkerderprovinz/junkerderprovinz/.github/workflows/glimstone-current.yml@main
+
   release:
+    needs: glimstone
     name: Create GitHub Release
     runs-on: ubuntu-latest
     steps:
