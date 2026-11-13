@@ -9,7 +9,7 @@
 #   gobuild: a CGO-free go build that embeds the webroot
 #   runtime: distroless static with the binary and the license texts
 ARG NODE_VERSION=24.22.3-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
-ARG GO_VERSION=1.27@sha256:01aa404fa56b604b6f48e90c1d6e2c79fe5cd78f9592f78d80303fbe171cdcc0
+ARG GO_VERSION=1.27@sha256:ec47ea3725fea0cc88f6de94919aef19f40f12fc1ec0e2d1b3426dbf15ecca04
 
 # The client is the same for every architecture, so it is built once on the
 # build host and both images embed the same bytes. NODE_VERSION matches .nvmrc,
