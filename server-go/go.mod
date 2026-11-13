@@ -7,7 +7,7 @@ toolchain go1.27.4
 require (
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/tus/tusd/v2 v2.10.1
-	golang.org/x/exp v0.0.0-20261109185158-a52e3aef5920
+	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4
 	modernc.org/sqlite v1.62.0
 )
 
