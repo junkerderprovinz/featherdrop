@@ -10,7 +10,7 @@ let Info: Component;
 before(async () => {
   const listen = () => {};
   Object.assign(globalThis, {
-    document: { cookie: "fd_lang=en", documentElement: { lang: "", dir: "", dataset: {} }, addEventListener: listen, removeEventListener: listen, createElement: () => ({}) },
+    document: { cookie: "fd_lang=en", documentElement: { lang: "", dir: "", dataset: {} }, addEventListener: listen, removeEventListener: listen, createElement: () => ({}), querySelectorAll: () => [], body: {} },
     window: { open: (...args: unknown[]) => opened.push(args[0]), addEventListener: listen, removeEventListener: listen, matchMedia: () => ({ matches: false, addEventListener: listen, removeEventListener: listen }) },
     location: { pathname: "/settings/info", hash: "" },
     addEventListener: listen,
